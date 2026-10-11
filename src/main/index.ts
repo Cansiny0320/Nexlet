@@ -4,7 +4,7 @@ import { copyFile, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isHostDocument } from './host-origin';
 import { Store } from './store';
 import { Catalog } from './catalog';
 import { Platform } from './platform';
@@ -30,7 +30,7 @@ async function bootstrap() {
   let main: BrowserWindow;
   let quitting=false, shortcutError:string|null=null, tray:Tray|null=null, modalCount=0;
   const hosts=new Map<number,BrowserWindow>(), views=new Map<number,string>(), boards=new Map<number,string[]>();
-  const html=path.join(__dirname,'../renderer/index.html'), hostUrl=pathToFileURL(html).href;
+  const html=path.join(__dirname,'../renderer/index.html');
   const notify=(event='state')=>{for(const window of hosts.values())if(!window.isDestroyed())window.webContents.send('host-change',event);};
   const platform=new Platform(()=>main?.getNativeWindowHandle());
   const clips=new ClipboardService(store,platform,()=>notify('clips'));
@@ -89,7 +89,7 @@ async function bootstrap() {
   async function writeImage(data:unknown){await clipboard.write([new ClipboardItem({'image/png':new Blob([new Uint8Array(imageData(data))],{type:'image/png'})})]);}
   ipcMain.handle('host-api',async(event,action:unknown,payload:unknown)=>{
     const window=hosts.get(event.sender.id);
-    if(!window||event.senderFrame!==event.sender.mainFrame||!event.senderFrame.url.startsWith(hostUrl)||!HOST_ACTIONS.includes(action as any))throw new Error('不允许的调用来源');
+    if(!window||event.senderFrame!==event.sender.mainFrame||!isHostDocument(event.senderFrame.url,html)||!HOST_ACTIONS.includes(action as any))throw new Error('不允许的调用来源');
     switch(action){
       case 'state':return state();
       case 'search':{
