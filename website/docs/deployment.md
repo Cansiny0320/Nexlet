@@ -21,3 +21,17 @@
 匿名 HTTP 回读确认四页、robots、sitemap、字体和脚本可直接访问，无认证跳转和 noindex 头。canonical 与正式 origin 一致。线上 CSS、JavaScript、平台 helper、字体、SVG 图标和分享图的字节均与部署 archive 一致。Git 的 `core.autocrlf=true` 使打包文本使用 CRLF；与工作目录文本比较时仅换行不同，避免把换行差异误报为部署内容漂移。
 
 本文件是部署后的审计记录，不改变静态网页产物；源码提交和部署对应关系以上述两个 SHA 为准。
+
+## 2026-10-12 细节优化更新
+
+- GitHub 官网实现提交：`3373be2399ff2607baf022ebf3fde3b9304fd96b`。
+- Sites 源码提交：`ada43456077a424f2e8c30b76e019453e169a4ef`。
+- Sites 版本：2，访问范围保持 public。
+- 版本 ID：`appgprj_6acbbb32d78881919f324dcdf9ee6640~appgver_1e8b7fbecf38819187151f48a13b4b8d`。
+- 部署 ID：`appgdep_6acbd1b9665481918104a2697b4302b3`。
+- 部署结果：`succeeded`，2026-10-12 02:13:29 +08:00。
+- Sites archive content hash：`sha256:c926808805cabbdbff36f55354ed5c8453a3311fb535fcda6d8c1192fd6c43ce`，22 个部署文件。
+
+本次细节调整见 visual-refinement.md。从实现提交精确导出的 63 个 website 源文件逐一校验后同步至 Sites；未包含共享工作区里的桌面端未提交改动。四页匿名 HTTP 回读均为 200，兼容性提示已从正式页面删除。线上 CSS、手写字体和分享图均与部署 archive 字节相同。公开域名的四页、六种屏幕宽度及交互回归检查通过。安装包版本仍为 0.1.0 预览版。
+
+本节为部署后的记录，不改变此次已部署静态产物。
