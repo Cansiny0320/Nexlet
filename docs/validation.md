@@ -1,4 +1,26 @@
-# Nexlet 0.2.0 验证记录
+# Nexlet 验证记录
+
+## 0.2.2 本地修订（2026-10-12）
+
+- 文件搜索空输入现在返回待输入状态，不启动 Everything 或执行探测查询；清空搜索框后，旧查询返回的结果或错误不会覆盖待输入页面。
+- 现场确认 ES `-timeout 1500` 在首次索引尚未就绪时返回 Error 8，但同一实例的版本查询仍正常。根据 [ES 源码](https://github.com/voidtools/ES/blob/master/src/es.c) 中等待数据库加载的逻辑，改为读回同一实例状态：仍响应时显示索引中并自动重试，实例不可用时提示连接中断，导出错误仍报告失败。
+- 飞书的桌面和开始菜单快捷方式都指向 `icon.ico`。现场确认 `app.getFileIcon` 返回通用文件图标，`nativeImage.createFromPath` 能读出实际 ICO 像素；修复后两条搜索结果均与该图像一致。
+- `npm run typecheck`、71 项单元测试、13 项桌面集成测试通过。覆盖空输入不启动、索引等待与恢复、引擎断开、过期错误、ICO 实际显示及原有功能。
+- 用户原有索引随后完成，只读查询实际找到了 `release/Nexlet-0.2.1-Windows-x64.exe`。测试没有停止、重启或调整用户的 Everything 实例。
+- 界面核对：`test-results/feishu-icons-fixed.png`、`test-results/filesearch-idle-fixed.png`。最终源码、三平台附件及发布状态以 [v0.2.2 发行页](https://github.com/Cansiny0320/Nexlet/releases/tag/v0.2.2) 为准。
+- `npm run smoke:package` 与 `npm run smoke:portable` 均通过，版本读回为 0.2.2；打包程序验证空输入待输入及内置 Everything 的真实文件查询。产物为 `release/Nexlet-0.2.2-Windows-x64.exe`（103,303,864 字节）。
+
+## 0.2.1 本地修订（2026-10-12）
+
+- 当前运行的用户进程确认来自 `Nexlet-0.1.0-Windows-x64.exe`，因此仍显示旧版 JSON 页面。0.2.1 包含已有的树形美化和红绿差异对比。
+- 标题栏增加独立拖动手柄，工具名称改为可拖动区域，返回按钮单独排除；计算样式和 Electron 实际命中区域均已核对。
+- 对最小化恢复、托盘使用的统一唤起入口、重复启动与应用激活添加恢复、前置和聚焦处理。集成测试验证窗口可见、非最小化、已聚焦，并保持原有非置顶状态。
+- 设置新增开机自启动；系统状态读回、便携 EXE 稳定路径、后台启动、系统禁用与 macOS 待批准分支有回归测试。注册写入边界以替身验证，没有修改用户系统自启动项，也没有做真实重启验收。
+- `npm run typecheck`、66 项单元测试、12 项桌面集成测试通过。解压目录和单文件便携 EXE 的 0.2.1 启动检查通过，内置 Everything 实际查询通过。
+- 原生鼠标拖动自动化无法移动 Nexlet，系统原生标题栏对照窗口也无法被同一操作移动，因此不将该结果归因于 Nexlet，也不声称完成实际鼠标移动验收。
+- 产物：`release/Nexlet-0.2.1-Windows-x64.exe`。此修订已纳入 0.2.2；下面的三平台 CI 记录属于前一版本。
+
+## 0.2.0 验证
 
 验证日期：2026-10-12。开发环境：Windows 10.0.26300 x64、Node.js 25.2.1、Electron 44.7.0。测试使用隔离的 `.tmp` 用户目录，截图只含测试数据。
 

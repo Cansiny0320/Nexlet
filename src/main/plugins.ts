@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile, rm, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { gt } from 'semver';
+import { revealWindow, focusOnRestore } from './window-visibility';
 import type { Store } from './store';
 import { readPluginDirectory, readPluginZip, type PluginBundle } from './plugin-bundle';
 import { safeEntryPath } from '../shared/plugin-validation';
@@ -87,7 +88,7 @@ export class PluginManager {
     const record=this.records().find(p=>p.manifest.id===id && p.enabled); if(!record)throw new Error('插件未安装或已停用');
     if(!record.manifest.features.some(f=>f.code===code))throw new Error('功能不存在');
     const existing=this.running.get(id);
-    if(existing && !existing.isDestroyed()) { this.callers.set(existing.webContents.id,{record,code,payload}); existing.webContents.send('plugin-activate',{code,payload}); existing.show(); existing.focus(); return; }
+    if(existing && !existing.isDestroyed()) { this.callers.set(existing.webContents.id,{record,code,payload}); existing.webContents.send('plugin-activate',{code,payload}); revealWindow(existing); return; }
     const root=await realpath(record.directory);
     const partition=`nexlet-plugin-${id}-${randomUUID()}`;
     const isolated=session.fromPartition(partition);
@@ -104,6 +105,7 @@ export class PluginManager {
       } catch { return new Response('无法读取插件资源',{status:403}); }
     });
     const window=new BrowserWindow({width:800,height:600,minWidth:500,minHeight:350,title:record.manifest.name,autoHideMenuBar:true,backgroundColor:'#f4f4f4',webPreferences:{preload:path.join(__dirname,'../preload/plugin.cjs'),partition,sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false}});
+    focusOnRestore(window);
     window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
     window.webContents.on('will-navigate',e=>e.preventDefault());
     window.webContents.on('will-attach-webview',e=>e.preventDefault());

@@ -32,11 +32,14 @@ test('启动器、快捷方式检索与真实启动',async()=>{
   const fixture=path.join(folder,'editor.cjs'),received=path.join(folder,'received.txt'),ready=path.join(folder,'ready');
   await writeFile(fixture,`const {app,BrowserWindow}=require('electron');const fs=require('fs');app.setPath('userData',${JSON.stringify(path.join(folder,'editor-data'))});app.whenReady().then(async()=>{const w=new BrowserWindow({width:500,height:300,title:'Nexlet 回贴测试编辑器'});await w.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent('<title>Nexlet 回贴测试编辑器</title><textarea autofocus aria-label="test" style="width:95%;height:90%"></textarea>'));w.show();w.focus();await w.webContents.executeJavaScript('document.querySelector("textarea").focus()');setTimeout(()=>fs.writeFileSync(${JSON.stringify(ready)},JSON.stringify({pid:process.pid,handle:w.getNativeWindowHandle().readBigUInt64LE().toString()})),500);const timer=setInterval(async()=>{if(w.isDestroyed()){clearInterval(timer);return;}const t=await w.webContents.executeJavaScript('document.querySelector("textarea").value');if(t){fs.writeFileSync(${JSON.stringify(received)},t);clearInterval(timer);w.close();}},100);setTimeout(()=>app.quit(),60000);});app.on('window-all-closed',()=>app.quit());`);
   const shortcut=path.join(shortcuts,'Nexlet 回贴验证.lnk');
-  expect(await app.evaluate(({shell},args)=>shell.writeShortcutLink(args.shortcut,'create',{target:process.execPath,args:`"${args.fixture}"`,description:'Nexlet isolated test editor'}),{shortcut,fixture})).toBeTruthy();
+  const customIcon=path.join(root,'assets','icon.ico');
+  expect(await app.evaluate(({shell},args)=>shell.writeShortcutLink(args.shortcut,'create',{target:process.execPath,args:`"${args.fixture}"`,description:'Nexlet isolated test editor',icon:args.customIcon,iconIndex:0}),{shortcut,fixture,customIcon})).toBeTruthy();
   await call('settings',{searchPaths:[shortcuts]});
   await expect.poll(()=>call('state').then((s:any)=>s.catalogLoading)).toBe(false);
   await home();await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).fill('回贴验证');
   await expect(page.locator('.tool-tile').filter({hasText:'Nexlet 回贴验证'})).toBeVisible();
+  const expectedIcon=await app.evaluate(({nativeImage},file)=>nativeImage.createFromPath(file).toDataURL(),customIcon);
+  await expect(page.locator('.tool-tile').filter({hasText:'Nexlet 回贴验证'}).locator('img')).toHaveAttribute('src',expectedIcon);
   await page.screenshot({path:path.join(root,'test-results','search.png')});
   await page.locator('.tool-tile').filter({hasText:'Nexlet 回贴验证'}).click();
   await expect.poll(()=>readFile(ready,'utf8').catch(()=>''),{timeout:15000}).not.toBe('');
@@ -115,6 +118,26 @@ test('重启后稿纸、收藏与设置保留，界面无脚本异常',async()=>
   await restoreClipboard();await app.close();await start();await saveClipboard();
   const pads:any=await call('pads');expect(pads.find((p:any)=>p.name==='Nexlet 验证稿纸').lines[1].expression).toBe('384+256');expect((await call('clips',{kind:'favorite'}) as any[])).toHaveLength(1);
   expect((await call('state') as any).settings.searchPaths[0]).toContain('shortcuts');expect(errors).toEqual([]);
+});
+
+test('文件搜索空输入保持待输入，索引后自动重试，清空后忽略过期错误',async()=>{
+  await open('文件搜索');const input=page.getByRole('textbox',{name:'Everything 文件搜索'});
+  await expect(page.getByText('输入文件名或路径开始搜索，例如 ext:pdf 项目',{exact:true})).toBeVisible();
+  expect(await app.evaluate(()=>(globalThis as any).__nexlet.files.engine.child)).toBeNull();
+  await page.screenshot({path:path.join(root,'test-results','filesearch-idle.png')});
+  await app.evaluate(()=>{const n=(globalThis as any).__nexlet;(globalThis as any).__fileSearchOriginal=n.files.search;let tries=0;n.files.search=async(owner:number,query:string)=>{
+    if(query==='slow')return new Promise((_resolve,reject)=>{(globalThis as any).__lateFileError=reject;});
+    if(query==='building')return ++tries===1?{status:'indexing',message:'正在建立文件索引，完成后会自动显示搜索结果。',items:[],limited:false}:{status:'ready',message:'',items:[{path:'C:\\fixture\\ready.txt',name:'ready.txt',parent:'C:\\fixture',size:1,modified:'',directory:false}],limited:false};
+    return (globalThis as any).__fileSearchOriginal.call(n.files,owner,query);
+  };});
+  try{
+    await input.fill('building');await expect(page.getByText('正在建立文件索引，完成后会自动显示搜索结果。',{exact:true})).toBeVisible();
+    await expect(page.getByRole('option').filter({hasText:'ready.txt'})).toBeVisible({timeout:7000});
+    await input.fill('slow');await expect.poll(()=>app.evaluate(()=>typeof (globalThis as any).__lateFileError)).toBe('function');
+    await input.fill('');await expect(page.getByText('输入文件名或路径开始搜索，例如 ext:pdf 项目',{exact:true})).toBeVisible();
+    await app.evaluate(()=>{(globalThis as any).__lateFileError(new Error('过期的查询失败'));});
+    await expect(page.getByText('过期的查询失败',{exact:true})).toHaveCount(0);await expect(page.getByRole('option')).toHaveCount(0);
+  }finally{await app.evaluate(()=>{(globalThis as any).__nexlet.files.search=(globalThis as any).__fileSearchOriginal;});}
 });
 
 test('内置 Everything 自动启动、中文文件索引、受限文件操作与退出',async()=>{

@@ -1,10 +1,10 @@
 import { useState,useEffect } from 'react';
 import { Keyboard, Palette, ClipboardList, FolderSearch, FolderOpen, Plus, X, RefreshCw, Monitor } from 'lucide-react';
 import { api,useApp,errorText,PanelHeader,IconButton } from './common';
-import type { Settings as SettingsType } from '../shared/types';
+import type { Settings as SettingsType, StartupStatus } from '../shared/types';
 
 export function SettingsPanel(){
-  const {state,toast}=useApp();const [shortcut,setShortcut]=useState(state.settings.shortcut),[recording,setRecording]=useState(false);
+  const {state,toast,refresh}=useApp();const [shortcut,setShortcut]=useState(state.settings.shortcut),[recording,setRecording]=useState(false),[startupBusy,setStartupBusy]=useState(false);
   useEffect(()=>{setShortcut(state.settings.shortcut);},[state.settings.shortcut]);
   const update=async(patch:Partial<SettingsType>)=>{try{await api('settings',patch);toast('设置已保存');}catch(e){toast(errorText(e),true);}};
   const coexist=state.platform==='darwin'?'Control+Alt+Space':'Ctrl+Alt+Space';
@@ -13,6 +13,7 @@ export function SettingsPanel(){
     <div className="setting-row"><div><strong>全局唤起</strong><p>在任意应用中打开 Nexlet</p></div><div className="shortcut-control"><input aria-label="全局快捷键" value={recording?'按下组合键…':shortcut} readOnly={recording} onChange={e=>setShortcut(e.target.value)} onKeyDown={e=>{if(!recording)return;e.preventDefault();if(['Control','Shift','Alt','Meta'].includes(e.key))return;const keys=[e.ctrlKey?'Control':null,e.metaKey?'Command':null,e.altKey?'Alt':null,e.shiftKey?'Shift':null,e.code==='Space'?'Space':e.key.length===1?e.key.toUpperCase():e.key].filter(Boolean);setShortcut(keys.join('+'));setRecording(false);}}/><button className="button" onClick={()=>setRecording(!recording)}>{recording?'取消':'录制'}</button><button className="button primary" onClick={()=>void update({shortcut})}>保存</button></div></div>
     {state.shortcutError&&<div className="settings-warning">{state.shortcutError}<button className="button" onClick={()=>void update({shortcut:coexist})}>使用 {coexist}</button></div>}
     <div className="setting-row"><div><strong>失焦收起</strong><p>切换到其他应用时收起主搜索框，独立窗口保持显示</p></div><Toggle label="失焦收起" value={state.settings.hideOnBlur} onChange={value=>void update({hideOnBlur:value})}/></div>
+    <div className="setting-row"><div><strong>开机自启动</strong><p>{state.startup.reason||'登录系统后在后台运行，通过快捷键或托盘唤出'}</p>{state.platform==='win32'&&<p>便携版请放在固定位置；移动后需重新开启此开关。</p>}</div><Toggle label="开机自启动" value={state.startup.enabled} disabled={!state.startup.supported||startupBusy} onChange={async value=>{setStartupBusy(true);try{const result=await api<StartupStatus>('startup',value);await refresh();toast(result.reason||(result.enabled?'已开启开机自启动':'已关闭开机自启动'));}catch(e){toast(errorText(e),true);await refresh();}finally{setStartupBusy(false);}}}/></div>
     <div className="settings-section-title"><Palette size={17}/>外观</div><div className="setting-row"><div><strong>主题</strong></div><select aria-label="主题" value={state.settings.theme} onChange={e=>void update({theme:e.target.value as SettingsType['theme']})}><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>
     <div className="settings-section-title"><ClipboardList size={17}/>剪贴板</div><div className="setting-row"><div><strong>记录剪贴板历史</strong><p>仅保存在本机；暂停后仍可查看已有记录</p></div><Toggle label="记录剪贴板历史" value={state.settings.clipboardEnabled} onChange={value=>void update({clipboardEnabled:value})}/></div>
     <div className="setting-row"><div><strong>保留条数</strong><p>超出数量时清理最早的非收藏记录</p></div><select aria-label="保留条数" value={state.settings.maxClipboardItems} onChange={e=>void update({maxClipboardItems:Number(e.target.value)})}>{[100,500,1000,3000,5000].map(n=><option value={n} key={n}>{n} 条</option>)}</select></div>
@@ -27,4 +28,4 @@ export function SettingsPanel(){
     <div className="settings-section-title"><Monitor size={17}/>关于与数据</div><div className="setting-row"><div><strong>Nexlet {state.version}</strong><p>{state.platform==='win32'?'Windows':state.platform==='darwin'?'macOS':state.platform} · 本地存储</p></div><button className="button" onClick={()=>void api('openData').catch(e=>toast(errorText(e),true))}><FolderOpen size={16}/>打开数据目录</button></div>
   </div>;
 }
-function Toggle({label,value,onChange}:{label:string;value:boolean;onChange:(v:boolean)=>void}){return <button className={`toggle ${value?'on':''}`} role="switch" aria-label={label} aria-checked={value} onClick={()=>onChange(!value)}><i/></button>;}
+function Toggle({label,value,onChange,disabled=false}:{label:string;value:boolean;onChange:(v:boolean)=>void;disabled?:boolean}){return <button className={`toggle ${value?'on':''}`} role="switch" aria-label={label} aria-checked={value} disabled={disabled} onClick={()=>onChange(!value)}><i/></button>;}

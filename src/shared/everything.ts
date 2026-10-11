@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 export interface FileResult { path:string;name:string;parent:string;size:number|null;modified:string;directory:boolean; }
-export interface FileSearchResult { status:'ready'|'indexing'|'unavailable'|'unsupported';message:string;items:FileResult[];limited:boolean;version?:string;scopes?:string[]; }
+export interface FileSearchResult { status:'idle'|'ready'|'indexing'|'unavailable'|'unsupported';message:string;items:FileResult[];limited:boolean;version?:string;scopes?:string[]; }
 export function everythingConfig(scopes:string[]):string{
   if(!scopes.length||scopes.length>26||scopes.some(p=>!path.win32.isAbsolute(p)||/[\0\r\n]/.test(p)))throw new Error('索引目录无效');
   return ['[Everything]','app_data=0','run_as_admin=0','run_in_background=1','show_tray_icon=0','check_for_updates_on_startup=0','search_history_enabled=0','run_history_enabled=0','auto_include_fixed_volumes=0','auto_include_removable_volumes=0','auto_include_fixed_refs_volumes=0','auto_include_removable_refs_volumes=0','ntfs_volume_includes=','refs_volume_includes=','http_server_enabled=0','etp_server_enabled=0','index_size=1','index_date_modified=1','index_attributes=1','folders='+scopes.map(p=>JSON.stringify(p)).join(','),'folder_monitor_changes='+scopes.map(()=>1).join(','),'folder_update_types='+scopes.map(()=>1).join(','),'folder_update_intervals='+scopes.map(()=>60).join(','),'folder_update_interval_types='+scopes.map(()=>0).join(','),''].join('\r\n');

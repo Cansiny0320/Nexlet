@@ -23,7 +23,7 @@ export async function loadCatalogIcon(file: string, platform = process.platform)
   for (const source of new Set(candidates)) {
     try {
       const expanded = source.replace(/%([^%]+)%/g, (whole, name: string) => process.env[name] || whole);
-      const icon = /\.(png|jpe?g|bmp)$/i.test(expanded)
+      const icon = /\.(png|jpe?g|bmp)$/i.test(expanded) || (platform === 'win32' && /\.ico$/i.test(expanded))
         ? nativeImage.createFromPath(expanded)
         : await app.getFileIcon(expanded, { size: 'normal' });
       if (!icon.isEmpty()) return icon.toDataURL();

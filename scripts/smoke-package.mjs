@@ -20,6 +20,7 @@ try{
   if(info.version!==JSON.parse(await readFile('package.json','utf8')).version)throw Error('Packaged version does not match source');
   if(await page.getByRole('button',{name:'固定窗口',exact:true}).count())throw Error('Launcher must not have a pin button');
   const state=await page.evaluate(()=>window.nexlet.call('state'));if(state.nativeStatus)throw Error(state.nativeStatus);
+  if(process.platform==='win32'&&(await page.evaluate(()=>window.nexlet.call('fileSearch',''))).status!=='idle')throw Error('Empty file search must stay idle');
   await application.evaluate(async({clipboard,ClipboardItem})=>{const values={};for(const item of await clipboard.read())for(const type of item.types)if(['text/plain','text/html','image/png','text/rtf'].includes(type))values[type]=await item.getType(type);globalThis.__smokeClipboard=Object.keys(values).length?[new ClipboardItem(values)]:[];});
   await page.evaluate(()=>window.nexlet.call('settings',{clipboardEnabled:true}));
   await application.evaluate(async({clipboard})=>{await clipboard.writeText('Nexlet packaged clipboard monitor');});

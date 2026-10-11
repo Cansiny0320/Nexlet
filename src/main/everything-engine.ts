@@ -19,7 +19,7 @@ export class EverythingEngine {
   private activePaths:string[]=[];
   constructor(private paths:()=>string[]){}
   get scopes(){return this.activePaths;}
-  private async version():Promise<string|null>{try{const {stdout}=await exec(this.es,['-argv','-instance',this.instance,'-get-everything-version'],{windowsHide:true,timeout:1500,maxBuffer:4096,encoding:'utf8'});return stdout.trim()||null;}catch{return null;}}
+  async version():Promise<string|null>{try{const {stdout}=await exec(this.es,['-argv','-instance',this.instance,'-get-everything-version'],{windowsHide:true,timeout:1500,maxBuffer:4096,encoding:'utf8'});return stdout.trim()||null;}catch{return null;}}
   async ensure():Promise<string>{
     if(this.stopped)throw new Error('文件搜索正在关闭');
     if(this.starting)return this.starting;

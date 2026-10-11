@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings as SettingsIcon, Pin, Minus, Square, X, ChevronLeft, ExternalLink } from 'lucide-react';
+import { Settings as SettingsIcon, Pin, Minus, Square, X, ChevronLeft, ExternalLink, GripVertical } from 'lucide-react';
 import type { AppState } from '../shared/types';
 import { BUILTIN_COMMANDS } from '../shared/types';
 import { AppContext, api, errorText, IconButton, Modal, ToolIcon, type DialogSpec } from './common';
@@ -47,9 +47,10 @@ export function App(){
   const command=BUILTIN_COMMANDS.find(c=>c.id==='tool:'+view);
   return <AppContext.Provider value={{state,refresh,toast,dialog,navigate}}><div className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files));}}} onPaste={e=>{if(view==='launcher'&&e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files));}}}>
     <header className="titlebar">
+      <div className="window-drag-handle" aria-label="拖动窗口" title="拖动窗口"><GripVertical size={17}/></div>
       {view==='launcher'?<input ref={input} className="launcher-input" aria-label="搜索功能、应用或快捷方式" placeholder="搜索功能 / 粘贴文件、图片" value={query} onChange={e=>setQuery(e.target.value)} autoComplete="off" spellCheck={false}/>:
        view==='clipboard'?<><ToolIcon command={command!}/><input ref={input} className="clipboard-search" aria-label="搜索剪贴板" placeholder="搜索…" value={query} onChange={e=>setQuery(e.target.value)}/>{board&&<span className="subtle">悬浮中转</span>}</>:
-       <button className="plugin-pill" title="返回首页" onClick={()=>navigate('launcher')}>{command&&<ToolIcon command={command} size={20}/>}<span>{command?.name||'Nexlet'}</span>{!detached&&<X size={14}/>}</button>}
+       <div className="plugin-pill" title="拖动窗口">{command&&<ToolIcon command={command} size={20}/>}<span>{command?.name||'Nexlet'}</span>{!detached&&<button className="plugin-pill-close" aria-label="关闭当前工具" title="返回首页" onClick={()=>navigate('launcher')}><X size={14}/></button>}</div>}
       <div className="titlebar-spacer"/>
       <div className="window-controls">
         {!detached&&view!=='launcher'&&<IconButton title="返回首页" onClick={()=>navigate('launcher')}><ChevronLeft size={17}/></IconButton>}
