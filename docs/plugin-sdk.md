@@ -1,0 +1,66 @@
+# Nexlet Plugin API v1
+
+插件由 `plugin.json` 和本地 HTML / CSS / JavaScript 组成。使用 Web 标准编写界面，通过沙箱 preload 提供的 `window.nexlet` 请求宿主能力。内置工具与外部插件使用不同的 IPC 接口。
+
+## Manifest
+
+```json
+{
+  "id": "org.nexlet.hello",
+  "name": "便笺示例",
+  "version": "1.0.0",
+  "description": "保存并复制一段便笺",
+  "apiVersion": 1,
+  "main": "index.html",
+  "permissions": ["clipboard.write"],
+  "features": [
+    {"code": "note", "name": "示例便笺", "keywords": ["hello", "便笺"]}
+  ]
+}
+```
+
+`id` 是插件的稳定身份，用于搜索命令、数据隔离和升级；必须使用反向域名格式，例如 `org.nexlet.hello`；每段以小写字母开头，包含小写字母、数字或连字符。`main` 必须是包内相对 HTML 路径。不要使用绝对路径、`..`、符号链接或远程入口。
+
+ZIP 包根目录必须直接包含 `plugin.json`。可直接选择开发目录调试，重新打开窗口会读取更新后的文件；修改 manifest 或权限后需要重新导入。每个插件同一时刻只有一个窗口，多条 feature 指令通过激活通知切换。
+
+## API
+
+所有调用返回 Promise，失败会 reject，应在界面显示错误。
+
+```js
+const info = await nexlet.info();
+// { name, version, code, payload }
+
+const previous = await nexlet.storage.get('note'); // 没有保存时为 null
+await nexlet.storage.set('note', { text: 'Hello' });
+
+const text = await nexlet.clipboard.readText();    // clipboard.read
+await nexlet.clipboard.writeText('Hello');         // clipboard.write
+await nexlet.openExternal('https://example.com'); // shell.openExternal
+
+const unsubscribe = nexlet.onActivate(({ code, payload }) => {
+  // 已打开的插件再次通过某条指令被唤起。
+});
+// 不再需要时 unsubscribe()
+```
+
+`storage` 只访问当前插件的数据。键允许字母、数字、`_`、`.`、`-`，最长 100 个字符；值必须可通过 IPC 结构化复制及 JSON 序列化，每个插件合计不超过 1 MB。不要使用 `__proto__`、`constructor` 或 `prototype`。卸载默认保留数据，使用同一个 `id` 重新安装后可继续读取。
+
+| 权限 | 可用能力 | 限制 |
+| --- | --- | --- |
+| 无权限 | `info`、`storage`、`onActivate` | 当前插件独立数据 |
+| `clipboard.read` | 读取当前剪贴板文本 | 不可读取 Nexlet 历史库；返回文本最多 2 Mi 字符 |
+| `clipboard.write` | 写入剪贴板文本 | 单次最多 1 Mi 字符 |
+| `shell.openExternal` | 在默认浏览器打开链接 | 仅 HTTP / HTTPS；拒绝带用户名密码的 URL |
+
+## 运行隔离
+
+每个插件使用独立内存 session、独立窗口及 sandbox。`nodeIntegration` 关闭，`contextIsolation` 开启，无 `require`、`process` 或任意 IPC。宿主根据调用窗口、主 frame、插件来源及安装时授权快照检查每个请求。
+
+资源从 `nexlet-plugin://<id>/...` 读取。宿主检查资源真实路径仍在插件根目录中，拒绝越界路径。CSP 默认只允许本地脚本和样式：请用 `<script src="main.js"></script>`，不要使用内联脚本、`eval`、iframe、远程依赖、内联事件处理器或表单提交。网络连接、窗口弹出和浏览器权限请求默认禁用。
+
+样式允许内联，图片允许包内文件及 `data:` / `blob:`。需要图标和依赖时，将它们随包提供。插件窗口关闭后清理浏览器 session；需要跨次运行保存的数据请使用 `nexlet.storage`，不要依赖 localStorage。
+
+安装包限制、非法 manifest 和越界文件都会在导入时被拒绝。插件停用后移出搜索结果并关闭窗口。插件进程崩溃或无响应时关闭该插件窗口，并通知主界面。
+
+完整可运行示例位于 `examples/hello-nexlet`；宿主实现位于 `src/main/plugins.ts`，桥接定义位于 `src/preload/plugin.ts`。

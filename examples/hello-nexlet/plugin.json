@@ -1,0 +1,10 @@
+{
+  "id": "org.nexlet.hello",
+  "name": "Nexlet 便笺示例",
+  "version": "1.0.0",
+  "description": "独立保存一段便笺，并按需复制到剪贴板。",
+  "apiVersion": 1,
+  "main": "index.html",
+  "permissions": ["clipboard.write"],
+  "features": [{"code":"note","name":"示例便笺","keywords":["hello","便笺","note"]}]
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+release/
+.tmp/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-*
+*.p12
+*.pfx
+*.pem

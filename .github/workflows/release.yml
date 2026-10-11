@@ -1,0 +1,157 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - id: version
+        run: node scripts/ci-metadata.mjs
+
+  build:
+    needs: metadata
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            platform: win
+            arch: x64
+            executable: release/win-unpacked/Nexlet.exe
+            artifact: Windows-x64
+          - name: macOS Intel
+            os: macos-15-intel
+            platform: mac
+            arch: x64
+            executable: release/mac/Nexlet.app/Contents/MacOS/Nexlet
+            artifact: macOS-x64
+          - name: macOS Apple Silicon
+            os: macos-15
+            platform: mac
+            arch: arm64
+            executable: release/mac-arm64/Nexlet.app/Contents/MacOS/Nexlet
+            artifact: macOS-arm64
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Desktop integration tests
+        if: runner.os == 'Windows'
+        run: npx playwright test
+      - name: Package Windows portable
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win portable --x64 --publish never
+      - name: Package macOS DMG (ad-hoc signed, not notarized)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac dmg --${{ matrix.arch }} --publish never -c.mac.identity=- -c.mac.entitlements=assets/entitlements.mac.plist -c.mac.entitlementsInherit=assets/entitlements.mac.plist
+      - name: Packaged app smoke test
+        run: node scripts/smoke-package.mjs "${{ matrix.executable }}"
+      - name: Portable wrapper smoke test
+        if: runner.os == 'Windows'
+        run: npm run smoke:portable
+      - name: Package example plugin
+        if: runner.os == 'Windows'
+        run: node scripts/package-example.mjs
+      - name: Upload installation files
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Nexlet-${{ needs.metadata.outputs.version }}-${{ matrix.artifact }}
+          path: |
+            release/Nexlet-*.exe
+            release/Nexlet-*.dmg
+            release/hello-nexlet.nexlet
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: diagnostics-${{ matrix.artifact }}
+          path: |
+            test-results/
+            release/builder-debug.yml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release:
+    needs: [metadata, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: Nexlet-*
+          merge-multiple: true
+          path: release-assets
+      - run: node scripts/release-checksums.mjs release-assets
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: checksums-${{ needs.metadata.outputs.version }}
+          path: release-assets/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Create or update draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.metadata.outputs.tag }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --json isDraft > release-state.json 2>/dev/null; then
+            node -e 'if (!JSON.parse(require("fs").readFileSync("release-state.json")).isDraft) throw Error("Refusing to overwrite a published release")'
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            printf 'Source commit: `%s`\n\n' "$COMMIT" > release-notes.md
+            cat docs/release-notes.md >> release-notes.md
+            gh release create "$TAG" release-assets/* --verify-tag --draft --title "Nexlet $TAG" --notes-file release-notes.md
+          fi
