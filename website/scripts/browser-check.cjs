@@ -6,43 +6,60 @@ const root=path.resolve(__dirname,'..');
 const base=process.env.SITE_URL||'http://127.0.0.1:4173';
 const routes=['/','/download/','/privacy/','/plugins/'];
 (async()=>{
-  const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',headless:true});
-  try{
-    await fs.mkdir(path.join(root,'.qa'),{recursive:true});
-    const page=await browser.newPage({viewport:{width:1440,height:1050},deviceScaleFactor:1});
-    const errors=[];page.on('pageerror',e=>errors.push(e.message));
-    page.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
-    for(const width of [1440,768,390,320]){
-      await page.setViewportSize({width,height:900});
-      for(const route of routes){
-        const response=await page.goto(base+route);assert.equal(response.status(),200);
-        await page.evaluate(()=>document.fonts.ready);
-        assert.equal(await page.locator('h1').count(),1);
-        for(const image of await page.locator('img').all()){await image.scrollIntoViewIfNeeded();await image.evaluate(el=>el.decode());}
-        await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
-        const dimensions=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth,broken:[...document.images].filter(i=>!i.complete||!i.naturalWidth).map(i=>i.src)}));
-        assert(dimensions.scroll<=dimensions.viewport,`${width} ${route}: horizontal overflow`);
-        assert.deepEqual(dimensions.broken,[],`${width} ${route}: broken images`);
-        if(route==='/'&&[1440,390].includes(width))await page.screenshot({path:path.join(root,'.qa',`home-${width}.png`),fullPage:true});
-      }
-    }
-    await page.setViewportSize({width:390,height:844});await page.goto(base+'/');
-    await page.keyboard.press('Tab');assert.equal(await page.locator('.skip-link').evaluate(el=>el===document.activeElement),true);
-    await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>location.hash),'#main');
-    const menu=page.getByRole('button',{name:/菜单/});await menu.click();assert.equal(await menu.getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#navigation').isVisible(),true);
-    await page.keyboard.press('Escape');assert.equal(await menu.getAttribute('aria-expanded'),'false');assert.equal(await menu.evaluate(el=>el===document.activeElement),true);
-    await menu.click();await page.locator('#navigation').getByRole('link',{name:'下载与入门'}).click();assert.equal(new URL(page.url()).pathname,'/download/');
-    await page.goto(base+'/');const question=page.locator('details').nth(1);await question.locator('summary').focus();await page.keyboard.press('Enter');assert.equal(await question.getAttribute('open'),'');
-    const nojs=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const plain=await nojs.newPage();
-    for(const route of routes){await plain.goto(base+route);assert.equal(await plain.locator('nav').isVisible(),true);assert.equal(await plain.locator('h1').isVisible(),true);assert((await plain.locator('main').innerText()).length>500);}
-    await nojs.close();assert.deepEqual(errors,[]);
-    if(!process.env.SITE_URL){
-      await page.setViewportSize({width:1200,height:630});
-      await page.setContent(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#f4f4f2;color:#24252d;font-family:"Segoe UI","Microsoft YaHei",sans-serif;width:1200px;height:630px;padding:58px 64px}.logo{display:flex;align-items:center;gap:13px;font-size:28px;font-weight:700}.logo img{width:44px;height:44px}h1{font-size:59px;letter-spacing:-2px;line-height:1.3;margin:48px 0 20px}h1 span{color:#5a51dd}p{font-size:19px;color:#656672;line-height:1.8}.content{display:grid;grid-template-columns:1fr 1.22fr;gap:35px;align-items:center}.screen{padding:27px 20px;background:#e8e8f0;border-radius:20px}.screen img{width:100%;border-radius:11px;box-shadow:0 20px 30px #3432401a}.foot{position:absolute;bottom:48px;left:64px;font-size:16px;color:#6c6c79;letter-spacing:1px}</style></head><body><div class="logo"><img src="${base}/assets/icon.png" alt="">Nexlet</div><div class="content"><div><h1>常用工具，<br><span>随叫随到。</span></h1><p>应用搜索 · 剪贴板 · 计算稿纸<br>一个顺手的桌面工具箱</p></div><div class="screen"><img src="${base}/assets/launcher.png" alt="真实启动器界面"></div></div><div class="foot">Windows 与 macOS · 预览阶段</div></body></html>`);
-      await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(root,'assets/social.png')});
-    }
-    const report={date:new Date().toISOString(),base,viewports:[1440,768,390,320],pages:routes,checks:['HTTP 200','no viewport overflow','all images loaded','keyboard skip link','mobile menu and Escape focus','navigation','keyboard FAQ','no-JavaScript content and navigation','no page errors'],status:'passed'};
-    await fs.writeFile(path.join(root,'.qa','browser-results.json'),JSON.stringify(report,null,2)+'\n');
-    console.log(JSON.stringify(report,null,2));
-  }finally{await browser.close();}
+ const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',headless:true});
+ try{
+  await fs.mkdir(path.join(root,'.qa'),{recursive:true});
+  const page=await browser.newPage({viewport:{width:1440,height:1050},deviceScaleFactor:1});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  page.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
+  const dimensions=[];
+  for(const width of [1065,1107,1440,768,390,320]){
+   await page.setViewportSize({width,height:900});
+   for(const route of routes){
+    const response=await page.goto(base+route);assert.equal(response.status(),200);
+    await page.evaluate(()=>document.fonts.ready);
+    assert.equal(await page.locator('h1').count(),1);
+    const d=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}));
+    assert(d.scroll<=d.width,`${width} ${route}: horizontal overflow ${d.scroll}`);dimensions.push({route,...d});
+    if([390,1440].includes(width)||(width===1065&&route==='/')||(width===1107&&route!=='/'))await page.screenshot({path:path.join(root,'.qa',`${route==='/'?'home':route.replaceAll('/','')}-${width}.png`),fullPage:true});
+   }
+  }
+  await page.setViewportSize({width:1065,height:900});await page.goto(base+'/');await page.evaluate(()=>document.fonts.ready);
+  assert.match(await page.locator('[data-primary-download]').first().getAttribute('href'),/Windows-x64\.exe$/);
+  const toggle=page.locator('.download-toggle').first();await toggle.click();
+  await page.screenshot({path:path.join(root,'.qa','home-1065-menu.png'),fullPage:true});
+  await page.keyboard.press('Escape');assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  await toggle.focus();await page.keyboard.press('ArrowDown');assert.equal(await page.locator('#hero-downloads button').first().evaluate(el=>el===document.activeElement),true);
+  await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+  for(const link of await page.locator('[data-primary-download]').all())assert.match(await link.getAttribute('href'),/macOS-arm64\.dmg$/);
+  await toggle.click();await page.locator('h1').click();assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  await page.setViewportSize({width:390,height:844});await page.goto(base+'/');
+  await page.keyboard.press('Tab');assert.equal(await page.locator('.skip-link').evaluate(el=>el===document.activeElement),true);
+  await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>location.hash),'#main');
+  const menu=page.getByRole('button',{name:/菜单/});await menu.click();assert.equal(await menu.getAttribute('aria-expanded'),'true');
+  await page.keyboard.press('Escape');assert.equal(await menu.getAttribute('aria-expanded'),'false');assert.equal(await menu.evaluate(el=>el===document.activeElement),true);
+  await menu.click();await page.locator('#navigation').getByRole('link',{name:'下载',exact:true}).click();assert.equal(new URL(page.url()).pathname,'/download/');
+  const question=page.locator('details').nth(1);await question.locator('summary').focus();await page.keyboard.press('Enter');assert.equal(await question.getAttribute('open'),'');
+  // Clipboard actions report their outcome; verify the exact value without changing the host clipboard.
+  await page.goto(base+'/privacy/');await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copied=text;}}}));
+  await page.getByRole('button',{name:'复制 Windows 数据目录'}).click();assert.equal(await page.evaluate(()=>window.copied),'%APPDATA%/Nexlet');
+  await page.locator('.privacy-sidebar a[href="#website"]').click();assert.equal(await page.locator('#website').getAttribute('open'),'');
+  const nojs=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const plain=await nojs.newPage();
+  for(const route of routes){await plain.goto(base+route);assert.equal(await plain.locator('#navigation').isVisible(),true);assert.equal(await plain.locator('h1').isVisible(),true);}
+  await plain.goto(base+'/download/');assert.equal(await plain.locator('[data-direct-download]').count(),3);for(const a of await plain.locator('[data-direct-download]').all())assert.match(await a.getAttribute('href'),/releases\/download\/v0.1.0\/.+\.(exe|dmg)$/);
+  await nojs.close();
+  // A late high-entropy response must never replace the user's selected architecture.
+  const delayed=await browser.newContext();await delayed.addInitScript(()=>{Object.defineProperty(navigator,'userAgentData',{value:{platform:'macOS',mobile:false,getHighEntropyValues:()=>new Promise(resolve=>{window.resolvePlatform=resolve;})}});Object.defineProperty(navigator,'userAgent',{value:'Macintosh; Intel Mac OS X'});});
+  const late=await delayed.newPage();await late.goto(base+'/');assert.equal(await late.locator('[data-primary-download]').first().getAttribute('href'),'/download/');
+  await late.locator('.download-toggle').first().click();await late.locator('#hero-downloads [data-platform="macos-x64"]').click();
+  await late.evaluate(()=>window.resolvePlatform({platform:'macOS',architecture:'arm',bitness:'64'}));
+  assert.match(await late.locator('[data-primary-download]').first().getAttribute('href'),/macOS-x64\.dmg$/);await delayed.close();
+  const armWindows=await browser.newContext();await armWindows.addInitScript(()=>{Object.defineProperty(navigator,'userAgentData',{value:{platform:'Windows',mobile:false,getHighEntropyValues:async()=>({architecture:'arm',bitness:'64'})}});});
+  const armPage=await armWindows.newPage();await armPage.goto(base+'/');assert.equal(await armPage.locator('[data-primary-download]').first().getAttribute('href'),'/download/');await armWindows.close();
+  const denied=await browser.newContext();await denied.addInitScript(()=>{Object.defineProperty(navigator,'userAgentData',{value:{platform:'macOS',mobile:false,getHighEntropyValues:async()=>{throw new Error('Unavailable');}}});Object.defineProperty(navigator,'userAgent',{value:'Macintosh; Intel Mac OS X'});});
+  const deniedPage=await denied.newPage();await deniedPage.goto(base+'/');assert.equal(await deniedPage.locator('[data-primary-download]').first().getAttribute('href'),'/download/');await denied.close();
+  assert.deepEqual(errors,[]);
+  const report={date:new Date().toISOString(),base,dimensions,checks:['HTTP 200','no viewport overflow','keyboard skip link','mobile menu and Escape focus','split download selection and keyboard navigation','outside click close','manual choice wins late detection','copied data path','keyboard FAQ','no-JavaScript direct downloads','no page errors'],status:'passed'};
+  await fs.writeFile(path.join(root,'.qa','browser-results.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
+ }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
