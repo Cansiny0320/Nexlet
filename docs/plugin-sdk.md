@@ -12,6 +12,7 @@
   "description": "保存并复制一段便笺",
   "apiVersion": 1,
   "main": "index.html",
+  "icon": "icon.png",
   "permissions": ["clipboard.write"],
   "features": [
     {"code": "note", "name": "示例便笺", "keywords": ["hello", "便笺"]}
@@ -22,6 +23,14 @@
 `id` 是插件的稳定身份，用于搜索命令、数据隔离和升级；必须使用反向域名格式，例如 `org.nexlet.hello`；每段以小写字母开头，包含小写字母、数字或连字符。`main` 必须是包内相对 HTML 路径。不要使用绝对路径、`..`、符号链接或远程入口。
 
 ZIP 包根目录必须直接包含 `plugin.json`。可直接选择开发目录调试，重新打开窗口会读取更新后的文件；修改 manifest 或权限后需要重新导入。每个插件同一时刻只有一个窗口，多条 feature 指令通过激活通知切换。
+
+`icon` 可选，必须是包内 PNG 相对路径，不超过 512 KB，宽高不超过 2048 像素。宿主生成搜索和已安装列表中的缩略图。未提供时使用默认插件图标。
+
+## 插件市场
+
+公开目录位于 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins)。客户端只从该仓库的 `index.json` 读取版本化目录，从同一仓库的 GitHub Releases 下载插件包。条目包含平台和最低 Nexlet 版本，安装包 ID / 版本必须一致，不要求 Hash 字段。
+
+市场安装、更新复用本地包校验和安装权限确认，成功后才替换安装记录。取消或失败保留旧版本与独立数据；开发目录不会被市场覆盖，也不会自动降级。离线时可浏览已缓存的目录，首次连接失败显示可重试提示。
 
 ## API
 

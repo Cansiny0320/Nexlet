@@ -7,6 +7,8 @@ import { Launcher } from './Launcher';
 import { ClipboardPanel } from './Clipboard';
 import { ScratchpadPanel } from './Scratchpad';
 import { ToolsPanel, WebPanel } from './Tools';
+import { JsonTool } from './JsonTool';
+import { FileSearch } from './FileSearch';
 import { PluginsPanel } from './Plugins';
 import { SettingsPanel } from './Settings';
 
@@ -60,7 +62,9 @@ export function App(){
       {view==='launcher'&&<Launcher query={query} setQuery={setQuery} input={input}/>}
       {view==='clipboard'&&<ClipboardPanel query={query} setQuery={setQuery} board={board}/>}
       {view==='scratchpad'&&<ScratchpadPanel initialExpression={payload}/>}
-      {['json','timestamp','encoding','uuid'].includes(view)&&<ToolsPanel key={view+payload} tool={view} initial={payload}/>}
+      {view==='json'&&<JsonTool key={payload} initial={payload}/>}
+      {view==='filesearch'&&<FileSearch/>}
+      {['timestamp','encoding','uuid'].includes(view)&&<ToolsPanel key={view+payload} tool={view} initial={payload}/>}
       {view==='web'&&<WebPanel/>}
       {view==='plugins'&&<PluginsPanel/>}
       {view==='settings'&&<SettingsPanel/>}

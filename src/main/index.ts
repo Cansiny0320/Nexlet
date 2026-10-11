@@ -10,6 +10,8 @@ import { Catalog } from './catalog';
 import { Platform } from './platform';
 import { ClipboardService } from './clipboard';
 import { PluginManager } from './plugins';
+import { Marketplace } from './marketplace';
+import { EverythingSearch } from './everything';
 import { BUILTIN_COMMANDS, HOST_ACTIONS, type AppState, type Settings, type Command, type Scratchpad } from '../shared/types';
 import { searchCommands } from '../shared/search';
 import { calculate } from '../shared/calculator';
@@ -36,6 +38,8 @@ async function bootstrap() {
   const clips=new ClipboardService(store,platform,()=>notify('clips'));
   const catalog=new Catalog(()=>notify());
   const plugins=new PluginManager(store,notify);
+  const marketplace=new Marketplace(store,plugins);
+  const files=new EverythingSearch(()=>store.settings().fileSearchPaths);
   const iconFile=path.join(__dirname,'../../assets/icon.png');
   const appIcon=existsSync(iconFile)?nativeImage.createFromPath(iconFile):createIcon();
   protocol.handle('nexlet-image',request=>{
@@ -53,7 +57,7 @@ async function bootstrap() {
     const contentsId=window.webContents.id, windowId=window.id;
     window.once('ready-to-show',()=>{window.show();window.focus();});
     window.on('close',event=>{if(!detached && !quitting){event.preventDefault();window.hide();}});
-    window.on('closed',()=>{hosts.delete(contentsId);views.delete(windowId);boards.delete(contentsId);});
+    window.on('closed',()=>{hosts.delete(contentsId);views.delete(windowId);boards.delete(contentsId);files.forget(contentsId);});
     window.on('blur',()=>{if(!detached && !testMode && !modalCount && store.settings().hideOnBlur && views.get(window.id)==='launcher')window.hide();});
     window.on('unresponsive',()=>notify('error:界面暂时无响应，请等待或从托盘重新打开'));
     void window.loadFile(html,{query:{view,detached:detached?'1':'0',board:ids.length?'1':'0'}});
@@ -73,7 +77,7 @@ async function bootstrap() {
   async function state():Promise<AppState> {
     const settings=store.settings();
     const commands:Command[]=[...BUILTIN_COMMANDS,...catalog.items,...plugins.commands(),...settings.webShortcuts.map(w=>({id:'web:'+w.id,name:w.name,subtitle:w.url,kind:'web' as const,keywords:[],color:'#3188ef'}))];
-    const pinned=store.get('pinned',['tool:plugins','tool:clipboard','tool:scratchpad','tool:web','tool:json','tool:timestamp']);
+    const pinned=store.get('pinned',['tool:plugins','tool:clipboard','tool:scratchpad','tool:web','tool:json','tool:timestamp','tool:filesearch']);
     const recent=store.get<string[]>('recent',[]);
     const visibleIds=new Set([...pinned,...recent.slice(0,18)]);
     const decorated=await catalog.withIcons(commands.filter(c=>visibleIds.has(c.id)));
@@ -116,12 +120,12 @@ async function bootstrap() {
         else if(args.action==='maximize'){window.isMaximized()?window.unmaximize():window.maximize();}
         else if(args.action==='pin'){window.setAlwaysOnTop(!window.isAlwaysOnTop());return window.isAlwaysOnTop();}
         else if(args.action==='view'){
-          const view=text(args.view,50);if(!['launcher','clipboard','scratchpad','plugins','settings','web','json','timestamp','encoding','uuid'].includes(view))throw new Error('视图无效');
+          const view=text(args.view,50);if(!['launcher','clipboard','scratchpad','plugins','settings','web','json','timestamp','encoding','uuid','filesearch'].includes(view))throw new Error('视图无效');
           views.set(window.id,view);
           if(!window.isMaximized()){const bounds=window.getBounds();const work=screen.getDisplayMatching(bounds).workArea;const height=Math.min(view==='launcher'?310:600,work.height);window.setBounds({...bounds,height,y:Math.min(bounds.y,work.y+work.height-height)});}
         }else if(args.action==='height'&&views.get(window.id)==='launcher'){
           const height=Math.max(270,Math.min(720,Number(args.height)||310));const bounds=window.getBounds();const work=screen.getDisplayMatching(bounds).workArea;window.setBounds({...bounds,height:Math.min(height,work.height),y:Math.min(bounds.y,work.y+work.height-Math.min(height,work.height))});
-        }else if(args.action==='detach'){const view=text(args.view,50);if(!['clipboard','scratchpad','json','timestamp','encoding','uuid'].includes(view))throw new Error('此视图不能分离');createWindow(view,true);}
+        }else if(args.action==='detach'){const view=text(args.view,50);if(!['clipboard','scratchpad','json','timestamp','encoding','uuid','filesearch'].includes(view))throw new Error('此视图不能分离');createWindow(view,true);}
         return true;
       }
       case 'settings':{
@@ -132,6 +136,7 @@ async function bootstrap() {
         for(const key of ['hideOnBlur','clipboardEnabled'] as const)if(key in update){if(typeof update[key]!=='boolean')throw new Error('开关无效');next[key]=update[key];}
         for(const key of ['maxClipboardItems','retentionDays'] as const)if(key in update){const n=update[key];if(!Number.isInteger(n)||n<1||n>(key==='retentionDays'?3650:5000))throw new Error('保留数量或天数无效');next[key]=n;}
         if('searchPaths'in update){if(!Array.isArray(update.searchPaths)||update.searchPaths.length>20||update.searchPaths.some((p:unknown)=>typeof p!=='string'||!path.isAbsolute(p)))throw new Error('搜索路径无效');next.searchPaths=update.searchPaths;}
+        if('fileSearchPaths'in update){if(!Array.isArray(update.fileSearchPaths)||update.fileSearchPaths.length>26||update.fileSearchPaths.some((p:unknown)=>typeof p!=='string'||!path.isAbsolute(p)||/[\0\r\n]/.test(p)))throw new Error('索引目录无效');next.fileSearchPaths=[...new Set(update.fileSearchPaths)] as string[];await files.reset();}
         if('webShortcuts'in update){if(!Array.isArray(update.webShortcuts)||update.webShortcuts.length>100)throw new Error('网页快捷方式过多');next.webShortcuts=update.webShortcuts.map((w:any)=>{const id=text(w.id,100),name=text(w.name,60).trim();const url=new URL(text(w.url,2048));if(!name||!['https:','http:'].includes(url.protocol)||url.username||url.password)throw new Error('名称或网页地址无效');return{id,name,url:url.href};});}
         store.set('settings',next);nativeTheme.themeSource=next.theme;if(next.shortcut!==settings.shortcut)registerShortcut();if(JSON.stringify(next.searchPaths)!==JSON.stringify(settings.searchPaths))void catalog.scan(next.searchPaths);store.prune();notify();notify('clips');return next;
       }
@@ -174,6 +179,10 @@ async function bootstrap() {
       case 'pluginToggle':{const args=inputObject(payload);if(typeof args.enabled!=='boolean')throw new Error('状态无效');plugins.toggle(text(args.id,100),args.enabled);return true;}
       case 'pluginRemove':{const args=inputObject(payload);await plugins.remove(text(args.id,100),args.deleteData===true);return true;}
       case 'pluginInspect':return plugins.records();
+      case 'marketplace':return marketplace.list(payload===true);
+      case 'marketInstall':return withDialog(()=>marketplace.install(window,text(payload,100)));
+      case 'fileSearch':return files.search(event.sender.id,text(payload,1024));
+      case 'fileAction':{const args=inputObject(payload);return files.action(event.sender.id,text(args.action,30),typeof args.path==='string'?text(args.path,32767):undefined);}
       case 'openData':{const error=await shell.openPath(store.directory);if(error)throw new Error(error);return true;}
       default:throw new Error('未知操作');
     }
@@ -187,9 +196,10 @@ async function bootstrap() {
   void catalog.scan(store.settings().searchPaths);
   app.on('second-instance',()=>void show()); app.on('activate',()=>void show());
   app.on('window-all-closed',()=>{});
-  app.on('before-quit',()=>{quitting=true;clips.stop();globalShortcut.unregisterAll();plugins.close();tray?.destroy();});
+  let cleanedUp=false;
+  app.on('before-quit',event=>{quitting=true;clips.stop();globalShortcut.unregisterAll();plugins.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void files.close().finally(()=>app.quit());}});
   app.once('will-quit',()=>store.close());
-  if(testMode)(globalThis as any).__nexlet={store,clips,platform,catalog,plugins,main,show,hosts};
+  if(testMode)(globalThis as any).__nexlet={store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts};
 }
 
 function createIcon(){const size=32,data=Buffer.alloc(size*size*4);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const offset=(y*size+x)*4;const letter=(x>=8&&x<=11&&y>=7&&y<=24)||(x>=21&&x<=24&&y>=7&&y<=24)||(y>=7&&y<=24&&Math.abs(x-(9+(y-7)*14/17))<=2);data[offset]=letter?255:245;data[offset+1]=letter?255:94;data[offset+2]=letter?255:101;data[offset+3]=255;}return nativeImage.createFromBitmap(data,{width:size,height:size});}

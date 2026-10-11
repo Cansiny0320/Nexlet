@@ -32,5 +32,7 @@ export function validateManifest(value: unknown): PluginManifest {
     if (!Array.isArray(item.keywords) || item.keywords.length > 30) throw new Error('功能关键词无效');
     return { code, name: string(item.name, 50, '功能名称'), keywords: item.keywords.map((k: unknown) => string(k, 50, '关键词')) };
   });
-  return { id, name, version, apiVersion: 1, main, permissions: [...new Set(v.permissions)] as PluginPermission[], description: typeof v.description === 'string' ? v.description.slice(0, 500) : '', features };
+  const icon=v.icon===undefined?undefined:safeEntryPath(string(v.icon,240,'插件图标'));
+  if(icon&&!/\.png$/i.test(icon))throw new Error('插件图标需要 PNG 文件');
+  return { id, name, version, apiVersion: 1, main, ...(icon?{icon}:{}), permissions: [...new Set(v.permissions)] as PluginPermission[], description: typeof v.description === 'string' ? v.description.slice(0, 500) : '', features };
 }

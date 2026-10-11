@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from 'react';
-import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Pin, X, Check, Search } from 'lucide-react';
+import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Pin, X, Check, Search, FileSearch } from 'lucide-react';
 import type { AppState, Command, HostAction } from '../shared/types';
 
 export const api=<T,>(action:HostAction,payload?:unknown)=>window.nexlet.call<T>(action,payload);
@@ -11,7 +11,7 @@ export function useApp(){const ctx=useContext(AppContext);if(!ctx)throw new Erro
 export function ToolIcon({command,size=32}:{command:Command;size?:number}){
   if(command.icon?.startsWith('data:image/'))return <img className="tool-image" src={command.icon} width={size} height={size} alt="" draggable={false}/>;
   const key=command.id.startsWith('tool:')?command.id.slice(5):command.kind;
-  const icons:Record<string,typeof ClipboardList>={clipboard:ClipboardList,scratchpad:Calculator,plugins:Blocks,web:Globe,json:Braces,timestamp:Clock3,encoding:Binary,uuid:Fingerprint,settings:Settings,plugin:Blocks,app:AppWindow,shortcut:FileSymlink,match:Search};
+  const icons:Record<string,typeof ClipboardList>={clipboard:ClipboardList,scratchpad:Calculator,plugins:Blocks,web:Globe,json:Braces,filesearch:FileSearch,timestamp:Clock3,encoding:Binary,uuid:Fingerprint,settings:Settings,plugin:Blocks,app:AppWindow,shortcut:FileSymlink,match:Search};
   const Icon=icons[key]||AppWindow;
   return <span className="tool-icon" style={{background:command.color||'#648fe5',width:size,height:size}}><Icon size={size*.72} strokeWidth={1.9}/></span>;
 }

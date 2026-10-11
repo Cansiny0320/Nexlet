@@ -1,9 +1,10 @@
-import { BrowserWindow, clipboard, dialog, ipcMain, session, shell } from 'electron';
+import { BrowserWindow, clipboard, dialog, ipcMain, session, shell, nativeImage } from 'electron';
 import { mkdir, readFile, writeFile, rm, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { gt } from 'semver';
 import type { Store } from './store';
-import { readPluginDirectory, readPluginZip } from './plugin-bundle';
+import { readPluginDirectory, readPluginZip, type PluginBundle } from './plugin-bundle';
 import { safeEntryPath } from '../shared/plugin-validation';
 import type { Command, PluginRecord, PluginPermission } from '../shared/types';
 
@@ -12,6 +13,7 @@ const MIME: Record<string, string> = { '.html':'text/html; charset=utf-8', '.js'
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 
 export class PluginManager {
+  private installing=false;
   private running = new Map<string, BrowserWindow>();
   private callers = new Map<number, { record: PluginRecord; code: string; payload: string }>();
   private root: string;
@@ -47,23 +49,35 @@ export class PluginManager {
     });
   }
   records(): PluginRecord[] { return this.store.get<PluginRecord[]>('plugins', []); }
-  commands(): Command[] { return this.records().filter(p=>p.enabled).flatMap(p => p.manifest.features.map(f => ({ id:`plugin:${p.manifest.id}:${f.code}`, name:f.name, subtitle:p.manifest.name, kind:'plugin' as const, keywords:f.keywords, pluginId:p.manifest.id, feature:f.code, color:'#8b80d9' }))); }
+  commands(): Command[] { return this.records().filter(p=>p.enabled).flatMap(p => p.manifest.features.map(f => ({ id:`plugin:${p.manifest.id}:${f.code}`, name:f.name, subtitle:p.manifest.name, kind:'plugin' as const, keywords:f.keywords, pluginId:p.manifest.id, feature:f.code, color:'#8b80d9',icon:p.icon }))); }
   async install(owner: BrowserWindow, development: boolean): Promise<boolean> {
     const picked = await dialog.showOpenDialog(owner, { title:development ? '选择插件开发目录' : '导入 Nexlet 插件包', properties:development ? ['openDirectory'] : ['openFile'], ...(development ? {} : {filters:[{name:'Nexlet 插件',extensions:['zip','nexlet']}]}) });
     if (picked.canceled || !picked.filePaths[0]) return false;
     const source = picked.filePaths[0];
     const bundle = development ? await readPluginDirectory(source) : readPluginZip(await readFile(source));
+    return this.installBundle(owner,bundle,{source:'local',developmentDirectory:development?source:undefined});
+  }
+  async installBundle(owner:BrowserWindow,bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
+    if(this.installing)throw new Error('请等待当前插件安装完成');this.installing=true;
+    try{return await this.applyBundle(owner,bundle,options);}finally{this.installing=false;}
+  }
+  private async applyBundle(owner:BrowserWindow,bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
+    const development=!!options.developmentDirectory;
     const previous = this.records().find(p=>p.manifest.id===bundle.manifest.id);
+    if(options.source==='marketplace'&&previous?.development)throw new Error('开发目录插件请通过本地方式更新');
+    if(options.source==='marketplace'&&previous&&!gt(bundle.manifest.version,previous.manifest.version))throw new Error('已安装相同或更新版本，请刷新市场');
+    let icon:string|undefined;
+    if(bundle.manifest.icon){const image=nativeImage.createFromBuffer(bundle.files.get(bundle.manifest.icon)!);if(image.isEmpty())throw new Error('插件 PNG 图标无法解码');icon=image.resize({width:64,height:64}).toDataURL();}
     const prompt = await dialog.showMessageBox(owner, { type:'question', title:'确认插件权限', message:`${previous ? '更新' : '安装'} ${bundle.manifest.name} ${bundle.manifest.version}`, detail:`${bundle.manifest.description}\n\n${previous ? `已安装版本：${previous.manifest.version}\n` : ''}需要的能力：\n${bundle.manifest.permissions.map(p=>'• '+PERMISSION_LABELS[p]).join('\n') || '仅插件独立存储，无系统权限'}\n\n${development ? '开发目录直接加载，重新打开可读取文件更新。' : '插件将在隔离窗口运行。'}`, buttons:['取消','允许并安装'], defaultId:0, cancelId:0 });
     if (prompt.response !== 1) return false;
-    const directory = development ? await realpath(source) : path.join(this.root, bundle.manifest.id, randomUUID());
+    const directory = development ? await realpath(options.developmentDirectory!) : path.join(this.root, bundle.manifest.id, randomUUID());
     if (!development) {
       try { for (const [name,data] of bundle.files) { const file=path.join(directory,name); await mkdir(path.dirname(file),{recursive:true}); await writeFile(file,data,{mode:0o600}); } }
       catch (error) { await this.removeManaged(directory); throw error; }
     }
     this.running.get(bundle.manifest.id)?.close();
-    const record: PluginRecord={manifest:bundle.manifest,directory,enabled:true,development,installedAt:Date.now()};
-    this.store.set('plugins',[...this.records().filter(p=>p.manifest.id!==record.manifest.id),record]);
+    const record: PluginRecord={manifest:bundle.manifest,directory,enabled:true,development,installedAt:Date.now(),source:options.source,icon};
+    try{this.store.set('plugins',[...this.records().filter(p=>p.manifest.id!==record.manifest.id),record]);}catch(e){if(!development)await this.removeManaged(directory);throw e;}
     if (previous && !previous.development) await this.removeManaged(previous.directory).catch(()=>{});
     this.changed(); return true;
   }

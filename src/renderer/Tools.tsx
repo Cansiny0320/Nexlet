@@ -10,10 +10,9 @@ export function ToolsPanel({tool,initial}:{tool:string;initial:string}){
   const [timestamp,setTimestamp]=useState(String(Math.floor(Date.now()/1000))),[unit,setUnit]=useState('seconds'),[date,setDate]=useState(localDateInput(new Date()));
   const copy=async(text=output)=>{try{await api('clipAction',{action:'writeText',text});toast('已复制');}catch(e){toast(errorText(e),true);}};
   function process(action:string){try{setError('');if(input.length>500000)throw new Error('文本过长，最多处理 50 万字符');
-    if(tool==='json')setOutput(JSON.stringify(JSON.parse(input),null,action==='compact'?undefined:2));
     if(tool==='encoding')setOutput(mode==='base64'?(action==='encode'?encode64(input):decode64(input)):(action==='encode'?encodeURIComponent(input):decodeURIComponent(input)));
   }catch(e){setError(errorText(e));setOutput('');}}
-  useEffect(()=>{if(tool==='json'&&initial)process('format');if(tool==='uuid')setOutput(crypto.randomUUID());},[]);
+  useEffect(()=>{if(tool==='uuid')setOutput(crypto.randomUUID());},[]);
   if(tool==='timestamp'){
     const millis=Number(timestamp)*(unit==='seconds'?1000:1),parsed=new Date(millis),valid=timestamp.trim()!==''&&Number.isFinite(millis)&&!Number.isNaN(parsed.getTime());
     const fromDate=new Date(date),dateValid=!Number.isNaN(fromDate.getTime());
@@ -27,9 +26,9 @@ export function ToolsPanel({tool,initial}:{tool:string;initial:string}){
     </div>;
   }
   if(tool==='uuid')return <div className="standard-panel editor-tool"><PanelHeader title="UUID" description="生成 UUID v4 随机标识"/><div className="form-row"><label htmlFor="uuid-count">数量</label><input id="uuid-count" className="number-input" type="number" min="1" max="100" value={count} onChange={e=>setCount(Number(e.target.value))}/><button className="button primary" onClick={()=>{if(!Number.isInteger(count)||count<1||count>100){toast('数量应为 1–100',true);return;}setOutput(Array.from({length:count},()=>crypto.randomUUID()).join('\n'));}}><RefreshCw size={16}/>生成</button><button className="button" onClick={()=>void copy()}><Copy size={16}/>全部复制</button></div><textarea className="code-editor uuid-output" aria-label="生成的 UUID" readOnly value={output}/></div>;
-  return <div className="standard-panel editor-tool"><PanelHeader title={tool==='json'?'JSON 格式化':'编码转换'} description={tool==='json'?'格式化、压缩与检查 JSON':'UTF-8 文本编码和解码'}/>
-    <div className="tool-buttons">{tool==='json'?<><button className="button primary" onClick={()=>process('format')}><WandSparkles size={16}/>格式化</button><button className="button" onClick={()=>process('compact')}><Minimize2 size={16}/>压缩</button></>:<><select aria-label="编码类型" value={mode} onChange={e=>{setMode(e.target.value);setOutput('');setError('');}}><option value="base64">Base64</option><option value="url">URL 组件</option></select><button className="button primary" onClick={()=>process('encode')}>编码</button><button className="button" onClick={()=>process('decode')}>解码</button></>}<span className="flex-spacer"/><button className="button" disabled={!output} onClick={()=>void copy()}><Copy size={16}/>复制结果</button></div>
-    <div className="editor-columns"><div><label>输入</label><textarea className="code-editor" aria-label="工具输入" value={input} maxLength={500000} spellCheck={false} placeholder={tool==='json'?'粘贴 JSON 内容…':'输入要转换的文本…'} onChange={e=>setInput(e.target.value)}/></div><div><label>结果</label><textarea className={`code-editor ${error?'has-error':''}`} aria-label="工具结果" readOnly value={error||output} placeholder="结果将在这里显示" spellCheck={false}/></div></div>
+  return <div className="standard-panel editor-tool"><PanelHeader title="编码转换" description="UTF-8 文本编码和解码"/>
+    <div className="tool-buttons"><select aria-label="编码类型" value={mode} onChange={e=>{setMode(e.target.value);setOutput('');setError('');}}><option value="base64">Base64</option><option value="url">URL 组件</option></select><button className="button primary" onClick={()=>process('encode')}>编码</button><button className="button" onClick={()=>process('decode')}>解码</button><span className="flex-spacer"/><button className="button" disabled={!output} onClick={()=>void copy()}><Copy size={16}/>复制结果</button></div>
+    <div className="editor-columns"><div><label>输入</label><textarea className="code-editor" aria-label="工具输入" value={input} maxLength={500000} spellCheck={false} placeholder="输入要转换的文本…" onChange={e=>setInput(e.target.value)}/></div><div><label>结果</label><textarea className={`code-editor ${error?'has-error':''}`} aria-label="工具结果" readOnly value={error||output} placeholder="结果将在这里显示" spellCheck={false}/></div></div>
     <div className="tool-status">{error?<span className="error-text">{error}</span>:`${input.length} 字符`}</div>
   </div>;
 }

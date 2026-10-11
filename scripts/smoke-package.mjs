@@ -1,5 +1,5 @@
 import { _electron as electron } from '@playwright/test';
-import { mkdir,mkdtemp,readFile } from 'node:fs/promises';
+import { mkdir,mkdtemp,readFile,writeFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 
@@ -30,7 +30,15 @@ try{
   if(await page.locator('output').first().innerText()!=='384')throw Error('Packaged calculation failed');
   await page.getByRole('button',{name:'固定窗口',exact:true}).waitFor();
   await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/packaged-scratchpad.png'});
-  console.log(JSON.stringify({...info,nativeBridge:'ready',backgroundCapture:'passed',calculation:'384',shortcutStatus:state.shortcutError||'registered',executable:executablePath},null,2));
+  let files='not supported on this platform';
+  if(info.platform==='win32'){
+    const fixture=path.join(data,'file-search-fixture');await mkdir(fixture);await writeFile(path.join(fixture,'Nexlet packaged search.txt'),'packaged engine');
+    await page.evaluate(folder=>window.nexlet.call('settings',{fileSearchPaths:[folder]}),fixture);
+    let found=false;const until=Date.now()+20000;
+    while(Date.now()<until){const result=await page.evaluate(()=>window.nexlet.call('fileSearch','Nexlet packaged search'));if(result.items.some(i=>i.name==='Nexlet packaged search.txt')){found=true;break;}if(result.status!=='indexing')throw Error(result.message);await new Promise(r=>setTimeout(r,400));}
+    if(!found)throw Error('Packaged Everything search failed');files='bundled engine searched a real fixture';
+  }
+  console.log(JSON.stringify({...info,nativeBridge:'ready',backgroundCapture:'passed',calculation:'384',fileSearch:files,shortcutStatus:state.shortcutError||'registered',executable:executablePath},null,2));
 }finally{
   await application.evaluate(async({clipboard})=>{if(globalThis.__smokeClipboard?.length)await clipboard.write(globalThis.__smokeClipboard);}).catch(()=>{});
   await application.close();

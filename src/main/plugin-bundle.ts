@@ -50,5 +50,6 @@ function finish(files: Map<string, Buffer>): PluginBundle {
   if (!config || config.length > 64 * 1024) throw new Error('插件根目录需要 plugin.json（小于 64 KB）');
   const manifest = validateManifest(JSON.parse(config.toString('utf8')));
   if (!files.has(manifest.main)) throw new Error('找不到插件入口 HTML');
+  if(manifest.icon){const icon=files.get(manifest.icon);if(!icon||icon.length<24||icon.length>512*1024||!icon.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))||icon.subarray(12,16).toString()!=='IHDR'||icon.readUInt32BE(16)>2048||icon.readUInt32BE(20)>2048||!icon.readUInt32BE(16)||!icon.readUInt32BE(20))throw new Error('插件 PNG 图标无效，或超过 512 KB / 2048 像素');}
   return { manifest, files };
 }

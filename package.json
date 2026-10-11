@@ -1,13 +1,15 @@
 {
   "name": "nexlet",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Nexlet 跨平台桌面工具箱",
   "author": "Nexlet",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "main": "dist/main/index.cjs",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "npm run build && electron .",
@@ -21,13 +23,18 @@
     "smoke:portable": "node scripts/smoke-portable.mjs"
   },
   "dependencies": {
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/merge": "^6.12.2",
     "adm-zip": "^0.6.1",
+    "codemirror": "^6.0.2",
     "decimal.js": "^10.6.0",
+    "jsonc-parser": "^3.3.1",
     "koffi": "^3.3.3",
     "lucide-react": "^0.468.0",
     "pinyin-pro": "^3.29.5",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "semver": "^7.8.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
@@ -35,6 +42,7 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/semver": "^7.8.0",
     "@vitejs/plugin-react": "^6.0.0",
     "electron": "^44.7.0",
     "electron-builder": "^26.15.3",
@@ -46,10 +54,32 @@
   "build": {
     "appId": "app.nexlet.desktop",
     "productName": "Nexlet",
-    "directories": { "output": "release" },
-    "files": ["dist/**/*", "assets/**/*", "package.json"],
-    "asarUnpack": ["node_modules/koffi/**/*"],
-    "win": { "icon":"assets/icon.ico", "target": ["portable"], "artifactName": "Nexlet-${version}-Windows-${arch}.${ext}" },
-    "mac": { "icon":"assets/icon.png", "target": ["dmg"], "category": "public.app-category.productivity", "artifactName": "Nexlet-${version}-macOS-${arch}.${ext}" }
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**/*",
+      "assets/vendor/everything/**/*"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "portable"
+      ],
+      "artifactName": "Nexlet-${version}-Windows-${arch}.${ext}"
+    },
+    "mac": {
+      "icon": "assets/icon.png",
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity",
+      "artifactName": "Nexlet-${version}-macOS-${arch}.${ext}"
+    }
   }
 }

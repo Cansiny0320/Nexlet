@@ -1,95 +1,119 @@
-# Nexlet
+<p align="center"><img src="assets/icon.png" width="76" alt="Nexlet"></p>
+<h1 align="center">Nexlet</h1>
+<p align="center">按下快捷键，把常用工具带到手边。</p>
+<p align="center">
+  <a href="https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml"><img src="https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml/badge.svg" alt="Build and Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-6875e9" alt="Windows and macOS">
+</p>
+<p align="center">
+  <a href="https://github.com/Cansiny0320/Nexlet/releases">下载与发行记录</a> ·
+  <a href="https://github.com/Cansiny0320/Nexlet-plugins">插件市场仓库</a> ·
+  <a href="docs/plugin-sdk.md">插件开发</a> ·
+  <a href="website/README.md">官网</a>
+</p>
 
-接近 uTools 操作习惯的桌面工具箱。首页使用最近 / 固定图标网格，搜索包含应用、系统快捷方式及插件指令，没有市场精选。
+Nexlet 是一个开源桌面工具箱，提供应用与快捷方式搜索、剪贴板、计算稿纸、JSON 工具和可扩展插件。主窗口保留搜索、最近使用和固定工具，常用工具可以分离成独立窗口。
 
-## 运行
+![Nexlet 启动器](docs/screenshots/launcher.png)
 
-Windows 可直接运行 `release/Nexlet-0.1.0-Windows-x64.exe`。便携包每次启动会解压运行环境，首次启动稍慢；关闭主窗口后保留托盘，右键托盘选择退出。
+## 几个随手就能完成的操作
 
-开发环境需要 Node.js 24+ 和 npm；CI 使用 `.node-version` 指定的 Node.js 24 LTS。当前工程使用 Electron 44 的异步剪贴板 API，不兼容旧版 Electron 的同步调用方式。
+| 输入或操作 | Nexlet 会做什么 |
+| --- | --- |
+| `Alt+Space` 后输入应用名、拼音或首字母 | 查找应用、系统快捷方式、网页与插件指令 |
+| 输入 `128*3` | 显示结果 `384`，可继续在计算稿纸里逐行计算 |
+| 打开「剪贴板」 | 搜索文字、图片和文件历史，收藏、复制或回贴到之前的应用 |
+| 打开「JSON 工具」 | 双栏编辑与树形格式化；对比两份 JSON，红色表示删除，绿色表示新增 |
+| 打开「文件搜索」 | 自动启动内置 Everything 引擎，搜索本机文件，无需另装 Everything |
+| 打开「插件管理」 | 浏览 GitHub 插件市场，安装、更新或管理本地插件 |
 
-```powershell
+其他预装工具包括时间戳、URL / Base64、UUID 和网页快开。预装工具随应用提供，离线也能打开。
+
+<table>
+<tr><td><img src="docs/screenshots/scratchpad.png" alt="逐行计算稿纸"></td><td><img src="docs/screenshots/clipboard.png" alt="剪贴板历史"></td></tr>
+<tr><td align="center">续算、备注、锁定和自动保存</td><td align="center">文本、图片、文件与收藏</td></tr>
+<tr><td><img src="docs/screenshots/json-diff.png" alt="JSON 红绿差异对比"></td><td><img src="docs/screenshots/marketplace-live.png" alt="真实插件市场"></td></tr>
+<tr><td align="center">JSON 对比与键顺序选项</td><td align="center">独立数据与安装权限说明</td></tr>
+</table>
+
+## 下载和开始使用
+
+构建产物位于 [GitHub Releases](https://github.com/Cansiny0320/Nexlet/releases) 或通过检查的 [Actions 运行记录](https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml)。标签构建先生成 Release 草稿；草稿公开发布前，开发预览包从 Actions artifacts 获取，需要登录 GitHub。
+
+| 平台 | 产物 | 当前验证范围 |
+| --- | --- | --- |
+| Windows x64 | 单文件便携 `.exe` | 本机集成测试、真实外部回贴、便携包启动检查 |
+| macOS Apple Silicon | arm64 `.dmg` | 原生 CI 构建与打包后启动检查 |
+| macOS Intel | x64 `.dmg` | 原生 CI 构建与打包后启动检查 |
+| Linux | 暂无发行包 | 基础界面；文件剪贴板和自动回贴尚未实现 |
+
+Windows 运行便携 EXE 即可。首次解压会稍慢，关闭主窗口后程序保留在托盘，右键托盘可退出。Windows 包未做数字签名。macOS 包使用 ad-hoc 签名，尚未完成 Developer ID 签名、公证，以及真实桌面回贴和系统权限流程验收。
+
+默认使用 `Alt+Space` 唤起。如果被其他程序占用，在右上角设置中换成 `Ctrl+Alt+Space`；Nexlet 会提示冲突，不会修改其他程序的配置。独立工具窗口支持置顶，主启动器不显示置顶按钮。
+
+### 文件搜索
+
+Windows 版随包提供官方稳定版 Everything 便携引擎。首次打开时，Nexlet 启动自己的后台实例，默认以普通权限索引本地固定磁盘中可访问的文件。可在设置中添加目录，将索引范围缩小到工作文件夹。
+
+首次扫描可能需要几分钟或更久，界面会显示建立索引状态。这种无需安装服务的文件夹索引，比 Everything 原生 NTFS 索引的首次扫描慢。Nexlet 不安装 Windows 服务、不添加系统启动项，也不控制用户另外安装的 Everything。退出 Nexlet 时一并关闭自己的索引进程。macOS 暂不提供 Everything 文件搜索。
+
+### 几个实用快捷操作
+
+- 搜索结果右键固定到首页；拖入文件或粘贴图片可以收进剪贴板。
+- 计算稿纸中 `Enter` 将结果带入下一行，`Ctrl/Cmd+B` 添加备注，`Ctrl/Cmd+N` 新建稿纸。
+- 剪贴板支持 `Ctrl/Cmd` 或 `Shift` 多选、文本合并复制、文件路径去重与悬浮中转。
+- 自动回贴需要先在目标应用中按快捷键打开 Nexlet；macOS 需要辅助功能权限。目标窗口不可用时会提示，仍可手动粘贴。
+- JSON 支持 50 万字符以内的内容，保留大整数原文；忽略对象键顺序可选，数组顺序始终参与比较。
+
+## 插件市场与开发
+
+公开市场由 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) 托管，目录来自版本化 JSON，安装包来自 GitHub Releases。当前提供可直接使用的「便笺」插件。安装时显示所需权限；更新保留独立数据，下载失败或取消不会替换旧版本。市场列表有本地缓存，不会自动更新已安装插件。
+
+外部插件使用 Nexlet 自有 API，由 HTML、CSS、JavaScript 和 `plugin.json` 组成。支持开发目录与 `.zip` / `.nexlet` 包导入。插件在独立沙箱窗口运行，没有 Node.js、任意宿主 IPC 或直接联网能力。
+
+从 [`examples/hello-nexlet`](examples/hello-nexlet) 开始，在「插件管理 → 已安装 → 加载开发目录」中选择它。完整 API、权限、图标和打包规则见 [插件 SDK](docs/plugin-sdk.md)。Nexlet 不兼容 uTools 插件 API。
+
+## 数据属于本机
+
+剪贴板、稿纸、设置和插件数据存储在本机，没有账号、云同步或遥测。插件市场联网仅用于获取目录和插件包；JSON 内容与文件搜索关键词不上传。
+
+| 平台 | 默认数据目录 |
+| --- | --- |
+| Windows | `%APPDATA%/Nexlet` |
+| macOS | `~/Library/Application Support/Nexlet` |
+
+设置中的「打开数据目录」可直接定位。备份前退出 Nexlet，再复制整个目录。数据没有额外加密；剪贴板默认保留 500 条非收藏记录、30 天，收藏不会自动清理。文件历史只保存路径，不复制原文件。
+
+## 本地开发
+
+需要 Node.js 24+ 和 npm，CI 使用 [.node-version](.node-version)。Electron 44 使用异步剪贴板 API。
+
+```sh
 npm ci
 npm start
 ```
 
-默认 `Alt+Space` 唤起。若 uTools 等应用已占用，Nexlet 会提示冲突；在右上角头像的设置中改成 `Ctrl+Alt+Space`。不会修改其他应用的快捷键。
-
-## 已实现
-
-- 应用启动：扫描 Windows 开始菜单、桌面的 `.lnk` / `.url` 和已注册 Windows 应用；macOS 扫描 Applications 中的 `.app`。设置中可添加目录。支持中文、拼音和首字母，右键固定到首页。
-- 剪贴板：后台记录文本、图片和文件，提供搜索、分类、收藏、复制、外部回贴、独立窗口和悬浮中转。Ctrl/Cmd 或 Shift 多选，文本按选择顺序用换行合并，文件按路径去重。文件历史保存路径，不复制原文件。
-- 计算稿纸：逐行计算，多稿纸自动保存；Enter 把结果带入下一行，点击结果复制。Ctrl/Cmd+B 添加备注，Ctrl/Cmd+N 新建。支持颜色、锁定、重命名、删除和复制整张稿纸图片。
-- 常用工具：JSON 格式化 / 压缩、时间戳、URL / Base64、UUID、网页快捷方式。
-- 插件：导入本地 ZIP 或加载开发目录，独立窗口和独立存储，安装时确认系统能力，支持启停和卸载。使用 Nexlet 自有 API，不兼容 uTools 插件 API。
-- 文件输入：将文件拖入主窗口，或粘贴图片，可收进剪贴板视图。
-- 系统 / 浅色 / 深色主题；托盘、快捷键唤起与窗口置顶。
-
-计算器支持 `+ - * / ^ %`、括号、`pi / e` 和常见函数。百分号表示除以 100；三角函数使用弧度。计算器使用有复杂度限制的表达式解析器，不执行 JavaScript。查看 `src/shared/calculator.ts` 和对应测试了解完整边界。
-
-## 数据与平台
-
-设置里的“打开数据目录”可找到 `nexlet.sqlite`、`images` 和 `plugins`。Windows 默认在 `%APPDATA%/Nexlet`，macOS 默认在 `~/Library/Application Support/Nexlet`。备份时先退出程序，再复制整个目录。数据以本机可读形式保存，不自动上传；未加入账号、云同步或遥测。
-
-剪贴板默认保留 500 条非收藏记录、30 天；收藏记录不自动清理。暂停记录后仍可查看已有历史。合并复制只支持纯文本或文件组合；图片须单独操作。
-
-自动回贴需要先在目标应用中按快捷键唤起 Nexlet。目标窗口不存在、焦点未恢复或权限不足时会明确报错，内容仍可手动粘贴。macOS 还需要用户在系统设置中授予辅助功能权限。
-
-Windows 已执行本机运行和集成验证。macOS 的应用扫描、剪贴板文件格式、目标应用恢复和权限检查已实现，但此 Windows 工作区没有完成 Mac 真机验证、签名或公证。Linux 仅有基础界面，文件剪贴板及自动回贴未实现。
-
-## 插件开发
-
-在“插件管理 → 加载开发目录”选择 `examples/hello-nexlet`，确认权限后搜索“示例便笺”。示例自动保存文本，并在用户点击时复制文本。
-
-详细 API 和打包规则见 [插件 SDK](docs/plugin-sdk.md)。外部插件运行在 Electron sandbox 中，不能直接访问 Node.js、宿主 IPC 或网络；系统能力必须在 manifest 声明并获安装确认。
-
-## 检查与打包
-
-```powershell
-npm run typecheck
-npm test
-npm run test:e2e
-npm run package:win
-```
-
-在 Mac 上构建通用架构 DMG：
-
 ```sh
-npm ci
-npm run package:mac
+npm run typecheck       # 类型检查
+npm test                # 逻辑、数据和边界测试
+npm run test:e2e         # Windows 桌面集成测试，会构建应用
+npm run package:win     # Windows x64 便携包
+npm run package:mac     # 在 Mac 上构建通用 DMG
 ```
 
-`test:e2e` 在 `.tmp` 创建独立用户目录，截图放在 `test-results`；测试会暂时使用系统剪贴板并恢复测试前可读取的文本、HTML、图片或文件列表。原生回贴单独验证，需要测试编辑器保持前台，不能同时操作其他窗口：
+`test:e2e` 使用 `.tmp` 中的隔离数据和文件夹索引，不扫描用户磁盘；会暂时使用剪贴板并恢复可读取的原内容。实时 GitHub 市场验收可在构建后运行 `node scripts/smoke-marketplace.mjs`。原生回贴专项与平台限制见 [验证记录](docs/validation.md)。
 
-```powershell
-$env:NEXLET_NATIVE_PASTE='1'
-npx playwright test -g '启动器、快捷方式检索与真实启动'
-Remove-Item Env:NEXLET_NATIVE_PASTE
-```
-
-原生测试首先核对前台窗口的进程 ID，只向自己的测试编辑器发送粘贴。常规集成测试不依赖桌面焦点，但仍会真实启动一个自动关闭的测试编辑器快捷方式。
-
-Windows 包未做代码签名；macOS 正式分发前需要 Apple 签名、公证和真机验证。
+仓库结构：`src/main` 为桌面宿主，`src/renderer` 为界面，`src/preload` 为受限桥接，`src/shared` 为共享类型与逻辑，`website` 为官网，`tests` 为回归测试。
 
 ## CI 与发版
 
-[Build and Release](https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml) 在提交 `main`、创建 PR、推送 `v*` 标签或手动运行时执行。Windows x64、macOS Intel 和 Apple Silicon 分别在原生 runner 上运行类型检查、单元测试、打包和实际启动检查；Windows 另运行完整桌面集成用例和便携 EXE 启动检查。
+[Build and Release](.github/workflows/release.yml) 覆盖 Windows x64、macOS Intel 和 Apple Silicon：类型检查、单元测试、原生打包、实际启动；Windows 额外运行桌面集成与便携 EXE 验证。普通提交和手动运行上传保留 14 天的 artifacts。
 
-普通提交与手动运行只上传 Actions artifacts，保留 14 天。安装包全部通过检查后会生成 `SHA256SUMS.txt`。macOS CI 包使用 ad-hoc 签名，没有 Developer ID 签名或公证；自动回贴和系统授权流程仍需真机验收。
+发版时更新 `package.json` 和 `package-lock.json` 的版本，提交后推送匹配的 `v*` 标签。CI 验证标签一致性，生成三个安装包、示例插件与 `SHA256SUMS.txt`，创建 **Release 草稿**，审核后手动公开发布。重跑可更新草稿，不覆盖已发布版本。不需要额外 PAT，也没有配置应用自动更新。
 
-发版时，先更新 `package.json` 与 `package-lock.json` 的同一版本，提交并推送，然后创建匹配的标签：
+贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。问题与建议可提交到 [Issues](https://github.com/Cansiny0320/Nexlet/issues)。
 
-```sh
-npm version 0.1.1 --no-git-tag-version
-git add package.json package-lock.json
-git commit -m "chore: release 0.1.1"
-git push origin main
-git tag v0.1.1
-git push origin v0.1.1
-```
+## 许可证
 
-标签版本不一致会立即失败。成功后 CI 创建包含三个安装包、示例插件和校验文件的 **Release 草稿**；审核附件及说明后手动发布。重跑可以更新同一草稿，已发布版本不会被覆盖。无需额外 GitHub PAT，发布 job 使用仓库自带的 `GITHUB_TOKEN`；仅该 job 获得 `contents: write`。
-
-工作流配置见 [release.yml](.github/workflows/release.yml)，发行说明模板见 [release-notes.md](docs/release-notes.md)。当前没有配置应用自动更新。
-
-具体测试范围、产物校验值及平台限制见 [验证记录](docs/validation.md)。界面截图位于 `docs/screenshots`。
+Nexlet 使用 [MIT License](LICENSE)，允许使用、修改和分发。Everything、ES 与其他第三方组件保留各自许可证，见 [第三方组件说明](assets/vendor/everything/README.md)。

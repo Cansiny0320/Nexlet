@@ -82,7 +82,8 @@ test('剪贴板文本、图片、文件、收藏、多选和中转',async()=>{
 });
 
 test('附加工具正常输入、错误输入与深色主题',async()=>{
-  await open('JSON 格式化');await page.getByRole('textbox',{name:'工具输入'}).fill('{"answer":42}');await page.getByRole('button',{name:'格式化',exact:true}).click();await expect(page.getByRole('textbox',{name:'工具结果'})).toHaveValue('{\n  "answer": 42\n}');await page.getByRole('textbox',{name:'工具输入'}).fill('{oops');await page.getByRole('button',{name:'格式化',exact:true}).click();await expect(page.locator('.has-error')).toBeVisible();
+  await open('JSON 工具');await page.getByRole('textbox',{name:'JSON 输入',exact:true}).fill('{"answer":42,"items":[{"name":"Nexlet"}],"big":9007199254740993}');await expect(page.getByLabel('JSON 解析结果')).toContainText('9007199254740993');await page.screenshot({path:path.join(root,'test-results','json-format.png')});await page.getByRole('button',{name:'全部折叠',exact:true}).click();await expect(page.getByLabel('JSON 解析结果')).not.toContainText('9007199254740993');await page.getByRole('textbox',{name:'JSON 输入',exact:true}).fill('{oops');await expect(page.locator('.has-error')).toBeVisible();
+  await page.getByRole('tab',{name:'JSON 对比',exact:true}).click();await page.getByRole('textbox',{name:'原始 JSON',exact:true}).fill('{"name":"old","deleted":true}');await page.getByRole('textbox',{name:'修改后的 JSON',exact:true}).fill('{"name":"new","added":true}');await page.getByRole('button',{name:'开始对比',exact:true}).click();await expect(page.locator('.cm-deletedLine').first()).toBeVisible();await expect(page.locator('.cm-insertedLine').first()).toBeVisible();await page.screenshot({path:path.join(root,'test-results','json-diff.png')});
   await open('编码转换');await page.getByRole('textbox',{name:'工具输入'}).fill('Nexlet 你好');await page.getByRole('button',{name:'编码',exact:true}).click();await expect(page.getByRole('textbox',{name:'工具结果'})).toHaveValue(Buffer.from('Nexlet 你好').toString('base64'));
   await page.getByRole('textbox',{name:'工具输入'}).fill('!!!');await page.getByRole('button',{name:'解码',exact:true}).click();await expect(page.locator('.has-error')).toBeVisible();
   await open('时间戳');await page.getByRole('textbox',{name:'Unix 时间戳'}).fill('0');await expect(page.locator('output').nth(1)).toHaveText('1970-01-01T00:00:00.000Z');await page.getByRole('textbox',{name:'Unix 时间戳'}).fill('invalid');await expect(page.locator('output').first()).toHaveText('请输入有效时间戳');
@@ -114,6 +115,42 @@ test('重启后稿纸、收藏与设置保留，界面无脚本异常',async()=>
   await restoreClipboard();await app.close();await start();await saveClipboard();
   const pads:any=await call('pads');expect(pads.find((p:any)=>p.name==='Nexlet 验证稿纸').lines[1].expression).toBe('384+256');expect((await call('clips',{kind:'favorite'}) as any[])).toHaveLength(1);
   expect((await call('state') as any).settings.searchPaths[0]).toContain('shortcuts');expect(errors).toEqual([]);
+});
+
+test('内置 Everything 自动启动、中文文件索引、受限文件操作与退出',async()=>{
+  const scope=path.join(folder,'索引范围, 中文'),file=path.join(scope,'Nexlet 搜索验收.txt');await mkdir(scope);await writeFile(file,'Everything local index fixture');
+  await call('settings',{fileSearchPaths:[scope]});await open('文件搜索');await page.getByRole('textbox',{name:'Everything 文件搜索'}).fill('Nexlet 搜索验收');
+  await expect(page.getByRole('option').filter({hasText:'Nexlet 搜索验收.txt'})).toBeVisible({timeout:30000});await page.screenshot({path:path.join(root,'test-results','filesearch.png')});
+  await page.getByRole('button',{name:'复制文件路径',exact:true}).click();expect(await app.evaluate(async({clipboard})=>await clipboard.readText())).toBe(file);
+  const result:any=await call('fileSearch','-exit');expect(result.status).toBe('ready');expect(result.items).toHaveLength(0);expect((await call('fileSearch','Nexlet 搜索验收') as any).items[0].path).toBe(file);
+  await expect(call('fileAction',{action:'open',path:path.join(folder,'outside.txt')})).rejects.toThrow('当前搜索结果');
+  await app.evaluate(({shell})=>{(globalThis as any).__openOriginal=shell.openPath;(globalThis as any).__opened=[];shell.openPath=(async(file:string)=>{(globalThis as any).__opened.push(file);return '';}) as any;});
+  try{await call('fileAction',{action:'open',path:file});expect(await app.evaluate(()=>(globalThis as any).__opened)).toEqual([file]);}finally{await app.evaluate(({shell})=>{shell.openPath=(globalThis as any).__openOriginal;});}
+  const pid=await app.evaluate(()=>(globalThis as any).__nexlet.files.engine.child?.pid);expect(pid).toBeGreaterThan(0);
+  await restoreClipboard();await app.close();await expect.poll(()=>{try{process.kill(pid,0);return true;}catch{return false;}}).toBe(false);await start();await saveClipboard();
+});
+
+test('插件市场缓存、安装、取消更新和失败保留旧数据',async()=>{
+  await home();
+  const zip=new AdmZip();zip.addLocalFolder(path.join(root,'examples','hello-nexlet'));const bundle=zip.toBuffer().toString('base64');
+  await app.evaluate(({dialog},bundle)=>{
+    const n=(globalThis as any).__nexlet;(globalThis as any).__marketOriginal=n.marketplace.download;(globalThis as any).__messageOriginal=dialog.showMessageBox;
+    (globalThis as any).__marketEntry={id:'org.nexlet.hello',name:'市场便笺',description:'通过市场安装的便笺插件',author:'Nexlet',category:'效率',version:'1.0.0',platforms:['win32','darwin'],download:'https://github.com/Cansiny0320/Nexlet-plugins/releases/download/v1.0.0/hello-nexlet.nexlet'};
+    n.marketplace.download=async(url:string)=>{if((globalThis as any).__marketOffline)throw new Error('测试离线');return url.endsWith('index.json')?Buffer.from(JSON.stringify({schemaVersion:1,plugins:[(globalThis as any).__marketEntry]})):Buffer.from(bundle,'base64');};
+    dialog.showMessageBox=(async()=>({response:1,checkboxChecked:false})) as any;
+  },bundle);
+  try{
+    const online:any=await call('marketplace',true);expect(online.entries).toHaveLength(1);expect(online.cached).toBe(false);
+    await app.evaluate(()=>{(globalThis as any).__marketOffline=true;});const offline:any=await call('marketplace',true);expect(offline.cached).toBe(true);expect(offline.entries).toHaveLength(1);expect(offline.error).toContain('离线');await app.evaluate(()=>{(globalThis as any).__marketOffline=false;});
+    await open('插件管理');await expect(page.locator('.market-card')).toHaveCount(1);await page.screenshot({path:path.join(root,'test-results','marketplace.png')});await page.getByRole('button',{name:'安装',exact:true}).click();await expect.poll(()=>call('pluginInspect').then((p:any)=>p[0]?.source)).toBe('marketplace');
+    await app.evaluate(()=>{const n=(globalThis as any).__nexlet;n.store.set('plugin-data:org.nexlet.hello',{note:'更新必须保留'});(globalThis as any).__marketEntry.version='1.0.1';});await call('marketplace',true);
+    await expect(call('marketInstall','org.nexlet.hello')).rejects.toThrow('ID 或版本');expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.0');
+    const manifest=JSON.parse(zip.readAsText('plugin.json'));manifest.version='1.0.1';zip.updateFile('plugin.json',Buffer.from(JSON.stringify(manifest)));
+    await app.evaluate(({dialog},bundle)=>{const n=(globalThis as any).__nexlet;n.marketplace.download=async()=>Buffer.from(bundle,'base64');dialog.showMessageBox=(async()=>({response:0,checkboxChecked:false})) as any;},zip.toBuffer().toString('base64'));
+    expect(await call('marketInstall','org.nexlet.hello')).toBe(false);expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.0');
+    await app.evaluate(({dialog})=>{dialog.showMessageBox=(async()=>({response:1,checkboxChecked:false})) as any;});expect(await call('marketInstall','org.nexlet.hello')).toBe(true);expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.1');expect(await app.evaluate(()=>(globalThis as any).__nexlet.store.get('plugin-data:org.nexlet.hello',{}))).toEqual({note:'更新必须保留'});
+    await call('pluginRemove',{id:'org.nexlet.hello',deleteData:true});
+  }finally{await app.evaluate(({dialog})=>{(globalThis as any).__nexlet.marketplace.download=(globalThis as any).__marketOriginal;dialog.showMessageBox=(globalThis as any).__messageOriginal;});}
 });
 
 test('启动器接收文件拖入、图片粘贴并可重新复制图片',async()=>{
