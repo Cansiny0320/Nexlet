@@ -10,6 +10,7 @@ const hash = (value: string | Buffer) => createHash('sha256').update(value).dige
 export class ClipboardService {
   private timer: NodeJS.Timeout | null = null;
   private busy = false;
+  private pending:Promise<void>=Promise.resolve();
   private lastSequence: number | null = null;
   private lastHash = '';
   error: string | null = null;
@@ -17,10 +18,12 @@ export class ClipboardService {
   start(): void { this.timer = setInterval(() => void this.capture(), 700); }
   stop(): void { if (this.timer) clearInterval(this.timer); }
   async capture(force = false): Promise<void> {
-    if (this.busy || (!force && !this.store.settings().clipboardEnabled)) return;
+    if(this.busy){if(force){await this.pending;return this.capture(true);}return;}
+    if(!force && !this.store.settings().clipboardEnabled)return;
     const sequence = this.platform.sequence();
     if (!force && sequence !== null && sequence === this.lastSequence) return;
     this.busy = true;
+    let idle!:()=>void;this.pending=new Promise(resolve=>{idle=resolve;});
     try {
       const contents = await clipboard.read();
       const formats = contents.flatMap(item => item.types);
@@ -55,7 +58,7 @@ export class ClipboardService {
       if (!item) this.lastHash = '';
       this.lastSequence = sequence; this.error = null;
     } catch (error) { this.error = (error as Error).message; }
-    finally { this.busy = false; }
+    finally { this.busy = false;idle(); }
   }
   async copy(ids: string[]): Promise<void> {
     const items = ids.map(id => this.store.clip(id));

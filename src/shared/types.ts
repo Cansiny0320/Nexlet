@@ -1,3 +1,4 @@
+import type { ContentMatch } from './launch';
 export type Theme = 'system' | 'light' | 'dark';
 export type ClipKind = 'text' | 'image' | 'files';
 export interface ClipItem { id: string; kind: ClipKind; text: string; hash: string; createdAt: number; favorite: boolean; files?: string[]; imagePath?: string; thumbnail?: string; width?: number; height?: number; }
@@ -5,11 +6,12 @@ export interface CalcLine { id: string; expression: string; note: string; }
 export interface Scratchpad { id: string; name: string; createdAt: number; updatedAt: number; locked: boolean; color: string; lines: CalcLine[]; }
 export interface WebShortcut { id: string; name: string; url: string; }
 export interface Settings { shortcut: string; theme: Theme; hideOnBlur: boolean; clipboardEnabled: boolean; maxClipboardItems: number; retentionDays: number; searchPaths: string[]; fileSearchPaths: string[]; webShortcuts: WebShortcut[]; }
-export interface Command { id: string; name: string; subtitle: string; kind: 'tool' | 'app' | 'shortcut' | 'plugin' | 'web' | 'match'; keywords: string[]; icon?: string; color?: string; path?: string; pluginId?: string; feature?: string; payload?: string; }
+export interface Command { id: string; name: string; subtitle: string; kind: 'tool' | 'app' | 'shortcut' | 'plugin' | 'web' | 'match'; keywords: string[]; icon?: string; color?: string; path?: string; pluginId?: string; feature?: string; payload?: string; inputId?:string; matches?:ContentMatch[]; }
 export type PluginPermission = 'clipboard.read' | 'clipboard.write' | 'shell.openExternal';
-export interface PluginManifest { id: string; name: string; version: string; description: string; apiVersion: 1; main: string; icon?: string; permissions: PluginPermission[]; features: { code: string; name: string; keywords: string[] }[]; }
+export interface PluginManifest { id: string; name: string; version: string; description: string; apiVersion: 1; main: string; icon?: string; permissions: PluginPermission[]; features: { code: string; name: string; keywords: string[]; matches?:ContentMatch[] }[]; }
 export interface PluginRecord { manifest: PluginManifest; directory: string; enabled: boolean; development: boolean; installedAt: number; source?: 'marketplace' | 'local'; icon?: string; }
 export interface StartupStatus { supported: boolean; enabled: boolean; reason: string | null; }
+export interface PluginSessionState { id:string; name:string; code:string; detached:boolean; loading:boolean; }
 export interface UpdateStatus { mode: 'automatic' | 'portable' | 'unsupported'; phase: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'error'; version: string | null; notes: string; percent: number | null; error: string | null; }
 export interface AppState { update: UpdateStatus; version: string; platform: string; settings: Settings; startup: StartupStatus; pinned: string[]; recent: string[]; commands: Command[]; plugins: PluginRecord[]; shortcutError: string | null; catalogLoading: boolean; nativeStatus: string | null; canPaste: boolean; }
 export const DEFAULT_SETTINGS: Settings = { shortcut: 'Alt+Space', theme: 'system', hideOnBlur: true, clipboardEnabled: true, maxClipboardItems: 500, retentionDays: 30, searchPaths: [], fileSearchPaths: [], webShortcuts: [] };
@@ -25,7 +27,7 @@ export const BUILTIN_COMMANDS: Command[] = [
   { id: 'tool:uuid', name: 'UUID', subtitle: '生成随机 UUID', kind: 'tool', keywords: ['uuid', '随机数'], color: '#3387f7' },
   { id: 'tool:settings', name: '设置', subtitle: '快捷键、外观与数据', kind: 'tool', keywords: ['preferences', 'settings'], color: '#7f8995' }
 ];
-export const HOST_ACTIONS = ['state', 'search', 'launch', 'pin', 'window', 'settings', 'startup', 'rescan', 'pickSearchPath', 'clips', 'clipAction', 'pads', 'savePad', 'deletePad', 'exportPad', 'pluginInstall', 'pluginToggle', 'pluginRemove', 'pluginInspect', 'marketplace', 'marketInstall', 'fileSearch', 'fileAction', 'openData', 'updateReady','updateCheck', 'updateDownload', 'updateInstall', 'updatePortable'] as const;
+export const HOST_ACTIONS = ['state', 'search', 'launchInput', 'clearInput', 'launch', 'pin', 'window', 'settings', 'startup', 'rescan', 'pickSearchPath', 'clips', 'clipAction', 'pads', 'savePad', 'deletePad', 'exportPad', 'pluginInstall', 'pluginToggle', 'pluginRemove', 'pluginInspect', 'pluginSession', 'toolSession', 'marketplace', 'marketInstall', 'fileSearch', 'fileAction', 'openData', 'updateReady','updateCheck', 'updateDownload', 'updateInstall', 'updatePortable'] as const;
 export type HostAction = typeof HOST_ACTIONS[number];
 export interface HostApi { pathForFile(file:File):string; call<T = unknown>(action: HostAction, payload?: unknown): Promise<T>; onChange(callback: (event: string) => void): () => void; }
 declare global { interface Window { nexlet: HostApi; } }

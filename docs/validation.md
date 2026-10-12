@@ -117,3 +117,42 @@ node scripts/smoke-portable.mjs
 - 汇总 job 已验证双架构更新清单、产物大小与 SHA-512，并生成 SHA256SUMS。只推送源码到 `main`，没有创建版本标签或 GitHub Release；首个含更新器的正式版本仍需手动安装。
 
 - 提交前额外导出仅含本次签名/更新改动的源码快照，排除其他会话的内容启动和工具分离修改：typecheck、build 通过，86 项单元测试通过，4 项 Windows 专用测试跳过。
+
+
+## 内容启动与会话对齐（2026-10-12）
+
+本轮为本地源码实现与验证，没有打包替换已安装应用或发布。REA 对本机 uTools 7.8.0 的分析提供静态行为参考；未宣称运行 uTools 动态验收或兼容其 SDK。
+
+- `npm run typecheck`、`npm test`、`npm run build`、`git diff --check`：通过。Vitest 为 100 passed / 4 Windows skipped；保留原有 renderer chunk 大于 500 kB 的构建提示。
+- 真实 Electron 的 `tests/alignment.spec.ts` 10 组通过：文件/图片/文本输入不改剪贴板、选中会话资源授权与旧 token 失效、默认内嵌、同实例分离、ready/enter/activate/detach/out、无 Node/网络/未授权剪贴板、禁用/崩溃重开、加载中退出、JSON 双栏与比较状态、编码/UUID/时间戳、稿纸 pending save 与保存失败回滚、剪贴板筛选选择、文件搜索新 caller 重查、目标恢复失败及原生写入回读失败保留源状态。
+- 另 7 组相关既有 Electron 回归通过：稿纸续算、附加工具、旧插件 SDK/安装/存储/升级/卸载/权限、文件搜索异步状态、插件市场、图片明确收录和复制、标题栏交互。
+- 初轮发现 macOS 原生文件剪贴板回读为空；后续已定位并修复 JXA 参数桥接问题，原生文件收录 E2E 现已通过，证据见下方「macOS 文件剪贴板修复」。「收进剪贴板」的回读失败保护继续保留。
+- Everything 查询/授权迁移使用隔离的搜索边界替身；Windows 原生搜索、快捷方式和跨应用回贴未在本轮复验。全量 `test:e2e` 包含这些 Windows 专项，未报告全量通过。
+
+复验命令（Node 24+）：
+
+```sh
+npm run typecheck
+npm test
+npm run build
+npx playwright test tests/alignment.spec.ts
+npx playwright test tests/electron.spec.ts tests/window-behavior.spec.ts -g '真实插件|附加工具|计算稿纸续算|文件搜索空输入|插件市场|启动器接收图片|工具标题'
+git diff --check
+```
+
+Windows 仍需运行完整 `npm run test:e2e`；macOS 原生文件剪贴板可用 `npx playwright test tests/electron.spec.ts -g '启动器接收文件'` 单独复验。
+
+
+## macOS 文件剪贴板修复（2026-10-12）
+
+- 根因：JXA 将 JavaScript 数组中的 Objective-C 包装对象转成 `__NSDictionaryM`，导致传给 `writeObjects` 的对象不符合 `NSPasteboardWriting`。诊断中 AppKit 打印协议错误，但 `writeObjects` 仍返回 `true`，实际 types/count 为空。读取类数组也会丢失对象身份；另外 JavaScript `null` 被转换成 `NSNull`，作为 options 时触发 `-[NSNull count]` 异常。
+- 最小修复：写入用 `NSMutableArray.addObject` 保留 `NSURL`；读取用 `NSArray.arrayWithObject(NSURL)` 和原生空 `NSDictionary`，用 `isNil()` 判断无可读对象。未调整 Windows 桥接或系统权限。[Apple NSPasteboard API 合同](https://developer.apple.com/documentation/appkit/nspasteboard/)
+- 新增 `tests/mac-file-clipboard.test.ts` 使用真实 `osascript` / AppKit，仅把目的地替换成独立命名 pasteboard，结束后释放。修复前两项均复现空回读；修复后通过跨进程多文件、目录、中文/空格/引号/换行/百分号路径、其他原生写入者，以及文本/网页 URL/空剪贴板不会误判文件的检查。
+- 真实 Electron 使用隔离用户数据并保存/恢复系统剪贴板：`剪贴板文本、图片、文件、收藏、多选和中转`、`启动器接收文件拖入并明确收进剪贴板`、`启动器接收图片粘贴并明确收录、重新复制图片` 三组全部通过。没有模拟原生文件读写。
+- 当前完整 Vitest：102 passed / 4 Windows skipped；typecheck、build、diff 检查通过。保留已有 chunk 体积提示。本次仅本地修复、未提交或发布。
+
+```sh
+npx vitest run --config vitest.config.ts tests/mac-file-clipboard.test.ts tests/platform.test.ts tests/clipboard-capture.test.ts
+npm run build
+npx playwright test tests/electron.spec.ts -g '启动器接收文件|启动器接收图片|剪贴板文本'
+```

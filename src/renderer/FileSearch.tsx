@@ -1,3 +1,4 @@
+import { useToolState, useRestoreBarrier } from './tool-session';
 import { useState,useEffect,useRef } from 'react';
 import { Search, File, Folder, FolderOpen, Copy, ExternalLink, RefreshCw, Settings } from 'lucide-react';
 import type { FileResult, FileSearchResult } from '../shared/everything';
@@ -5,10 +6,11 @@ import { api,useApp,errorText,IconButton,Empty } from './common';
 import './filesearch.css';
 
 export function FileSearch(){
-  const {toast,navigate}=useApp();const [query,setQuery]=useState(''),[result,setResult]=useState<FileSearchResult|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[selected,setSelected]=useState('');const sequence=useRef(0),input=useRef<HTMLInputElement>(null);
-  const search=async(value:string)=>{const id=++sequence.current;setBusy(Boolean(value.trim()));setError('');try{const next=await api<FileSearchResult>('fileSearch',value);if(id===sequence.current){setResult(next);setSelected(next.items[0]?.path||'');}}catch(e){if(id===sequence.current){setError(errorText(e));setResult(null);}}finally{if(id===sequence.current)setBusy(false);}};
+  const {toast,navigate}=useApp();const [query,setQuery]=useToolState('query',''),[result,setResult]=useState<FileSearchResult|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[selected,setSelected]=useToolState('selected','');const sequence=useRef(0),input=useRef<HTMLInputElement>(null);
+  const restoration=useRestoreBarrier();
+  const search=async(value:string)=>{const id=++sequence.current;setBusy(Boolean(value.trim()));setError('');try{const next=await api<FileSearchResult>('fileSearch',value);if(id===sequence.current){setResult(next);setSelected(old=>next.items.some(item=>item.path===old)?old:next.items[0]?.path||'');}}catch(e){if(id===sequence.current){setError(errorText(e));setResult(null);}}finally{if(id===sequence.current)setBusy(false);}};
   useEffect(()=>{input.current?.focus();},[]);
-  useEffect(()=>{sequence.current++;setSelected('');setResult(null);setError('');setBusy(false);const timer=setTimeout(()=>void search(query),250);return()=>{clearTimeout(timer);sequence.current++;};},[query]);
+  useEffect(()=>{sequence.current++;setResult(null);setError('');setBusy(false);let resolve!:()=>void;const pending=new Promise<void>(done=>{resolve=done;});const timer=setTimeout(()=>{void search(query).finally(resolve);},250);if(restoration&&'query' in restoration.initial)restoration.restores.add(pending);return()=>{clearTimeout(timer);resolve();sequence.current++;};},[query]);
   useEffect(()=>{if(!query.trim()||result?.status!=='indexing')return;const timer=setTimeout(()=>void search(query),2000);return()=>clearTimeout(timer);},[result,query]);
   const action=async(action:string,path?:string)=>{try{await api('fileAction',{action,path});if(action==='copy')toast('已复制文件路径');}catch(e){toast(errorText(e),true);}};
   const current=result?.items.find(i=>i.path===selected);

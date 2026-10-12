@@ -1,3 +1,4 @@
+import { useToolState, useBeforeDetach, useRestoreBarrier } from './tool-session';
 import { useState,useRef,useEffect,useLayoutEffect,useCallback } from 'react';
 import { Palette, LockKeyhole, LockKeyholeOpen, Trash2, PencilLine, Images, Plus, MessageSquare, Check, Circle, Info } from 'lucide-react';
 import type { Scratchpad, CalcLine } from '../shared/types';
@@ -10,7 +11,7 @@ const newPad=(expression=''):Scratchpad=>({id:crypto.randomUUID(),name:new Date(
 const format=(value:string)=>{if(value.includes('e'))return value;const [integer,fraction]=value.split('.');return integer.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(fraction!==undefined?'.'+fraction:'');};
 export function ScratchpadPanel({initialExpression}:{initialExpression:string}){
   const {toast,dialog}=useApp();
-  const [pads,setPads]=useState<Scratchpad[]>([]),[active,setActive]=useState(''),[focused,setFocused]=useState(0),[saved,setSaved]=useState('已保存'),[palette,setPalette]=useState(false);
+  const [pads,setPads]=useState<Scratchpad[]>([]),[active,setActive]=useToolState('active',''),[focused,setFocused]=useToolState('focused',0),[saved,setSaved]=useState('已保存'),[palette,setPalette]=useState(false);
   const [focusRequest,setFocusRequest]=useState<{id:string}|null>(null);
   const current=useRef<Scratchpad[]>([]),versions=useRef(new Map<string,number>()),pending=useRef(new Map<string,Scratchpad>()),saving=useRef(false),timer=useRef<ReturnType<typeof setTimeout>|null>(null),inputs=useRef(new Map<string,HTMLTextAreaElement>()),initialized=useRef(false);
   const updateList=(list:Scratchpad[])=>{current.current=list;setPads(list);};
@@ -30,17 +31,20 @@ export function ScratchpadPanel({initialExpression}:{initialExpression:string}){
     await flush();
     if(pending.current.size)throw Error('稿纸尚未保存，请处理保存错误后再安装更新');
   }),[flush]);
+  useBeforeDetach(async()=>{const field=inputs.current.get(current.current.find(p=>p.id===active)?.lines[focused]?.id||'');if(restoration)restoration.values.cursor=field?{start:field.selectionStart,end:field.selectionEnd}:null;if(timer.current)clearTimeout(timer.current);while(saving.current)await new Promise(resolve=>setTimeout(resolve,20));await flush();if(pending.current.size)throw Error('稿纸保存失败，已保留原窗口');});
+  const restoration=useRestoreBarrier();
   const queue=(pad:Scratchpad)=>{updateList(current.current.some(p=>p.id===pad.id)?current.current.map(p=>p.id===pad.id?pad:p):[pad,...current.current]);pending.current.set(pad.id,pad);setSaved('未保存');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void flush(),250);};
   const load=useCallback(async()=>{try{const list=await api<Scratchpad[]>('pads');if(pending.current.size||saving.current)return;for(const p of list)versions.current.set(p.id,p.updatedAt);updateList(list);setActive(old=>list.some(p=>p.id===old)?old:list.some(p=>p.id===localStorage.getItem('active-pad'))?localStorage.getItem('active-pad')!:list[0]?.id||'');}catch(e){toast(errorText(e),true);}},[toast]);
   useEffect(()=>{
     let live=true;
-    void api<Scratchpad[]>('pads').then(list=>{if(!live)return;for(const p of list)versions.current.set(p.id,p.updatedAt);updateList(list);
-      if(initialExpression&&!initialized.current){initialized.current=true;const pad=newPad(initialExpression);queue(pad);setActive(pad.id);}else{const prior=localStorage.getItem('active-pad');setActive(list.some(p=>p.id===prior)?prior!:list[0]?.id||'');}
-    }).catch(e=>toast(errorText(e),true));
+    const restore=api<Scratchpad[]>('pads').then(list=>{if(!live)return;for(const p of list)versions.current.set(p.id,p.updatedAt);updateList(list);
+      if(initialExpression&&!initialized.current){initialized.current=true;const pad=newPad(initialExpression);queue(pad);setActive(pad.id);}else{const prior=active||localStorage.getItem('active-pad');setActive(list.some(p=>p.id===prior)?prior!:list[0]?.id||'');}
+    }).catch(e=>{toast(errorText(e),true);throw e;});restoration?.restores.add(restore);void restore.catch(()=>{});
     const off=window.nexlet.onChange(event=>{if(event==='pads')void load();});
     return()=>{live=false;off();if(timer.current)clearTimeout(timer.current);void flush();};
   },[]);
   useEffect(()=>{if(active)localStorage.setItem('active-pad',active);},[active]);
+  const cursorRestored=useRef(false);useLayoutEffect(()=>{if(cursorRestored.current||!pads.length)return;cursorRestored.current=true;const field=inputs.current.get(pads.find(p=>p.id===active)?.lines[focused]?.id||'');const cursor=restoration?.initial.cursor as {start:number;end:number}|undefined;if(field&&cursor){field.focus();field.setSelectionRange(cursor.start,cursor.end);}},[pads,active,focused]);
   const pad=pads.find(p=>p.id===active);
   const focus=(index:number,id?:string)=>{setFocused(index);const row=id||current.current.find(p=>p.id===active)?.lines[index]?.id;if(row)setFocusRequest({id:row});};
   // Position the caret in the same commit as the row update, before another

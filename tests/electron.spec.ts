@@ -16,6 +16,7 @@ async function start(){
 async function call(action:string,payload?:unknown){return page.evaluate(({action,payload})=>(window as any).nexlet.call(action,payload),{action,payload});}
 async function home(){await app.evaluate(()=>{const n=(globalThis as any).__nexlet;n.main.show();n.main.focus();n.main.webContents.send('host-change','navigate:launcher');});await expect(page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'})).toBeVisible();}
 async function open(name:string){await home();await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).fill(name);await page.getByRole('button',{name,exact:true}).first().click();}
+async function launchPlugin(){await call('launch',{id:'plugin:org.nexlet.hello:note'});await expect.poll(()=>app.context().pages().some(p=>p.url().startsWith('nexlet-plugin://org.nexlet.hello/'))).toBe(true);return app.context().pages().find(p=>p.url().startsWith('nexlet-plugin://org.nexlet.hello/'))!;}
 async function saveClipboard(){await app.evaluate(async({clipboard,ClipboardItem})=>{const items=await clipboard.read();const saved=[];for(const item of items){const values:Record<string,any>={};for(const type of item.types){if(['text/plain','text/html','image/png','text/rtf','electron application/bookmark'].includes(type))values[type]=await item.getType(type);}if(Object.keys(values).length)saved.push(new ClipboardItem(values));}(globalThis as any).__savedClipboard=saved;(globalThis as any).__savedFiles=await (globalThis as any).__nexlet.platform.readFiles();});}
 async function restoreClipboard(){await app.evaluate(async({clipboard})=>{const saved=(globalThis as any).__savedClipboard,files=(globalThis as any).__savedFiles;if(files?.length)await (globalThis as any).__nexlet.platform.writeFiles(files);else if(saved?.length)await clipboard.write(saved);});}
 test.describe.configure({mode:'serial'});
@@ -97,20 +98,20 @@ test('附加工具正常输入、错误输入与深色主题',async()=>{
 test('真实插件安装、独立存储、权限拒绝、禁用和卸载',async()=>{
   await home();await app.evaluate(({dialog},directory)=>{(globalThis as any).__dialogOriginals=[dialog.showOpenDialog,dialog.showMessageBox];dialog.showOpenDialog=(async()=>({canceled:false,filePaths:[directory]})) as any;dialog.showMessageBox=(async()=>({response:1,checkboxChecked:false})) as any;},path.join(root,'examples','hello-nexlet'));
   try{expect(await call('pluginInstall',{development:true})).toBeTruthy();}finally{await app.evaluate(({dialog})=>{[dialog.showOpenDialog,dialog.showMessageBox]=(globalThis as any).__dialogOriginals;});}
-  const pluginPromise=app.waitForEvent('window');await call('launch',{id:'plugin:org.nexlet.hello:note'});let plugin=await pluginPromise;
+  let plugin=await launchPlugin();
   await expect(plugin.getByRole('textbox',{name:'便笺内容'})).toBeVisible();await plugin.getByRole('textbox',{name:'便笺内容'}).fill('插件数据持久保存');await expect(plugin.locator('#status')).toHaveText('已保存');
   expect(await plugin.evaluate(()=>({node:typeof (window as any).require,process:typeof (window as any).process}))).toEqual({node:'undefined',process:'undefined'});
   const denial=await plugin.evaluate(async()=>{try{await (window as any).nexlet.clipboard.readText();return '';}catch(e){return String(e);}});expect(denial).toContain('未授权：clipboard.read');
   const network=await plugin.evaluate(async()=>{try{await fetch('https://example.com');return 'allowed';}catch{return 'blocked';}});expect(network).toBe('blocked');
   await plugin.getByRole('button',{name:'复制便笺'}).click();await expect(plugin.locator('#status')).toHaveText('已复制');expect(await app.evaluate(async({clipboard})=>await clipboard.readText())).toBe('插件数据持久保存');
-  await plugin.screenshot({path:path.join(root,'test-results','plugin.png')});await plugin.close();await home();
-  const reopen=app.waitForEvent('window');await call('launch',{id:'plugin:org.nexlet.hello:note'});plugin=await reopen;await expect(plugin.getByRole('textbox',{name:'便笺内容'})).toHaveValue('插件数据持久保存');
+  await plugin.screenshot({path:path.join(root,'test-results','plugin.png')});await call('window',{action:'exitPlugin'});await home();
+  plugin=await launchPlugin();await expect(plugin.getByRole('textbox',{name:'便笺内容'})).toHaveValue('插件数据持久保存');
   await call('pluginToggle',{id:'org.nexlet.hello',enabled:false});await expect.poll(()=>call('state').then((s:any)=>s.commands.some((c:any)=>c.id.startsWith('plugin:')))).toBe(false);
   await call('pluginToggle',{id:'org.nexlet.hello',enabled:true});
   const zip=new AdmZip();zip.addLocalFolder(path.join(root,'examples','hello-nexlet'));const manifest=JSON.parse(zip.readAsText('plugin.json'));manifest.version='1.0.1';zip.updateFile('plugin.json',Buffer.from(JSON.stringify(manifest)));const archive=path.join(folder,'hello.nexlet');zip.writeZip(archive);
   await app.evaluate(({dialog},archive)=>{(globalThis as any).__dialogOriginals=[dialog.showOpenDialog,dialog.showMessageBox];dialog.showOpenDialog=(async()=>({canceled:false,filePaths:[archive]})) as any;dialog.showMessageBox=(async()=>({response:1,checkboxChecked:false})) as any;},archive);
   try{expect(await call('pluginInstall',{development:false})).toBeTruthy();}finally{await app.evaluate(({dialog})=>{[dialog.showOpenDialog,dialog.showMessageBox]=(globalThis as any).__dialogOriginals;});}
-  expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.1');const upgrade=app.waitForEvent('window');await call('launch',{id:'plugin:org.nexlet.hello:note'});plugin=await upgrade;await expect(plugin.getByRole('textbox',{name:'便笺内容'})).toHaveValue('插件数据持久保存');
+  expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.1');plugin=await launchPlugin();await expect(plugin.getByRole('textbox',{name:'便笺内容'})).toHaveValue('插件数据持久保存');
   await call('pluginRemove',{id:'org.nexlet.hello',deleteData:false});expect(await call('pluginInspect')).toEqual([]);
 });
 
@@ -176,12 +177,15 @@ test('插件市场缓存、安装、取消更新和失败保留旧数据',async(
   }finally{await app.evaluate(({dialog})=>{(globalThis as any).__nexlet.marketplace.download=(globalThis as any).__marketOriginal;dialog.showMessageBox=(globalThis as any).__messageOriginal;});}
 });
 
-test('启动器接收文件拖入、图片粘贴并可重新复制图片',async()=>{
+test('启动器接收文件拖入并明确收进剪贴板',async()=>{
   await writeFile(path.join(folder,'Nexlet 测试文件.txt'),'Nexlet drop test');
   await home();await page.evaluate(()=>{const input=document.createElement('input');input.type='file';input.id='test-drop-file';document.body.append(input);});await page.locator('#test-drop-file').setInputFiles(path.join(folder,'Nexlet 测试文件.txt'));
   await page.evaluate(()=>{const input=document.querySelector<HTMLInputElement>('#test-drop-file')!;const transfer=new DataTransfer();transfer.items.add(input.files![0]);document.querySelector('.app-shell')!.dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));input.remove();});
-  await expect(page.getByRole('textbox',{name:'搜索剪贴板'})).toBeVisible();expect((await call('clips') as any[]).some(i=>i.files?.includes(path.join(folder,'Nexlet 测试文件.txt')))).toBeTruthy();
+  await expect(page.getByLabel('待处理输入')).toBeVisible();await page.getByRole('button',{name:'收进剪贴板',exact:true}).click();await expect(page.getByRole('textbox',{name:'搜索剪贴板'})).toBeVisible();expect((await call('clips') as any[]).some(i=>i.files?.includes(path.join(folder,'Nexlet 测试文件.txt')))).toBeTruthy();
+});
+
+test('启动器接收图片粘贴并明确收录、重新复制图片',async()=>{
   await home();await page.evaluate(async()=>{const canvas=document.createElement('canvas');canvas.width=32;canvas.height=24;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#6962ff';ctx.fillRect(0,0,32,24);const blob=await new Promise<Blob>(r=>canvas.toBlob(v=>r(v!),'image/png'));const transfer=new DataTransfer();transfer.items.add(new File([blob],'pasted.png',{type:'image/png'}));document.querySelector('.launcher-input')!.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,clipboardData:transfer}));});
-  await expect(page.getByRole('textbox',{name:'搜索剪贴板'})).toBeVisible();const pictures:any[]=await call('clips',{kind:'image'}) as any[];const picture=pictures.find(p=>p.width===32&&p.height===24);expect(picture).toBeTruthy();await call('clipAction',{action:'copy',ids:[picture.id]});
+  await expect(page.getByLabel('待处理输入')).toContainText('图片');await page.getByRole('button',{name:'收进剪贴板',exact:true}).click();await expect(page.getByRole('textbox',{name:'搜索剪贴板'})).toBeVisible();const pictures:any[]=await call('clips',{kind:'image'}) as any[];const picture=pictures.find(p=>p.width===32&&p.height===24);expect(picture).toBeTruthy();await call('clipAction',{action:'copy',ids:[picture.id]});
   const size=await app.evaluate(async({clipboard,nativeImage})=>{const item=(await clipboard.read()).find(i=>i.types.includes('image/png'))!;const blob=await item.getType('image/png');return nativeImage.createFromBuffer(Buffer.from(await blob.arrayBuffer())).getSize();});expect(size).toEqual({width:32,height:24});
 });

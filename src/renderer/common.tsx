@@ -5,7 +5,7 @@ import type { AppState, Command, HostAction } from '../shared/types';
 export const api=<T,>(action:HostAction,payload?:unknown)=>window.nexlet.call<T>(action,payload);
 export const errorText=(error:unknown)=>error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': Error: /,'') : String(error);
 export interface DialogSpec { title:string; message?:string; input?:string; placeholder?:string; confirm?:string; danger?:boolean; }
-export interface AppContextValue { state:AppState; refresh:()=>Promise<void>; toast:(message:string,error?:boolean)=>void; dialog:(spec:DialogSpec)=>Promise<string|boolean|null>; navigate:(view:string,payload?:string)=>void; }
+export interface AppContextValue { detach:()=>Promise<void>; canDetach:boolean; state:AppState; refresh:()=>Promise<void>; toast:(message:string,error?:boolean)=>void; dialog:(spec:DialogSpec)=>Promise<string|boolean|null>; navigate:(view:string,payload?:string)=>void; }
 export const AppContext=createContext<AppContextValue|null>(null);
 export function useApp(){const ctx=useContext(AppContext);if(!ctx)throw new Error('App context missing');return ctx;}
 export function ToolIcon({command,size=32}:{command:Command;size?:number}){

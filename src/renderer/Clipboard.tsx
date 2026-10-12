@@ -1,3 +1,4 @@
+import { useToolState } from './tool-session';
 import { useState,useEffect,useRef,useCallback } from 'react';
 import { ClipboardCopy, Send, Pin, ExternalLink, Settings, Brush, Star, Trash2, Type, Image as ImageIcon, Files, ClipboardList, Download, Copy, Pause, Play } from 'lucide-react';
 import type { ClipItem } from '../shared/types';
@@ -5,13 +6,13 @@ import { api,useApp,errorText,IconButton,Empty,relativeTime } from './common';
 
 const filters=[['all','全部',ClipboardList],['text','文本',Type],['image','图像',ImageIcon],['files','文件',Files],['favorite','收藏',Star]] as const;
 export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(value:string)=>void;board:boolean}){
-  const {state,toast,dialog,navigate}=useApp();
-  const [kind,setKind]=useState('all'),[items,setItems]=useState<ClipItem[]>([]),[selected,setSelected]=useState<string[]>([]),[cursor,setCursor]=useState(0),[expanded,setExpanded]=useState<string|null>(null);
+  const {state,toast,dialog,navigate,detach,canDetach}=useApp();
+  const [kind,setKind]=useToolState('kind','all'),[items,setItems]=useState<ClipItem[]>([]),[selected,setSelected]=useToolState<string[]>('selected',[]),[cursor,setCursor]=useToolState('cursor',0),[expanded,setExpanded]=useToolState<string|null>('expanded',null);
   const [context,setContext]=useState<{x:number;y:number;ids:string[]}|null>(null);
   const rows=useRef(new Map<string,HTMLDivElement>()),loadId=useRef(0);
   const reload=useCallback(async()=>{const id=++loadId.current;try{const list=await api<ClipItem[]>('clips',{query,kind});if(id!==loadId.current)return;setItems(list);setSelected(old=>{const kept=old.filter(v=>list.some(i=>i.id===v));return kept.length?kept:list[0]?[list[0].id]:[];});setCursor(v=>Math.max(0,Math.min(v,list.length-1)));}catch(e){toast(errorText(e),true);}},[query,kind,toast]);
   useEffect(()=>{void reload();return window.nexlet.onChange(event=>{if(event==='clips')void reload();});},[reload]);
-  useEffect(()=>{setCursor(0);setSelected([]);},[query,kind]);
+  const firstFilter=useRef(true);useEffect(()=>{if(firstFilter.current){firstFilter.current=false;return;}setCursor(0);setSelected([]);},[query,kind]);
   useEffect(()=>{const hide=()=>setContext(null);window.addEventListener('click',hide);return()=>window.removeEventListener('click',hide);},[]);
   const action=useCallback(async(name:string,ids=selected,extra:Record<string,unknown>={})=>{
     try{const result=await api('clipAction',{action:name,ids,...extra});
@@ -55,7 +56,7 @@ export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(va
       <IconButton className="round primary" title={state.canPaste?'执行粘贴':'请从目标应用用快捷键唤起后粘贴'} disabled={!selected.length||!state.canPaste} onClick={()=>void action('paste')}><Send size={21}/></IconButton>
       <IconButton className="round primary" title="悬浮中转" disabled={!selected.length} onClick={()=>void action('station')}><Pin size={21}/></IconButton>
       <div className="rail-spacer"/>
-      <IconButton title="打开独立剪贴板" onClick={()=>void api('window',{action:'detach',view:'clipboard'}).catch(e=>toast(errorText(e),true))}><ExternalLink size={20}/></IconButton>
+      <IconButton title="打开独立剪贴板" disabled={!canDetach} onClick={()=>void detach()}><ExternalLink size={20}/></IconButton>
       <IconButton title="剪贴板设置" onClick={()=>navigate('settings')}><Settings size={20}/></IconButton>
       <IconButton title="清空历史记录" onClick={async()=>{if(await dialog({title:'清空剪贴板历史？',message:'收藏内容会保留。不会清空系统剪贴板，也不会删除原文件。',confirm:'清空历史',danger:true}))await action('clear',[],{includeFavorites:false});}}><Brush size={21}/></IconButton>
     </aside></div>

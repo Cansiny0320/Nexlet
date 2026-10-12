@@ -1,3 +1,4 @@
+import { useToolState, useRestoreBarrier } from './tool-session';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Copy, Minimize2, Maximize2, ArrowLeftRight, ChevronRight, ChevronDown, ArrowDown, Braces, Code2, ListTree, Check } from 'lucide-react';
 import { EditorView, basicSetup } from 'codemirror';
@@ -51,14 +52,15 @@ function JsonBranch({ node, source, label, depth = 0, expand }: { node: JsonNode
 
 export function JsonTool({ initial }: { initial: string }) {
   const { toast } = useApp();
-  const [tab, setTab] = useState<'format' | 'diff'>('format'), [input, setInput] = useState(initial), [output, setOutput] = useState('');
-  const [error, setError] = useState(''), [tree, setTree] = useState(true), [expand, setExpand] = useState<'default' | 'open' | 'closed'>('default');
-  const [before, setBefore] = useState(''), [after, setAfter] = useState(''), [ignoreOrder, setIgnoreOrder] = useState(true);
-  const [comparison, setComparison] = useState<{ a: string; b: string } | null>(null), [changes, setChanges] = useState(0);
+  const [tab, setTab] = useToolState<'format' | 'diff'>('tab','format'), [input, setInput] = useToolState('input',initial), [output, setOutput] = useToolState('output','');
+  const [error, setError] = useToolState('error',''), [tree, setTree] = useToolState('tree',true), [expand, setExpand] = useToolState<'default' | 'open' | 'closed'>('expand','default');
+  const [before, setBefore] = useToolState('before',''), [after, setAfter] = useToolState('after',''), [ignoreOrder, setIgnoreOrder] = useToolState('ignoreOrder',true);
+  const [comparison, setComparison] = useToolState<{ a: string; b: string } | null>('comparison',null), [changes, setChanges] = useToolState('changes',0);
   const diffParent = useRef<HTMLDivElement>(null), merge = useRef<MergeView | null>(null), outputEditor = useRef<EditorView | null>(null);
   const root = useMemo(() => { if (!output) return null; try { return parseJson(output); } catch { return null; } }, [output]);
   const format = (compact = false) => { try { setOutput(formatJson(input, compact)); setError(''); setExpand('default'); } catch (e) { setOutput(''); setError(errorText(e)); } };
-  useEffect(() => { if (!input.trim()) { setOutput(''); setError(''); return; } const timer = setTimeout(() => format(), 220); return () => clearTimeout(timer); }, [input]);
+  const restore=useRestoreBarrier(),firstFormat=useRef(true);
+  useEffect(() => { if(firstFormat.current){firstFormat.current=false;if(restore&&'output' in restore.initial)return;}if (!input.trim()) { setOutput(''); setError(''); return; } const timer = setTimeout(() => format(), 220); return () => clearTimeout(timer); }, [input]);
   const copy = async (value: string) => { try { await api('clipAction', { action: 'writeText', text: value }); toast('已复制'); } catch (e) { toast(errorText(e), true); } };
   const compare = () => { try { setComparison({ a: normalizeJson(before, ignoreOrder), b: normalizeJson(after, ignoreOrder) }); setError(''); } catch (e) { setError(errorText(e)); setComparison(null); } };
   useEffect(() => {

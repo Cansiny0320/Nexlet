@@ -1,4 +1,5 @@
 import type { PluginManifest, PluginPermission } from './types';
+import { validateMatches } from './launch';
 
 export const KNOWN_PERMISSIONS: PluginPermission[] = ['clipboard.read', 'clipboard.write', 'shell.openExternal'];
 export function safeEntryPath(path: string): string {
@@ -30,7 +31,7 @@ export function validateManifest(value: unknown): PluginManifest {
     if (!/^[a-zA-Z0-9_-]+$/.test(code) || codes.has(code)) throw new Error('功能码无效或重复');
     codes.add(code);
     if (!Array.isArray(item.keywords) || item.keywords.length > 30) throw new Error('功能关键词无效');
-    return { code, name: string(item.name, 50, '功能名称'), keywords: item.keywords.map((k: unknown) => string(k, 50, '关键词')) };
+    return { code, name: string(item.name, 50, '功能名称'), keywords: item.keywords.map((k: unknown) => string(k, 50, '关键词')), ...(item.matches===undefined?{}:{matches:validateMatches(item.matches)}) };
   });
   const icon=v.icon===undefined?undefined:safeEntryPath(string(v.icon,240,'插件图标'));
   if(icon&&!/\.png$/i.test(icon))throw new Error('插件图标需要 PNG 文件');

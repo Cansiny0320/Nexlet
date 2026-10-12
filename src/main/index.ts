@@ -1,3 +1,4 @@
+import { ToolHandoffs } from './tool-handoff';
 import { autoUpdater } from 'electron-updater';
 import { AppUpdates, UpdateSaveBarrier } from './updater';
 import { app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, globalShortcut, ipcMain, clipboard, ClipboardItem, dialog, shell, screen, protocol } from 'electron';
@@ -12,6 +13,9 @@ import { Catalog } from './catalog';
 import { Platform } from './platform';
 import { ClipboardService } from './clipboard';
 import { PluginManager } from './plugins';
+import { LaunchInputs } from './launch-input';
+import { ContentMatcher } from './content-matcher';
+import { INPUT_TEXT_LIMIT } from '../shared/launch';
 import { Marketplace } from './marketplace';
 import { EverythingSearch } from './everything';
 import { StartupManager } from './startup';
@@ -41,7 +45,9 @@ async function bootstrap() {
   const platform=new Platform(()=>main?.getNativeWindowHandle());
   const clips=new ClipboardService(store,platform,()=>notify('clips'));
   const catalog=new Catalog(()=>notify());
-  const plugins=new PluginManager(store,notify);
+  const inputs=new LaunchInputs(bytes=>{const image=nativeImage.createFromBuffer(bytes);return image.isEmpty()?{width:0,height:0}:image.getSize();});
+  const matcher=new ContentMatcher();
+  const plugins=new PluginManager(store,notify,inputs);
   const marketplace=new Marketplace(store,plugins);
   const files=new EverythingSearch(()=>store.settings().fileSearchPaths);
   const startup=new StartupManager(app,process.platform,process.execPath,process.env.PORTABLE_EXECUTABLE_FILE);
@@ -58,7 +64,8 @@ async function bootstrap() {
     if(url.hostname!=='local' || !/^\/[a-f0-9]{64}\.png$/.test(url.pathname))return new Response('Not found',{status:404});
     try{return new Response(readFileSync(path.join(store.images,url.pathname.slice(1))),{headers:{'Content-Type':'image/png'}});}catch{return new Response('Not found',{status:404});}
   });
-  function createWindow(view='launcher', detached=false, ids:string[]=[], initiallyHidden=false) {
+  const toolHandoffs=new ToolHandoffs();
+  function createWindow(view='launcher', detached=false, ids:string[]=[], initiallyHidden=false, transfer='') {
     const window=new BrowserWindow({width:800,height:view==='launcher'?310:600,minWidth:640,minHeight:260,show:false,frame:false,roundedCorners:true,resizable:true,backgroundColor:'#f4f4f4',title:detached?`Nexlet · ${view==='clipboard'?'剪贴板':view==='scratchpad'?'计算稿纸':'工具'}`:'Nexlet',icon:appIcon,autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'../preload/host.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,spellcheck:false}});
     hosts.set(window.webContents.id,window); views.set(window.id,view);
     if(ids.length)boards.set(window.webContents.id,ids);
@@ -69,10 +76,10 @@ async function bootstrap() {
     focusOnRestore(window);
     window.once('ready-to-show',()=>{if(!initiallyHidden)revealWindow(window);});
     window.on('close',event=>{if(!detached && !quitting){event.preventDefault();window.hide();}});
-    window.on('closed',()=>{hosts.delete(contentsId);views.delete(windowId);boards.delete(contentsId);files.forget(contentsId);});
+    window.on('closed',()=>{toolHandoffs.forget(contentsId);hosts.delete(contentsId);views.delete(windowId);boards.delete(contentsId);files.forget(contentsId);inputs.forget(contentsId);matcher.cancel(contentsId);});
     window.on('blur',()=>{if(!detached && !testMode && !modalCount && store.settings().hideOnBlur && views.get(window.id)==='launcher')window.hide();});
     window.on('unresponsive',()=>notify('error:界面暂时无响应，请等待或从托盘重新打开'));
-    void window.loadFile(html,{query:{view,detached:detached?'1':'0',board:ids.length?'1':'0'}});
+    void window.loadFile(html,{query:{view,detached:detached?'1':'0',board:ids.length?'1':'0',transfer}});
     if(detached)window.center();
     return window;
   }
@@ -97,7 +104,7 @@ async function bootstrap() {
     return {update:updates.read(),version:app.getVersion(),platform:process.platform,settings,startup:startup.read(),pinned,recent,commands:commands.map(c=>({...c,icon:icons.get(c.id)||c.icon})),plugins:plugins.records(),shortcutError,catalogLoading:catalog.loading,nativeStatus:platform.status||clips.error,canPaste:!!platform.target};
   }
   function recordRecent(id:string) {store.set('recent',[id,...store.get<string[]>('recent',[]).filter(v=>v!==id)].slice(0,60));notify();}
-  async function withDialog<T>(callback:()=>Promise<T>):Promise<T>{modalCount++;try{return await callback();}finally{modalCount--;}}
+  async function withDialog<T>(callback:()=>Promise<T>):Promise<T>{modalCount++;plugins.runtime.suspend(true);try{return await callback();}finally{modalCount--;plugins.runtime.suspend(modalCount>0);}}
   function inputObject(payload:unknown):Record<string,any>{if(!payload || typeof payload!=='object' || Array.isArray(payload))throw new Error('参数无效');return payload as Record<string,any>;}
   function text(value:unknown,max=1000):string{if(typeof value!=='string'||value.length>max)throw new Error('文本参数无效');return value;}
   function ids(value:unknown):string[]{if(!Array.isArray(value)||value.length>256||value.some(v=>typeof v!=='string'||v.length>150))throw new Error('记录列表无效');return value;}
@@ -108,41 +115,65 @@ async function bootstrap() {
     if(!window||event.senderFrame!==event.sender.mainFrame||!isHostDocument(event.senderFrame.url,html)||!HOST_ACTIONS.includes(action as any))throw new Error('不允许的调用来源');
     switch(action){
       case 'state':return state();
+      case 'pluginSession':return plugins.runtime.state(window);
       case 'updateReady':{const args=inputObject(payload);updateSaves.ready(event.sender.id,args.token,args.error);return true;}
       case 'updateCheck':await updates.check();return updates.read();
       case 'updateDownload':await updates.download();return updates.read();
       case 'updateInstall':await updates.install();return true;
       case 'updatePortable':await shell.openExternal(updates.downloadUrl());return true;
       case 'search':{
-        const query=text(payload,1024);const current=await state();
-        return catalog.withIcons(searchCommands(current.commands,query,current.recent));
+        if(typeof payload==='string'){const current=await state();return catalog.withIcons(searchCommands(current.commands,text(payload,1024),current.recent));}
+        const args=inputObject(payload),query=text(args.query,INPUT_TEXT_LIMIT);
+        const input=args.inputId?inputs.get(event.sender.id,args.inputId).input:inputs.setText(event.sender.id,query,args.from==='paste'?'paste':'input');
+        const current=await state();
+        inputs.get(event.sender.id,input.id);
+        const result=await matcher.search(event.sender.id,current.commands,input,query,current.recent);
+        result.results=await catalog.withIcons(result.results);return result;
       }
+      case 'launchInput':matcher.cancel(event.sender.id);return inputs.capture(event.sender.id,payload);
+      case 'clearInput':matcher.cancel(event.sender.id);inputs.clear(event.sender.id);return true;
       case 'launch':{
         const args=inputObject(payload), id=text(args.id,250); const current=await state();
-        if(id==='input:url'){const url=new URL(text(args.payload,2048));if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error('链接无效');await shell.openExternal(url.href);window.hide();return {opened:true};}
+        const snapshot=args.inputId?inputs.get(event.sender.id,args.inputId):undefined;
+        const content=snapshot?.input.type==='text'?snapshot.input.text:typeof args.payload==='string'?text(args.payload,INPUT_TEXT_LIMIT):'';
+        if(id==='input:url'){const url=new URL(text(content.trim(),2048));if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error('链接无效');await shell.openExternal(url.href);window.hide();return {opened:true};}
+        if(id==='match:collect'){
+          if(!snapshot||snapshot.input.type==='text')throw new Error('请选择图片或文件输入');
+          if(snapshot.input.type==='image'){const bytes=await inputs.readResource(snapshot,snapshot.input.image.id);await clipboard.write([new ClipboardItem({'image/png':new Blob([new Uint8Array(bytes)],{type:'image/png'})})]);}
+          else{for(const resource of snapshot.input.files){if(!existsSync(resource.path!))throw new Error('输入文件已移动或不存在');if(!resource.isDirectory)await inputs.readResource(snapshot,resource.id);}const paths=snapshot.input.files.map(f=>f.path!);await platform.writeFiles(paths);const copied=await platform.readFiles();if(paths.some(file=>!copied.includes(file)))throw new Error('系统未接受文件剪贴板，输入已保留，请重试');}
+          await clips.capture(true);if(clips.error)throw Error(clips.error);return {view:'clipboard'};
+        }
+        if(['match:calc','match:json','match:clipboard'].includes(id)){
+          if(!snapshot||snapshot.input.type!=='text')throw new Error('请选择文本输入');
+          const view=id==='match:calc'?'scratchpad':id==='match:json'?'json':'clipboard';
+          recordRecent('tool:'+view);return {view,payload:content};
+        }
         const command=current.commands.find(c=>c.id===id);if(!command)throw new Error('工具或快捷方式已不存在，请刷新索引');
-        if(command.kind==='tool'){recordRecent(id);return {view:id.slice(5)};}
-        if(command.kind==='plugin'){await plugins.launch(command.pluginId!,command.feature!,typeof args.payload==='string'?args.payload.slice(0,65536):'');recordRecent(id);window.hide();return {opened:true};}
+        if(command.kind==='tool'){await plugins.runtime.exitWindow(window);recordRecent(id);return {view:id.slice(5)};}
+        if(command.kind==='plugin'){await plugins.launch(command.pluginId!,command.feature!,content,snapshot);recordRecent(id);return {opened:true};}
         if(command.kind==='web'){const entry=current.settings.webShortcuts.find(w=>'web:'+w.id===id);if(!entry)throw new Error('网页不存在');await shell.openExternal(entry.url);}
         else if(id.startsWith('uwp:')){await exec('explorer.exe',['shell:AppsFolder\\'+id.slice(4)],{windowsHide:true,timeout:5000});}
         else if(command.path){const error=await shell.openPath(command.path);if(error)throw new Error(error);}
         recordRecent(id);window.hide();return {opened:true};
       }
       case 'pin':{const id=text(payload,250);const current=await state();if(!current.commands.some(c=>c.id===id))throw new Error('功能不存在');const old=current.pinned;store.set('pinned',old.includes(id)?old.filter(v=>v!==id):[...old,id]);notify();return true;}
+      case 'toolSession':{const args=inputObject(payload),token=text(args.token,100);if(args.action==='read')return toolHandoffs.read(event.sender.id,token);if(args.action==='ready'){toolHandoffs.acknowledge(event.sender.id,token,args.error?text(args.error,1000):undefined);return true;}throw Error('交接操作无效');}
       case 'window':{
         const args=inputObject(payload);
-        if(args.action==='hide')window.hide();
+        if(args.action==='exitPlugin')await plugins.runtime.exitWindow(window);
+        else if(args.action==='overlay')plugins.runtime.overlay(window,args.visible===true);
+        else if(args.action==='hide')window.hide();
         else if(args.action==='close'){if(window===main)window.hide();else window.close();}
         else if(args.action==='minimize')window.minimize();
         else if(args.action==='maximize'){window.isMaximized()?window.unmaximize():window.maximize();}
         else if(args.action==='pin'){window.setAlwaysOnTop(!window.isAlwaysOnTop());return window.isAlwaysOnTop();}
         else if(args.action==='view'){
-          const view=text(args.view,50);if(!['launcher','clipboard','scratchpad','plugins','settings','web','json','timestamp','encoding','uuid','filesearch'].includes(view))throw new Error('视图无效');
+          const view=text(args.view,50);if(!['launcher','plugin','clipboard','scratchpad','plugins','settings','web','json','timestamp','encoding','uuid','filesearch'].includes(view))throw new Error('视图无效');
           views.set(window.id,view);
           if(!window.isMaximized()){const bounds=window.getBounds();const work=screen.getDisplayMatching(bounds).workArea;const height=Math.min(view==='launcher'?310:600,work.height);window.setBounds({...bounds,height,y:Math.min(bounds.y,work.y+work.height-height)});}
         }else if(args.action==='height'&&views.get(window.id)==='launcher'){
           const height=Math.max(270,Math.min(720,Number(args.height)||310));const bounds=window.getBounds();const work=screen.getDisplayMatching(bounds).workArea;window.setBounds({...bounds,height:Math.min(height,work.height),y:Math.min(bounds.y,work.y+work.height-Math.min(height,work.height))});
-        }else if(args.action==='detach'){const view=text(args.view,50);if(!['clipboard','scratchpad','json','timestamp','encoding','uuid','filesearch'].includes(view))throw new Error('此视图不能分离');createWindow(view,true);}
+        }else if(args.action==='detach'){const view=text(args.view,50);if(view==='plugin'){await plugins.runtime.detach(window);return true;}if(!['clipboard','scratchpad','json','timestamp','encoding','uuid','filesearch'].includes(view))throw new Error('此视图不能分离');if(views.get(window.id)!==view||args.snapshot?.view!==view)throw Error('工具视图已改变');await toolHandoffs.transfer(event.sender.id,args.snapshot,token=>{const target=createWindow(view,true,[],true,token);return {id:target.webContents.id,show:()=>revealWindow(target),destroy:()=>{if(!target.isDestroyed())target.destroy();}};});}
         return true;
       }
       case 'settings':{
@@ -194,7 +225,7 @@ async function bootstrap() {
       case 'deletePad':{const id=text(payload,80),pads=store.pads();if(pads.find(p=>p.id===id)?.locked)throw new Error('请先解锁稿纸');store.set('pads',pads.filter(p=>p.id!==id));notify('pads');return true;}
       case 'exportPad':await writeImage(inputObject(payload).data);return true;
       case 'pluginInstall':return withDialog(()=>plugins.install(window,inputObject(payload).development===true));
-      case 'pluginToggle':{const args=inputObject(payload);if(typeof args.enabled!=='boolean')throw new Error('状态无效');plugins.toggle(text(args.id,100),args.enabled);return true;}
+      case 'pluginToggle':{const args=inputObject(payload);if(typeof args.enabled!=='boolean')throw new Error('状态无效');await plugins.toggle(text(args.id,100),args.enabled);return true;}
       case 'pluginRemove':{const args=inputObject(payload);await plugins.remove(text(args.id,100),args.deleteData===true);return true;}
       case 'pluginInspect':return plugins.records();
       case 'marketplace':return marketplace.list(payload===true);
@@ -206,6 +237,7 @@ async function bootstrap() {
     }
   });
   main=createWindow('launcher',false,[],loginLaunch);position();nativeTheme.themeSource=store.settings().theme;
+  plugins.runtime.configure({main:()=>main,createDetached:()=>createWindow('plugin',true,[],true),changed:owner=>{if(!owner.isDestroyed()){const current=plugins.runtime.state(owner);views.set(owner.id,current?'plugin':'launcher');owner.webContents.send('host-change','plugin-changed');}},error:message=>notify('error:'+message)});
   if(!testMode){
     tray=new Tray(appIcon.resize({width:20,height:20}));tray.setToolTip('Nexlet');
     tray.setContextMenu(Menu.buildFromTemplate([{label:'打开 Nexlet',click:()=>void show()},{label:'剪贴板',click:()=>{void show();main.webContents.send('host-change','navigate:clipboard');}},{label:'计算稿纸',click:()=>{void show();main.webContents.send('host-change','navigate:scratchpad');}},{type:'separator'},{label:'退出 Nexlet',click:()=>{quitting=true;app.quit();}}]));
@@ -215,9 +247,9 @@ async function bootstrap() {
   app.on('second-instance',()=>void show()); app.on('activate',()=>void show());
   app.on('window-all-closed',()=>{});
   let cleanedUp=false;
-  app.on('before-quit',event=>{quitting=true;clips.stop();globalShortcut.unregisterAll();plugins.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void files.close().finally(()=>app.quit());}});
+  app.on('before-quit',event=>{quitting=true;clips.stop();globalShortcut.unregisterAll();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();app.quit();});}});
   app.once('will-quit',()=>store.close());
-  if(testMode)(globalThis as any).__nexlet={updates,autoUpdater,store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts};
+  if(testMode)(globalThis as any).__nexlet={updates,autoUpdater,store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
 }
 
 function createIcon(){const size=32,data=Buffer.alloc(size*size*4);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const offset=(y*size+x)*4;const letter=(x>=8&&x<=11&&y>=7&&y<=24)||(x>=21&&x<=24&&y>=7&&y<=24)||(y>=7&&y<=24&&Math.abs(x-(9+(y-7)*14/17))<=2);data[offset]=letter?255:245;data[offset+1]=letter?255:94;data[offset+2]=letter?255:101;data[offset+3]=255;}return nativeImage.createFromBitmap(data,{width:size,height:size});}

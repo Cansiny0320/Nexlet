@@ -1,3 +1,4 @@
+import { useToolState } from './tool-session';
 import { useState,useEffect } from 'react';
 import { Copy, WandSparkles, Minimize2, RefreshCw, ArrowRight, Plus, Trash2, Globe } from 'lucide-react';
 import { api,useApp,errorText,PanelHeader,Empty,IconButton } from './common';
@@ -6,13 +7,13 @@ function encode64(value:string){const bytes=new TextEncoder().encode(value);let 
 function decode64(value:string){const binary=atob(value.replace(/\s/g,''));return new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(binary,c=>c.charCodeAt(0)));}
 export function ToolsPanel({tool,initial}:{tool:string;initial:string}){
   const {toast}=useApp();
-  const [input,setInput]=useState(initial),[output,setOutput]=useState(''),[error,setError]=useState(''),[mode,setMode]=useState('base64'),[count,setCount]=useState(1);
-  const [timestamp,setTimestamp]=useState(String(Math.floor(Date.now()/1000))),[unit,setUnit]=useState('seconds'),[date,setDate]=useState(localDateInput(new Date()));
+  const [input,setInput]=useToolState('input',initial),[output,setOutput]=useToolState('output',''),[error,setError]=useToolState('error',''),[mode,setMode]=useToolState('mode','base64'),[count,setCount]=useToolState('count',1);
+  const [timestamp,setTimestamp]=useToolState('timestamp',String(Math.floor(Date.now()/1000))),[unit,setUnit]=useToolState('unit','seconds'),[date,setDate]=useToolState('date',localDateInput(new Date()));
   const copy=async(text=output)=>{try{await api('clipAction',{action:'writeText',text});toast('已复制');}catch(e){toast(errorText(e),true);}};
   function process(action:string){try{setError('');if(input.length>500000)throw new Error('文本过长，最多处理 50 万字符');
     if(tool==='encoding')setOutput(mode==='base64'?(action==='encode'?encode64(input):decode64(input)):(action==='encode'?encodeURIComponent(input):decodeURIComponent(input)));
   }catch(e){setError(errorText(e));setOutput('');}}
-  useEffect(()=>{if(tool==='uuid')setOutput(crypto.randomUUID());},[]);
+  useEffect(()=>{if(tool==='uuid'&&!output)setOutput(crypto.randomUUID());},[]);
   if(tool==='timestamp'){
     const millis=Number(timestamp)*(unit==='seconds'?1000:1),parsed=new Date(millis),valid=timestamp.trim()!==''&&Number.isFinite(millis)&&!Number.isNaN(parsed.getTime());
     const fromDate=new Date(date),dateValid=!Number.isNaN(fromDate.getTime());

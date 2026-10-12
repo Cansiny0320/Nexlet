@@ -71,7 +71,8 @@ export class Platform {
       } finally { this.win.close(); }
     }
     if (process.platform === 'darwin') {
-      const output = await this.jxa('ObjC.import("AppKit"); var urls=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions([$.NSURL],null); var out=[]; if(urls) for(var i=0;i<Number(urls.count);i++){var u=urls.objectAtIndex(i);if(u.isFileURL)out.push(ObjC.unwrap(u.path));} JSON.stringify(out);');
+      // Native collections preserve ObjC class/object identity; JS null bridges to NSNull.
+      const output = await this.jxa('ObjC.import("AppKit"); var urls=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); var out=[]; if(!urls.isNil()) for(var i=0;i<Number(urls.count);i++){var u=urls.objectAtIndex(i);if(u.isFileURL)out.push(ObjC.unwrap(u.path));} JSON.stringify(out);');
       return JSON.parse(output || '[]');
     }
     return [];
@@ -93,7 +94,7 @@ export class Platform {
       return;
     }
     if (process.platform === 'darwin') {
-      await this.jxa('ObjC.import("AppKit"); function run(argv){var paths=JSON.parse(argv[0]);var urls=paths.map(function(p){return $.NSURL.fileURLWithPath(p);});var pb=$.NSPasteboard.generalPasteboard;pb.clearContents;if(!pb.writeObjects(urls))throw Error("无法写入文件剪贴板");}', [JSON.stringify(files)]); return;
+      await this.jxa('ObjC.import("AppKit"); function run(argv){var paths=JSON.parse(argv[0]);var urls=$.NSMutableArray.array;paths.forEach(function(p){urls.addObject($.NSURL.fileURLWithPath(p));});var pb=$.NSPasteboard.generalPasteboard;pb.clearContents;if(!pb.writeObjects(urls))throw Error("无法写入文件剪贴板");}', [JSON.stringify(files)]); return;
     }
     throw new Error('此平台暂不支持复制文件');
   }
