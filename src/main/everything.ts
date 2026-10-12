@@ -6,16 +6,24 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { everythingArguments, parseEverythingResults, type FileSearchResult } from '../shared/everything';
 import { EverythingEngine } from './everything-engine';
+import { SpotlightSearch } from './spotlight';
 
 const exec=promisify(execFile);
 export class EverythingSearch {
   private generations=new Map<number,number>();
   private allowed=new Map<number,Set<string>>();
   private engine:EverythingEngine;
-  constructor(paths:()=>string[]){this.engine=new EverythingEngine(paths);}
+  private spotlight:SpotlightSearch;
+  private nextGeneration=0;
+  constructor(paths:()=>string[],private platform:NodeJS.Platform=process.platform){this.engine=new EverythingEngine(paths);this.spotlight=new SpotlightSearch(paths);}
   async search(owner:number,query:string):Promise<FileSearchResult>{
-    const generation=(this.generations.get(owner)||0)+1;this.generations.set(owner,generation);this.allowed.set(owner,new Set());
-    if(process.platform!=='win32')return {status:'unsupported',message:'Everything 文件搜索目前仅支持 Windows。应用与快捷方式仍可在主搜索框查找。',items:[],limited:false};
+    const generation=++this.nextGeneration;this.generations.set(owner,generation);this.allowed.set(owner,new Set());
+    if(this.platform==='darwin'){
+      const result=await this.spotlight.search(owner,query);
+      if(this.generations.get(owner)===generation)this.allowed.set(owner,new Set(result.items.map(item=>item.path)));
+      return result;
+    }
+    if(this.platform!=='win32')return {status:'unsupported',message:'文件搜索目前支持 Windows 和 macOS。应用与快捷方式仍可在主搜索框查找。',items:[],limited:false};
     if(!query.trim())return {status:'idle',message:'输入文件名或路径开始搜索，例如 ext:pdf 项目',items:[],limited:false};
     let version:string;
     try{version=await this.engine.ensure();}catch(e){return {status:'unavailable',message:e instanceof Error?e.message:'内置引擎暂时不可用',items:[],limited:false};}
@@ -50,7 +58,7 @@ export class EverythingSearch {
     else if(action==='reveal')shell.showItemInFolder(file);
     else throw new Error('文件操作无效');return true;
   }
-  forget(owner:number){this.allowed.delete(owner);this.generations.delete(owner);}
-  async reset(){this.allowed.clear();await this.engine.stop();}
-  async close(){if(process.platform==='win32')await this.engine.stop(true);}
+  forget(owner:number){this.spotlight.forget(owner);this.allowed.delete(owner);this.generations.delete(owner);}
+  async reset(){this.generations.clear();this.allowed.clear();this.spotlight.reset();if(this.platform==='win32')await this.engine.stop();}
+  async close(){this.generations.clear();this.allowed.clear();this.spotlight.reset();if(this.platform==='win32')await this.engine.stop(true);}
 }
