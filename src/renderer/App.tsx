@@ -7,6 +7,7 @@ import { BUILTIN_COMMANDS } from '../shared/types';
 import { INPUT_TEXT_LIMIT, type LaunchInput, type InputSource } from '../shared/launch';
 import { AppContext, api, errorText, IconButton, Modal, ToolIcon, type DialogSpec } from './common';
 import { Launcher } from './Launcher';
+import { LaunchInputChip } from './LaunchInputChip';
 import { ClipboardPanel } from './Clipboard';
 import { ScratchpadPanel } from './Scratchpad';
 import { ToolsPanel, WebPanel } from './Tools';
@@ -24,7 +25,7 @@ export function App(){
   const [session,setSession]=useState(()=>createToolSession()),[restoring,setRestoring]=useState(!!transfer),[transferring,setTransferring]=useState(false);
   const [state,setState]=useState<AppState|null>(null),[loadError,setLoadError]=useState('');
   const [view,setView]=useState(params.get('view')||'launcher'),[query,setQuery]=useState(''),[payload,setPayload]=useState('');
-  const [launchInput,setLaunchInput]=useState<LaunchInput|null>(null),[inputSource,setInputSource]=useState<InputSource>('input');
+  const [launchInput,setLaunchInput]=useState<(LaunchInput&{preview?:string})|null>(null),[inputSource,setInputSource]=useState<InputSource>('input');
   const captureGeneration=useRef(0),pluginGeneration=useRef(0),transferDone=useRef(false);
   const [capturing,setCapturing]=useState(false),[pluginInfo,setPluginInfo]=useState<PluginSessionState|null>(null);
   const syncPlugin=useCallback(async()=>{const generation=++pluginGeneration.current;const info=await api<PluginSessionState|null>('pluginSession');if(generation!==pluginGeneration.current)return;setPluginInfo(info);setView(current=>info?'plugin':current==='plugin'?'launcher':current);if(info){setLaunchInput(null);setQuery('');}},[]);
@@ -41,7 +42,7 @@ export function App(){
   useEffect(()=>{void api('window',{action:'overlay',visible:!!dialogSpec||(view==='plugin'&&!!notification)});},[dialogSpec,notification,view]);
   useEffect(()=>{if(!state||restoring)return;const media=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=state.settings.theme==='system'?(media.matches?'dark':'light'):state.settings.theme;apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);},[state?.settings.theme,restoring]);
   useEffect(()=>{const handle=(event:KeyboardEvent)=>{
-    if(dialogSpec||transferring)return;
+    if(dialogSpec||transferring||document.querySelector('dialog[open]'))return;
     if((event.ctrlKey||event.metaKey)&&event.key===','){event.preventDefault();navigate('settings');}
     if(event.key==='Escape'&&!event.defaultPrevented){if(query)setQuery('');else if(launchInput)clearLaunchInput();else if(view!=='launcher'&&!detached)navigate('launcher');else void api('window',{action:'hide'});}
   };window.addEventListener('keydown',handle);return()=>window.removeEventListener('keydown',handle);},[view,query,launchInput,dialogSpec,transferring,navigate,clearLaunchInput]);
@@ -54,10 +55,10 @@ export function App(){
     const generation=++captureGeneration.current;setCapturing(true);
     try{
       const paths=files.map(file=>window.nexlet.pathForFile(file)).filter(Boolean);
-      let captured:LaunchInput;
+      let captured:LaunchInput,preview:string|undefined;
       if(paths.length===files.length){captured=await api('launchInput',{type:'files',paths,from});}
-      else{const file=files.find(f=>f.type.startsWith('image/'));if(!file)throw new Error('暂不支持此粘贴内容');if(file.size>20*1024*1024)throw new Error('图片超过 20 MB');const bitmap=await createImageBitmap(file);if(bitmap.width*bitmap.height>36_000_000){bitmap.close();throw new Error('图片超过 3600 万像素');}const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;canvas.getContext('2d')!.drawImage(bitmap,0,0);bitmap.close();if(generation!==captureGeneration.current)return;captured=await api('launchInput',{type:'image',data:canvas.toDataURL('image/png'),from});}
-      if(generation===captureGeneration.current){setLaunchInput(captured);setQuery('');setInputSource(from);}
+      else{const file=files.find(f=>f.type.startsWith('image/'));if(!file)throw new Error('暂不支持此粘贴内容');if(file.size>20*1024*1024)throw new Error('图片超过 20 MB');const bitmap=await createImageBitmap(file);if(bitmap.width*bitmap.height>36_000_000){bitmap.close();throw new Error('图片超过 3600 万像素');}const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;canvas.getContext('2d')!.drawImage(bitmap,0,0);bitmap.close();if(generation!==captureGeneration.current)return;preview=canvas.toDataURL('image/png');captured=await api('launchInput',{type:'image',data:preview,from});}
+      if(generation===captureGeneration.current){setLaunchInput({...captured,preview});setQuery('');setInputSource(from);}
     }catch(e){if(generation===captureGeneration.current)toast(errorText(e),true);}finally{if(generation===captureGeneration.current)setCapturing(false);}
   };
   if(!state||restoring)return <div className="loading-screen"><span className="brand-mark">N</span><p>{loadError||'正在打开 Nexlet…'}</p>{loadError&&<button className="button" onClick={()=>void refresh()}>重试</button>}</div>;
@@ -65,7 +66,7 @@ export function App(){
   return <ToolSessionContext.Provider value={session}><AppContext.Provider value={{state,refresh,toast,dialog,navigate,detach:detachTool,canDetach:!detached}}><div inert={state.update.phase==='installing'} className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files),'drop');}}} onPaste={e=>{if(view!=='launcher')return;if(e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files),'paste');}else if(e.target===input.current){e.preventDefault();const next=query.slice(0,input.current?.selectionStart??0)+e.clipboardData.getData('text/plain')+query.slice(input.current?.selectionEnd??query.length);if(next.length>INPUT_TEXT_LIMIT){toast('输入最多 50 万字符',true);return;}captureGeneration.current++;setCapturing(false);setInputSource('paste');setQuery(next);}}}>
     <header className="titlebar">
       <div className="window-drag-handle" aria-label="拖动窗口" title="拖动窗口"><GripVertical size={17}/></div>
-      {view==='launcher'?<>{launchInput&&<div className="launch-input-chip" aria-label="待处理输入"><span>{launchInput.type==='files'?`${launchInput.files.length} 个文件${launchInput.files.length===1?' · '+launchInput.files[0].name:''}`:'图片'}</span><IconButton title="取消内容输入" onClick={clearLaunchInput}><X size={14}/></IconButton></div>}<input ref={input} className="launcher-input" aria-label="搜索功能、应用或快捷方式" placeholder={launchInput?'筛选处理功能…':'搜索功能 / 粘贴文件、图片'} maxLength={INPUT_TEXT_LIMIT} value={query} onChange={e=>{captureGeneration.current++;setCapturing(false);setInputSource('input');setQuery(e.target.value);}} autoComplete="off" spellCheck={false}/></>:
+      {view==='launcher'?<>{launchInput&&<LaunchInputChip key={launchInput.id} input={launchInput} preview={launchInput.preview} onClear={clearLaunchInput}/>}<input ref={input} className="launcher-input" aria-label="搜索功能、应用或快捷方式" placeholder={launchInput?'筛选处理功能…':'搜索功能 / 粘贴文件、图片'} maxLength={INPUT_TEXT_LIMIT} value={query} onChange={e=>{captureGeneration.current++;setCapturing(false);setInputSource('input');setQuery(e.target.value);}} autoComplete="off" spellCheck={false}/></>:
        view==='clipboard'?<><ToolIcon command={command!}/><input ref={input} className="clipboard-search" aria-label="搜索剪贴板" placeholder="搜索…" value={query} onChange={e=>setQuery(e.target.value)}/>{board&&<span className="subtle">悬浮中转</span>}</>:
        <div className="plugin-pill" title="拖动窗口">{command&&<ToolIcon command={command} size={20}/>}<span>{view==='plugin'?pluginInfo?.name||'正在打开插件…':command?.name||'Nexlet'}</span>{!detached&&<button className="plugin-pill-close" aria-label="关闭当前工具" title="返回首页" onClick={()=>navigate('launcher')}><X size={14}/></button>}</div>}
       <div className="titlebar-spacer"/>

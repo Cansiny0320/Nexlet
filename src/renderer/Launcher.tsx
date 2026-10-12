@@ -48,7 +48,7 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
     }catch(e){toast(errorText(e),true);}
   }
   useEffect(()=>{const handle=(e:KeyboardEvent)=>{
-    if(document.querySelector('.modal-backdrop'))return;
+    if(document.querySelector('.modal-backdrop,dialog[open]'))return;
     if(e.key==='ArrowDown'||e.key==='ArrowRight'){e.preventDefault();setSelected(i=>Math.min(i+1,visible.length-1));}
     else if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();setSelected(i=>Math.max(0,i-1));}
     else if(e.key==='Enter'&&visible[selected]){e.preventDefault();void launch(visible[selected]);}
