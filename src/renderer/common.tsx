@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from 'react';
 import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Pin, X, Check, Search, FileSearch } from 'lucide-react';
 import type { AppState, Command, HostAction } from '../shared/types';
+import { builtInArtwork } from './tool-artwork';
 
 export const api=<T,>(action:HostAction,payload?:unknown)=>window.nexlet.call<T>(action,payload);
 export const errorText=(error:unknown)=>error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': Error: /,'') : String(error);
@@ -10,6 +11,7 @@ export const AppContext=createContext<AppContextValue|null>(null);
 export function useApp(){const ctx=useContext(AppContext);if(!ctx)throw new Error('App context missing');return ctx;}
 export function ToolIcon({command,size=32}:{command:Command;size?:number}){
   if(command.icon?.startsWith('data:image/'))return <img className="tool-image" src={command.icon} width={size} height={size} alt="" draggable={false}/>;
+  if(builtInArtwork[command.id])return <img className="tool-image" src={builtInArtwork[command.id]} width={size} height={size} alt="" draggable={false}/>;
   const key=command.id.startsWith('tool:')?command.id.slice(5):command.kind;
   const icons:Record<string,typeof ClipboardList>={clipboard:ClipboardList,scratchpad:Calculator,plugins:Blocks,web:Globe,json:Braces,filesearch:FileSearch,timestamp:Clock3,encoding:Binary,uuid:Fingerprint,settings:Settings,plugin:Blocks,app:AppWindow,shortcut:FileSymlink,match:Search};
   const Icon=icons[key]||AppWindow;

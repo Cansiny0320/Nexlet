@@ -7,6 +7,7 @@ import { BUILTIN_COMMANDS } from '../shared/types';
 import { INPUT_TEXT_LIMIT, type LaunchInput, type InputSource } from '../shared/launch';
 import { AppContext, api, errorText, IconButton, Modal, ToolIcon, type DialogSpec } from './common';
 import { Launcher } from './Launcher';
+import { brandIcon } from './tool-artwork';
 import { LaunchInputChip } from './LaunchInputChip';
 import { saveBeforeUpdate } from './update-save';
 import { ToolBoundary } from './ToolBoundary';
@@ -67,7 +68,7 @@ export function App(){
       if(generation===captureGeneration.current){setLaunchInput({...captured,preview});setQuery('');setInputSource(from);}
     }catch(e){if(generation===captureGeneration.current)toast(errorText(e),true);}finally{if(generation===captureGeneration.current)setCapturing(false);}
   };
-  if(!state||restoring)return <div className="loading-screen"><span className="brand-mark">N</span><p>{loadError||'正在打开 Nexlet…'}</p>{loadError&&<button className="button" onClick={()=>void refresh()}>重试</button>}</div>;
+  if(!state||restoring)return <div className="loading-screen"><img className="brand-mark" src={brandIcon} width={48} height={48} alt="" draggable={false}/><p>{loadError||'正在打开 Nexlet…'}</p>{loadError&&<button className="button" onClick={()=>void refresh()}>重试</button>}</div>;
   const command=BUILTIN_COMMANDS.find(c=>c.id==='tool:'+view);
   return <ToolSessionContext.Provider value={session}><AppContext.Provider value={{state,refresh,toast,dialog,navigate,detach:detachTool,canDetach:!detached&&readySession===session}}><div inert={state.update.phase==='installing'} className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files),'drop');}}} onPaste={e=>{if(view!=='launcher')return;if(e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files),'paste');}else if(e.target===input.current){e.preventDefault();const next=query.slice(0,input.current?.selectionStart??0)+e.clipboardData.getData('text/plain')+query.slice(input.current?.selectionEnd??query.length);if(next.length>INPUT_TEXT_LIMIT){toast('输入最多 50 万字符',true);return;}captureGeneration.current++;setCapturing(false);setInputSource('paste');setQuery(next);}}}>
     <header className="titlebar">
@@ -80,7 +81,7 @@ export function App(){
         {!detached&&view!=='launcher'&&<IconButton title="返回首页" onClick={()=>navigate('launcher')}><ChevronLeft size={17}/></IconButton>}
         {view!=='launcher'&&view!=='settings'&&view!=='plugins'&&view!=='web'&&!detached&&<IconButton title="分离为独立窗口" disabled={transferring||(view!=='plugin'&&readySession!==session)} onClick={()=>void detachTool()}><ExternalLink size={16}/></IconButton>}
         {view!=='launcher'&&<IconButton title="固定窗口" active={pinned} onClick={()=>void control('pin')}><Pin size={16}/></IconButton>}
-        {view==='launcher'?<button className="brand-button" title="设置" aria-label="打开设置" onClick={()=>navigate('settings')}><span>N</span>{state.shortcutError&&<i/>}</button>:<><IconButton title="最小化" onClick={()=>void control('minimize')}><Minus size={16}/></IconButton><IconButton title="最大化" onClick={()=>void control('maximize')}><Square size={13}/></IconButton><IconButton title="关闭窗口" onClick={()=>void control('close')}><X size={17}/></IconButton></>}
+        {view==='launcher'?<button className="brand-button" title="设置" aria-label="打开设置" onClick={()=>navigate('settings')}><img src={brandIcon} width={30} height={30} alt="" draggable={false}/>{state.shortcutError&&<i/>}</button>:<><IconButton title="最小化" onClick={()=>void control('minimize')}><Minus size={16}/></IconButton><IconButton title="最大化" onClick={()=>void control('maximize')}><Square size={13}/></IconButton><IconButton title="关闭窗口" onClick={()=>void control('close')}><X size={17}/></IconButton></>}
       </div>
     </header>
     <main className="main-content" inert={transferring}>
