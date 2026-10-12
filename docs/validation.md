@@ -101,7 +101,7 @@ node scripts/smoke-portable.mjs
 
 ## 主程序更新验证（2026-10-12）
 
-以下为提交前的本地验证。两个正式格式版本号仅用于隔离测试，不代表 GitHub 已发布这些版本。
+以下分别记录本地验证与提交后的 GitHub CI 结果。两个正式格式版本号仅用于隔离测试，不代表 GitHub 已发布这些版本。
 
 - 已配置并回读仓库 Actions Secrets 名称：`NEXLET_MAC_CERTIFICATE_P12`、`NEXLET_MAC_CERTIFICATE_PASSWORD`。没有输出私钥或密码。
 - macOS 26.5.2 arm64、Electron 44.7.0、electron-updater 6.8.10：固定证书构建 `0.2.3` / `0.2.4`，两份 DMG 与应用签名校验通过，ZIP、blockmap 和更新清单均生成。
@@ -111,6 +111,9 @@ node scripts/smoke-portable.mjs
 - `npm run typecheck`、`npm run build`、`git diff --check` 通过；当前工作区单元测试 98 项通过、4 项 Windows 专用测试跳过。构建保留原有大于 500 kB 的 chunk 提示。
 - 设置页更新入口已通过真实界面检查；测试模式的检查按钮正确禁用。
 - `actionlint 1.7.12` 检查更新后的 workflow 通过。版本、资产大小与 SHA-512 不符会使更新清单合并失败；回归测试覆盖双架构合并、状态转换、签名/网络失败、安装前保存确认与超时。
-- Windows 安装版与便携版配置已接入；本机没有 Windows 运行环境，尚未验证 NSIS 安装或跨版本自动更新。更新后的 GitHub CI 也尚未运行。不能用原有版本的 CI 成功替代本轮验证。
+- Windows 安装版与便携版配置已接入；CI 已生成 NSIS 安装包并验证解压应用与便携版实际启动。尚未实测 Windows NSIS 安装流程和跨版本自动更新。
+- 提交 `de217ca0eb9973bf9f285497c81dc7fbff1568b0` 的 [GitHub Actions 完整运行](https://github.com/Cansiny0320/Nexlet/actions/runs/38235133659) 已通过：Windows x64、macOS Intel、macOS Apple Silicon 均完成类型检查、单元测试、构建、打包与启动检查；Windows 为 90 项单元测试和 16 项桌面集成测试通过。
+- 两个 macOS CI 构建的签名证书均读回 `69397314808BC8B95C8B4AF0FBDFA53C0184FC2C`，与本地固定证书一致。打包后撤销临时 Code Signing 信任、验证身份不再受信任并删除临时钥匙串；清理失败会使 CI 失败。
+- 汇总 job 已验证双架构更新清单、产物大小与 SHA-512，并生成 SHA256SUMS。只推送源码到 `main`，没有创建版本标签或 GitHub Release；首个含更新器的正式版本仍需手动安装。
 
 - 提交前额外导出仅含本次签名/更新改动的源码快照，排除其他会话的内容启动和工具分离修改：typecheck、build 通过，86 项单元测试通过，4 项 Windows 专用测试跳过。
