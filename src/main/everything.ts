@@ -7,11 +7,13 @@ import { randomUUID } from 'node:crypto';
 import { everythingArguments, parseEverythingResults, type FileSearchResult, type FileSearchIndexStatus } from '../shared/everything';
 import { EverythingEngine } from './everything-engine';
 import { SpotlightSearch } from './spotlight';
+import { FileBrowser } from './file-browser';
 
 const exec=promisify(execFile);
 export class EverythingSearch {
   private generations=new Map<number,number>();
   private allowed=new Map<number,Set<string>>();
+  private browser=new FileBrowser(owner=>this.allowed.get(owner));
   private engine:EverythingEngine;
   private spotlight:SpotlightSearch;
   private nextGeneration=0;
@@ -44,6 +46,7 @@ export class EverythingSearch {
     }
   }
   async search(owner:number,query:string):Promise<FileSearchResult>{
+    this.browser.forget(owner);
     const generation=++this.nextGeneration;this.generations.set(owner,generation);this.allowed.set(owner,new Set());
     if(this.platform==='darwin'){
       const result=await this.spotlight.search(owner,query);
@@ -85,7 +88,9 @@ export class EverythingSearch {
     else if(action==='reveal')shell.showItemInFolder(file);
     else throw new Error('文件操作无效');return true;
   }
-  forget(owner:number){this.spotlight.forget(owner);this.allowed.delete(owner);this.generations.delete(owner);}
-  async reset(){this.generations.clear();this.allowed.clear();this.spotlight.reset();await this.preparation?.catch(()=>{});this.preparationSince=0;if(this.platform==='win32')await this.engine.stop();}
-  async close(){this.generations.clear();this.allowed.clear();this.spotlight.reset();await this.preparation?.catch(()=>{});if(this.platform==='win32')await this.engine.stop(true);}
+  browse(owner:number,file:string,filter?:string,cursor?:string){return this.browser.browse(owner,file,filter,cursor);}
+  info(owner:number,file:string){return this.browser.info(owner,file);}
+  forget(owner:number){this.browser.forget(owner);this.spotlight.forget(owner);this.allowed.delete(owner);this.generations.delete(owner);}
+  async reset(){this.browser.reset();this.generations.clear();this.allowed.clear();this.spotlight.reset();await this.preparation?.catch(()=>{});this.preparationSince=0;if(this.platform==='win32')await this.engine.stop();}
+  async close(){this.browser.reset();this.generations.clear();this.allowed.clear();this.spotlight.reset();await this.preparation?.catch(()=>{});if(this.platform==='win32')await this.engine.stop(true);}
 }

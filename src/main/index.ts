@@ -235,6 +235,8 @@ async function bootstrap() {
       case 'marketInstall':return withDialog(()=>marketplace.install(window,text(payload,100)));
       case 'fileSearch':return files.search(event.sender.id,text(payload,1024));
       case 'fileSearchStatus':return files.status();
+      case 'fileBrowse':{const args=inputObject(payload);return files.browse(event.sender.id,text(args.path,32767),text(args.filter??'',1024),typeof args.cursor==='string'?text(args.cursor,100):undefined);}
+      case 'fileInfo':return files.info(event.sender.id,text(payload,32767));
       case 'fileAction':{const args=inputObject(payload);return files.action(event.sender.id,text(args.action,30),typeof args.path==='string'?text(args.path,32767):undefined);}
       case 'openData':{const error=await shell.openPath(store.directory);if(error)throw new Error(error);return true;}
       default:throw new Error('未知操作');
