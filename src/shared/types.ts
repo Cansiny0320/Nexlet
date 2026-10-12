@@ -12,7 +12,7 @@ export interface PluginManifest { id: string; name: string; version: string; des
 export interface PluginRecord { manifest: PluginManifest; directory: string; enabled: boolean; development: boolean; installedAt: number; source?: 'marketplace' | 'local'; icon?: string; }
 export interface StartupStatus { supported: boolean; enabled: boolean; reason: string | null; }
 export interface PluginSessionState { id:string; name:string; code:string; detached:boolean; loading:boolean; }
-export interface UpdateStatus { mode: 'automatic' | 'portable' | 'unsupported'; phase: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'error'; version: string | null; notes: string; percent: number | null; error: string | null; }
+export interface UpdateStatus { mode: 'automatic' | 'portable' | 'unsupported'; phase: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'error'; version: string | null; notes: string; percent: number | null; transferred?: number | null; total?: number | null; bytesPerSecond?: number | null; error: string | null; }
 export interface AppState { update: UpdateStatus; version: string; platform: string; settings: Settings; startup: StartupStatus; pinned: string[]; recent: string[]; commands: Command[]; plugins: PluginRecord[]; shortcutError: string | null; catalogLoading: boolean; nativeStatus: string | null; canPaste: boolean; }
 export const DEFAULT_SETTINGS: Settings = { shortcut: 'Alt+Space', theme: 'system', hideOnBlur: true, clipboardEnabled: true, maxClipboardItems: 500, retentionDays: 30, searchPaths: [], fileSearchPaths: [], webShortcuts: [] };
 export const BUILTIN_COMMANDS: Command[] = [

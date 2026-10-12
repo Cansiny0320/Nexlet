@@ -1,5 +1,5 @@
 import { ToolHandoffs } from './tool-handoff';
-import { autoUpdater } from 'electron-updater';
+import { createUpdateTransport } from './update-transport';
 import { AppUpdates, UpdateSaveBarrier } from './updater';
 import { app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, globalShortcut, ipcMain, clipboard, ClipboardItem, dialog, shell, screen, protocol } from 'electron';
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
@@ -53,7 +53,7 @@ async function bootstrap() {
   const startup=new StartupManager(app,process.platform,process.execPath,process.env.PORTABLE_EXECUTABLE_FILE);
   const loginLaunch=startup.wasOpenedAtLogin(process.argv);
   const updateMode = !app.isPackaged || testMode || !['darwin','win32'].includes(process.platform) ? 'unsupported' : process.env.PORTABLE_EXECUTABLE_FILE ? 'portable' : 'automatic';
-  const updateTransport = updateMode === 'automatic' || (testMode && app.isPackaged) ? autoUpdater : null;
+  const updateTransport = updateMode === 'automatic' || (testMode && app.isPackaged) ? createUpdateTransport() : null;
   if(updateTransport){updateTransport.autoDownload=false;updateTransport.autoInstallOnAppQuit=false;updateTransport.allowPrerelease=false;updateTransport.allowDowngrade=false;}
   const updateSaves = new UpdateSaveBarrier();
   const updates = new AppUpdates(app.getVersion(),updateMode,updateTransport,()=>{if(updates.read().phase==='error')quitting=false;notify();},async()=>{await updateSaves.prepare([...hosts.keys()],(id,token)=>hosts.get(id)?.webContents.send('host-change','update:prepare:'+token));quitting=true;});
@@ -254,7 +254,7 @@ async function bootstrap() {
   let cleanedUp=false;
   app.on('before-quit',event=>{quitting=true;clips.stop();globalShortcut.unregisterAll();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();app.quit();});}});
   app.once('will-quit',()=>store.close());
-  if(testMode)(globalThis as any).__nexlet={updates,autoUpdater,store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
+  if(testMode)(globalThis as any).__nexlet={updates,autoUpdater:updateTransport,store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
 }
 
 function createIcon(){const size=32,data=Buffer.alloc(size*size*4);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const offset=(y*size+x)*4;const letter=(x>=8&&x<=11&&y>=7&&y<=24)||(x>=21&&x<=24&&y>=7&&y<=24)||(y>=7&&y<=24&&Math.abs(x-(9+(y-7)*14/17))<=2);data[offset]=letter?255:245;data[offset+1]=letter?255:94;data[offset+2]=letter?255:101;data[offset+3]=255;}return nativeImage.createFromBitmap(data,{width:size,height:size});}

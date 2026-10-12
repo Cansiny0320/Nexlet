@@ -14,6 +14,23 @@ function fixture(mode: 'automatic'|'portable'|'unsupported' = 'automatic') {
 }
 
 describe('主程序更新', () => {
+  it('收到进度前不显示虚假的 0%，保留下载大小和速度直到校验完成', async () => {
+    const { updates, transport } = fixture();
+    let finish!: () => void;
+    transport.downloadUpdate.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+    await updates.check();
+    const pending = updates.download();
+    expect(updates.read()).toMatchObject({ phase: 'downloading', percent: null });
+    transport.emit('download-progress', { percent: 25, transferred: 250, total: 1000, bytesPerSecond: 50 });
+    expect(updates.read()).toMatchObject({ percent: 25, transferred: 250, total: 1000, bytesPerSecond: 50 });
+    transport.emit('download-progress', { percent: 100, transferred: 1000, total: 1000, bytesPerSecond: 0 });
+    expect(updates.read().phase).toBe('downloading');
+    await expect(updates.install()).rejects.toThrow('下载');
+    transport.emit('update-downloaded', { version: '0.2.3' });
+    finish(); await pending;
+    expect(updates.read().phase).toBe('downloaded');
+  });
+
   it('检查不会下载；下载完成后才允许重启安装，先完成退出准备', async () => {
     const { updates, transport, prepare } = fixture();
     await expect(updates.install()).rejects.toThrow('下载');

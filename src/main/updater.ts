@@ -58,8 +58,12 @@ export class AppUpdates {
       this.set({ phase: 'available', version: info.version, notes: notes.slice(0, 8000) });
     });
     transport?.on('update-not-available', () => { if (this.status.phase === 'checking') this.set({ phase: 'latest' }); });
-    transport?.on('download-progress', ({ percent }: { percent: number }) => {
-      if (this.status.phase === 'downloading' && Number.isFinite(percent)) this.set({ percent: Math.max(0, Math.min(100, Math.floor(percent))) });
+    transport?.on('download-progress', ({ percent, transferred, total, bytesPerSecond }: { percent: number; transferred?: number; total?: number; bytesPerSecond?: number }) => {
+      const valid = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+      if (this.status.phase === 'downloading') this.set({
+        percent: Number.isFinite(percent) ? Math.max(0, Math.min(100, Math.floor(percent))) : null,
+        transferred: valid(transferred), total: valid(total), bytesPerSecond: valid(bytesPerSecond)
+      });
     });
     transport?.on('update-downloaded', (info: ReleaseInfo) => {
       if (this.status.phase === 'downloading' && info.version === this.status.version) this.set({ phase: 'downloaded', percent: 100 });
@@ -74,7 +78,7 @@ export class AppUpdates {
   async check(): Promise<void> {
     if (this.status.mode === 'unsupported' || ['checking', 'downloading', 'downloaded', 'installing'].includes(this.status.phase)) return;
     this.portableUrl = null;
-    this.set({ phase: 'checking', version: null, notes: '', percent: null, error: null });
+    this.set({ phase: 'checking', version: null, notes: '', percent: null, transferred: null, total: null, bytesPerSecond: null, error: null });
     try {
       if (this.status.mode === 'portable') {
         const info = await this.checkPortable(this.current);
@@ -88,7 +92,7 @@ export class AppUpdates {
   }
   async download(): Promise<void> {
     if (this.status.mode !== 'automatic' || this.status.phase !== 'available') throw Error('请先检查可用更新');
-    this.set({ phase: 'downloading', percent: 0, error: null });
+    this.set({ phase: 'downloading', percent: null, transferred: null, total: null, bytesPerSecond: null, error: null });
     try { await this.transport!.downloadUpdate(); } catch (error) { this.fail(error); }
   }
   async install(): Promise<void> {
