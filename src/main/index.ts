@@ -4,8 +4,7 @@ import { AppUpdates, UpdateSaveBarrier } from './updater';
 import { app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, globalShortcut, ipcMain, clipboard, ClipboardItem, dialog, shell, screen, protocol } from 'electron';
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { copyFile, writeFile } from 'node:fs/promises';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { launchWindowsApplication } from './launch-windows';
 import path from 'node:path';
 import { isHostDocument } from './host-origin';
 import { Store } from './store';
@@ -24,7 +23,6 @@ import { BUILTIN_COMMANDS, HOST_ACTIONS, type AppState, type Settings, type Comm
 import { searchCommands } from '../shared/search';
 import { calculate } from '../shared/calculator';
 
-const exec = promisify(execFile);
 const testMode = process.env.NEXLET_TEST_MODE === '1';
 if (process.env.NEXLET_USER_DATA) { const directory=path.resolve(process.env.NEXLET_USER_DATA); mkdirSync(directory,{recursive:true}); app.setPath('userData',directory); }
 protocol.registerSchemesAsPrivileged([{scheme:'nexlet-plugin',privileges:{standard:true,secure:true,supportFetchAPI:true}},{scheme:'nexlet-image',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
@@ -157,7 +155,7 @@ async function bootstrap() {
         if(command.kind==='tool'){await plugins.runtime.exitWindow(window);recordRecent(id);return {view:id.slice(5)};}
         if(command.kind==='plugin'){await plugins.launch(command.pluginId!,command.feature!,content,snapshot);recordRecent(id);return {opened:true};}
         if(command.kind==='web'){const entry=current.settings.webShortcuts.find(w=>'web:'+w.id===id);if(!entry)throw new Error('网页不存在');await shell.openExternal(entry.url);}
-        else if(id.startsWith('uwp:')){await exec('explorer.exe',['shell:AppsFolder\\'+id.slice(4)],{windowsHide:true,timeout:5000});}
+        else if(id.startsWith('uwp:')){launchWindowsApplication(id.slice(4));}
         else if(command.path){const error=await shell.openPath(command.path);if(error)throw new Error(error);}
         recordRecent(id);window.hide();return {opened:true};
       }
