@@ -1,4 +1,4 @@
-Nexlet 0.2.3 增加内容启动、插件内嵌与保留状态的工具分离，并修复 macOS 文件剪贴板回读为空的问题。
+Nexlet 0.2.4 增加内容启动、插件内嵌与保留状态的工具分离，并修复 macOS 文件剪贴板回读为空的问题。
 
 ## 新增与改进
 
@@ -16,10 +16,10 @@ Nexlet 0.2.3 增加内容启动、插件内嵌与保留状态的工具分离，�
 
 ## 下载与更新
 
-- Windows x64 安装版：`Nexlet-0.2.3-Windows-x64-Setup.exe`。
-- Windows x64 便携版：`Nexlet-0.2.3-Windows-x64.exe`。
-- Intel Mac：`Nexlet-0.2.3-macOS-x64.dmg`。
-- Apple Silicon Mac：`Nexlet-0.2.3-macOS-arm64.dmg`。
+- Windows x64 安装版：`Nexlet-0.2.4-Windows-x64-Setup.exe`。
+- Windows x64 便携版：`Nexlet-0.2.4-Windows-x64.exe`。
+- Intel Mac：`Nexlet-0.2.4-macOS-x64.dmg`。
+- Apple Silicon Mac：`Nexlet-0.2.4-macOS-arm64.dmg`。
 - macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新。`hello-nexlet.nexlet` 为示例插件；`SHA256SUMS.txt` 提供下载校验值。
 
 从 0.2.2 升级请手动下载安装包，先从托盘退出旧版。已有本地数据沿用原数据目录。Windows 便携 EXE 请放在固定位置；移动文件后如需自启动，请在设置中重新开启。

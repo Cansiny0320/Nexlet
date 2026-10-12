@@ -156,3 +156,9 @@ npx vitest run --config vitest.config.ts tests/mac-file-clipboard.test.ts tests/
 npm run build
 npx playwright test tests/electron.spec.ts -g '启动器接收文件|启动器接收图片|剪贴板文本'
 ```
+
+
+## 发布构建复验（2026-10-12）
+
+- `v0.2.3` 标签的 Windows CI 暴露新增并发捕获测试缺少 `Platform.readFiles` mock，实际剪贴板实现没有异常。补齐替身并分别覆盖 `darwin` / `win32` 分支后，两项通过。
+- 保留已有 `v0.2.3` 标签，不移动或覆盖；它未发布。下一正式版本为 `v0.2.4`，继续以三平台构建及发布资产检查作为发版门禁。
