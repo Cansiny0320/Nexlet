@@ -53,7 +53,21 @@ try {
   console.error(message);
   process.exitCode = 1;
 } finally {
-  if (trusted) await security(['remove-trusted-cert', '-d', certificateFile], true).catch(() => {});
-  if (created) await security(['delete-keychain', keychain]).catch(() => {});
+  let cleanupFailed = false;
+  if (trusted) {
+    try {
+      // remove-trusted-cert can still prompt on hosted macOS. Replace the explicit
+      // grant with Unspecified, then verify that this identity is no longer trusted.
+      await security(['add-trusted-cert', '-d', '-r', 'unspecified', '-p', 'codeSign', '-k', keychain, certificateFile], true);
+      const { stdout } = await security(['find-identity', '-v', '-p', 'codesigning', keychain]);
+      if (stdout.includes(sha1)) throw Error('Signing identity remains trusted');
+      console.log('[signing] Code Signing trust revoked and verified');
+    } catch { cleanupFailed = true; console.error('CI 证书信任撤销未通过验证'); }
+  }
+  if (created) {
+    try { await security(['delete-keychain', keychain]); }
+    catch { cleanupFailed = true; console.error('CI 临时钥匙串删除失败'); }
+  }
   await rm(directory, { recursive: true, force: true });
+  if (cleanupFailed) process.exitCode = 1;
 }
