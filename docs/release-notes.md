@@ -1,4 +1,4 @@
-Nexlet 0.2.9 增加应用内文件夹浏览和文件信息预览，更新 Logo 与功能图标，并改进搜索准备和应用启动反馈。
+Nexlet 0.2.10 增加应用内文件夹浏览和文件信息预览，更新 Logo 与功能图标，并改进搜索准备和应用启动反馈。
 
 ## 文件搜索
 
@@ -18,10 +18,10 @@ Nexlet 0.2.9 增加应用内文件夹浏览和文件信息预览，更新 Logo �
 
 ## 下载与更新
 
-- Windows x64 安装版：`Nexlet-0.2.9-Windows-x64-Setup.exe`。
-- Windows x64 便携版：`Nexlet-0.2.9-Windows-x64.exe`。
-- Intel Mac：`Nexlet-0.2.9-macOS-x64.dmg`。
-- Apple Silicon Mac：`Nexlet-0.2.9-macOS-arm64.dmg`。
+- Windows x64 安装版：`Nexlet-0.2.10-Windows-x64-Setup.exe`。
+- Windows x64 便携版：`Nexlet-0.2.10-Windows-x64.exe`。
+- Intel Mac：`Nexlet-0.2.10-macOS-x64.dmg`。
+- Apple Silicon Mac：`Nexlet-0.2.10-macOS-arm64.dmg`。
 - macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新。`hello-nexlet.nexlet` 为示例插件；`SHA256SUMS.txt` 提供下载校验值。
 
 手动安装前请从托盘退出旧版，已有本地数据沿用原数据目录。Windows 便携 EXE 请放在固定位置；移动文件后如需自启动，请在设置中重新开启。
