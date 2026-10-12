@@ -8,6 +8,7 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   const {state,toast,navigate}=useApp();
   const [response,setResponse]=useState<{key:string;value:SearchResponse}|null>(null),[selected,setSelected]=useState(0),[expanded,setExpanded]=useState(false),[all,setAll]=useState(false);
   const [menu,setMenu]=useState<{command:Command;x:number;y:number}|null>(null);
+  const [icons,setIcons]=useState<Record<string,string>>({});
   const container=useRef<HTMLDivElement>(null);
   const requestKey=JSON.stringify([query,launchInput?.id,source]);
   const searching=Boolean(query.trim()||launchInput);
@@ -28,6 +29,18 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   const pinned=state.pinned.map(id=>indexed.get(id)).filter((c):c is Command=>!!c);
   const homeCommands=[...recent.slice(0,expanded?60:9),...(all?state.commands:pinned)];
   const visible=searching?[...results,...matching]:homeCommands;
+  const iconRequest=JSON.stringify([...new Set(visible.filter(c=>!c.icon&&(c.kind==='app'||c.kind==='shortcut')).map(c=>c.id))]);
+  useEffect(()=>{
+    let valid=true;
+    const ids=JSON.parse(iconRequest) as string[];
+    void (async()=>{
+      for(let offset=0;valid&&offset<ids.length;offset+=64){
+        const loaded=await api<Pick<Command,'id'|'icon'>[]>('catalogIcons',ids.slice(offset,offset+64));
+        if(valid)setIcons(current=>({...current,...Object.fromEntries(loaded.map(c=>[c.id,c.icon||'']))}));
+      }
+    })().catch(e=>{if(valid)toast(errorText(e),true);});
+    return()=>{valid=false;};
+  },[iconRequest,state.catalogLoading,toast]);
   async function launch(command:Command){
     try{
       const result=await api<{view?:string;payload?:string}>('launch',{id:command.id,inputId:command.inputId,payload:command.payload});
@@ -43,7 +56,7 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   useEffect(()=>{if(!container.current)return;const observer=new ResizeObserver(()=>{const height=container.current?.scrollHeight||240;void api('window',{action:'height',height:Math.max(270,Math.min(720,height+60))});});observer.observe(container.current);return()=>observer.disconnect();},[query,results.length,expanded,all,state.commands.length]);
   useEffect(()=>{const hide=()=>setMenu(null);window.addEventListener('click',hide);return()=>window.removeEventListener('click',hide);},[]);
   let index=0;
-  const grid=(commands:Command[])=> <div className="tool-grid">{commands.map((command)=>{const current=index++;return <button key={command.id} className={`tool-tile ${selected===current?'selected':''}`} title={command.subtitle} onClick={()=>void launch(command)} onMouseEnter={()=>setSelected(current)} onContextMenu={e=>{e.preventDefault();setMenu({command,x:Math.min(e.clientX,innerWidth-180),y:Math.min(e.clientY,innerHeight-90)});}}><ToolIcon command={command}/><span>{command.name}</span></button>;})}</div>;
+  const grid=(commands:Command[])=> <div className="tool-grid">{commands.map((command)=>{const current=index++;return <button key={command.id} className={`tool-tile ${selected===current?'selected':''}`} title={command.subtitle} onClick={()=>void launch(command)} onMouseEnter={()=>setSelected(current)} onContextMenu={e=>{e.preventDefault();setMenu({command,x:Math.min(e.clientX,innerWidth-180),y:Math.min(e.clientY,innerHeight-90)});}}><ToolIcon command={{...command,icon:command.icon||icons[command.id]}}/><span>{command.name}</span></button>;})}</div>;
   return <div className="launcher-body" ref={container}>
     {searching?<>
       {!launchInput&&<section><div className="section-label">搜索结果 {state.catalogLoading&&<small>正在索引应用…</small>}</div>{results.length?grid(results):<div className="no-match">{result?'未找到匹配的应用、快捷方式或插件':'正在匹配…'}</div>}</section>}

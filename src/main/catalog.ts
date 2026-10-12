@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { app } from 'electron';
 import type { Command } from '../shared/types';
 import { loadCatalogIcon } from './catalog-icons';
+import { loadMacCatalogIcons } from './catalog-mac';
 import { readWindowsApplications } from './catalog-windows';
 
 export class Catalog {
@@ -57,6 +58,14 @@ export class Catalog {
     } finally { this.loading = false; this.changed(); }
   }
   async withIcons(items: Command[]): Promise<Command[]> {
+    if (process.platform === 'darwin') {
+      const missing = items.filter(item => !this.icons.has(item.id) && item.path?.endsWith('.app'));
+      const loaded = await loadMacCatalogIcons(missing.map(item => item.path!));
+      for (const item of missing) {
+        const icon = loaded.get(item.path!);
+        if (icon) this.icons.set(item.id, icon);
+      }
+    }
     return Promise.all(items.map(async item => {
       const source = this.iconSources.get(item.id) || item.path;
       if (!source) return item;

@@ -115,6 +115,11 @@ async function bootstrap() {
     if(!window||event.senderFrame!==event.sender.mainFrame||!isHostDocument(event.senderFrame.url,html)||!HOST_ACTIONS.includes(action as any))throw new Error('不允许的调用来源');
     switch(action){
       case 'state':return state();
+      case 'catalogIcons':{
+        if(!Array.isArray(payload)||payload.length>64||payload.some(id=>typeof id!=='string'||id.length>250))throw new Error('应用列表无效');
+        const requested=new Set(payload);
+        return (await catalog.withIcons(catalog.items.filter(item=>requested.has(item.id)))).map(({id,icon})=>({id,icon}));
+      }
       case 'pluginSession':return plugins.runtime.state(window);
       case 'updateReady':{const args=inputObject(payload);updateSaves.ready(event.sender.id,args.token,args.error);return true;}
       case 'updateCheck':await updates.check();return updates.read();

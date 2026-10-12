@@ -1,25 +1,18 @@
-Nexlet 0.2.5 增加内容启动、插件内嵌与保留状态的工具分离，并修复 macOS 文件剪贴板回读为空的问题。
-
-## 新增与改进
-
-- 启动器识别文本、图片和文件输入，按插件声明推荐处理功能；文件和图片保留为输入卡片，可继续输入关键词筛选。只有明确选择「收进剪贴板」才写入系统剪贴板。
-- 外部插件默认内嵌主窗口，分离时保留同一页面实例和输入状态；支持 ready、enter、out、detach 生命周期与按会话授权的只读输入资源。
-- 内置 JSON、编码、时间戳、UUID、剪贴板、计算稿纸和文件搜索分离后保留相关状态；保存或恢复失败时保留源页面。
-- 继续使用 Nexlet SDK，兼容原有 API v1 插件；不兼容 uTools 的 `.upx` 或 `window.utools`。
-- 设置页新增主程序更新入口。Windows 提供安装版和便携版；安装版及新 macOS 包支持应用内更新，便携版提供下载入口。
+Nexlet 0.2.6 修复启动器应用图标显示。
 
 ## 修复
 
-- 修复 macOS 原生文件剪贴板的 JXA 参数桥接，支持多个文件、目录和特殊字符路径，文件历史收录及复制可正常回读。
-- 明确收录剪贴板内容时等待正在进行的后台捕获，避免操作提前返回。
-- 修复稿纸续算、全选替换和移动光标时的焦点竞争。
+- 展开「全部工具」时分批加载应用和快捷方式的真实图标，并复用图标缓存。
+- macOS 改用系统应用图标接口，修复 Electron 返回统一通用图标的问题。
+- 展开「最近使用」时补齐第 19 项及后续应用的图标。
+- 图标读取失败时保留默认占位图，不影响应用展示和启动。
 
 ## 下载与更新
 
-- Windows x64 安装版：`Nexlet-0.2.5-Windows-x64-Setup.exe`。
-- Windows x64 便携版：`Nexlet-0.2.5-Windows-x64.exe`。
-- Intel Mac：`Nexlet-0.2.5-macOS-x64.dmg`。
-- Apple Silicon Mac：`Nexlet-0.2.5-macOS-arm64.dmg`。
+- Windows x64 安装版：`Nexlet-0.2.6-Windows-x64-Setup.exe`。
+- Windows x64 便携版：`Nexlet-0.2.6-Windows-x64.exe`。
+- Intel Mac：`Nexlet-0.2.6-macOS-x64.dmg`。
+- Apple Silicon Mac：`Nexlet-0.2.6-macOS-arm64.dmg`。
 - macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新。`hello-nexlet.nexlet` 为示例插件；`SHA256SUMS.txt` 提供下载校验值。
 
 从 0.2.2 升级请手动下载安装包，先从托盘退出旧版。已有本地数据沿用原数据目录。Windows 便携 EXE 请放在固定位置；移动文件后如需自启动，请在设置中重新开启。
