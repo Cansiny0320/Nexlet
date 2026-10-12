@@ -121,12 +121,13 @@ test('重启后稿纸、收藏与设置保留，界面无脚本异常',async()=>
   expect((await call('state') as any).settings.searchPaths[0]).toContain('shortcuts');expect(errors).toEqual([]);
 });
 
-test('文件搜索空输入保持待输入，索引后自动重试，清空后忽略过期错误',async()=>{
+test('文件搜索空输入准备索引，索引后自动重试，清空后忽略过期错误',async()=>{
+  const scope=path.join(folder,'empty-index');await mkdir(scope);await call('settings',{fileSearchPaths:[scope]});
   await open('文件搜索');const input=page.getByRole('textbox',{name:'Everything 文件搜索'});
   await expect(page.getByText('输入文件名或路径开始搜索，例如 ext:pdf 项目',{exact:true})).toBeVisible();
-  expect(await app.evaluate(()=>(globalThis as any).__nexlet.files.engine.child)).toBeNull();
+  expect(await app.evaluate(()=>(globalThis as any).__nexlet.files.engine.child?.pid)).toBeGreaterThan(0);
   await page.screenshot({path:path.join(root,'test-results','filesearch-idle.png')});
-  await app.evaluate(()=>{const n=(globalThis as any).__nexlet;(globalThis as any).__fileSearchOriginal=n.files.search;let tries=0;n.files.search=async(owner:number,query:string)=>{
+  await app.evaluate(()=>{const n=(globalThis as any).__nexlet;(globalThis as any).__fileStatusOriginal=n.files.status;(globalThis as any).__fileSearchOriginal=n.files.search;let tries=0,checks=0;n.files.status=async()=>tries===1&&checks++===0?{status:'preparing',message:'正在建立文件索引，完成后会自动显示搜索结果。',startedAt:Date.now()}:((globalThis as any).__fileStatusOriginal.call(n.files));n.files.search=async(owner:number,query:string)=>{
     if(query==='slow')return new Promise((_resolve,reject)=>{(globalThis as any).__lateFileError=reject;});
     if(query==='building')return ++tries===1?{status:'indexing',message:'正在建立文件索引，完成后会自动显示搜索结果。',items:[],limited:false}:{status:'ready',message:'',items:[{path:'C:\\fixture\\ready.txt',name:'ready.txt',parent:'C:\\fixture',size:1,modified:'',directory:false}],limited:false};
     return (globalThis as any).__fileSearchOriginal.call(n.files,owner,query);
@@ -138,7 +139,7 @@ test('文件搜索空输入保持待输入，索引后自动重试，清空后�
     await input.fill('');await expect(page.getByText('输入文件名或路径开始搜索，例如 ext:pdf 项目',{exact:true})).toBeVisible();
     await app.evaluate(()=>{(globalThis as any).__lateFileError(new Error('过期的查询失败'));});
     await expect(page.getByText('过期的查询失败',{exact:true})).toHaveCount(0);await expect(page.getByRole('option')).toHaveCount(0);
-  }finally{await app.evaluate(()=>{(globalThis as any).__nexlet.files.search=(globalThis as any).__fileSearchOriginal;});}
+  }finally{await app.evaluate(()=>{(globalThis as any).__nexlet.files.search=(globalThis as any).__fileSearchOriginal;(globalThis as any).__nexlet.files.status=(globalThis as any).__fileStatusOriginal;});}
 });
 
 test('内置 Everything 自动启动、中文文件索引、受限文件操作与退出',async()=>{

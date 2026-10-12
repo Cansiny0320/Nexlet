@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 export interface FileResult { path:string;name:string;parent:string;size:number|null;modified:string;directory:boolean; }
+export interface FileSearchIndexStatus { status:'preparing'|'ready'|'unavailable'|'unsupported';message:string;startedAt:number;version?:string;scopes?:string[]; }
 export interface FileSearchResult { status:'idle'|'ready'|'indexing'|'unavailable'|'unsupported';message:string;items:FileResult[];limited:boolean;version?:string;scopes?:string[]; }
 export function everythingConfig(scopes:string[]):string{
   if(!scopes.length||scopes.length>26||scopes.some(p=>!path.win32.isAbsolute(p)||/[\0\r\n]/.test(p)))throw new Error('索引目录无效');

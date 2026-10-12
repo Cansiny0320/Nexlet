@@ -27,7 +27,7 @@ export const BUILTIN_COMMANDS: Command[] = [
   { id: 'tool:uuid', name: 'UUID', subtitle: '生成随机 UUID', kind: 'tool', keywords: ['uuid', '随机数'], color: '#3387f7' },
   { id: 'tool:settings', name: '设置', subtitle: '快捷键、外观与数据', kind: 'tool', keywords: ['preferences', 'settings'], color: '#7f8995' }
 ];
-export const HOST_ACTIONS = ['state', 'catalogIcons', 'search', 'launchInput', 'clearInput', 'launch', 'pin', 'window', 'settings', 'startup', 'rescan', 'pickSearchPath', 'clips', 'clipAction', 'pads', 'savePad', 'deletePad', 'exportPad', 'pluginInstall', 'pluginToggle', 'pluginRemove', 'pluginInspect', 'pluginSession', 'toolSession', 'marketplace', 'marketInstall', 'fileSearch', 'fileAction', 'openData', 'updateReady','updateCheck', 'updateDownload', 'updateInstall', 'updatePortable'] as const;
+export const HOST_ACTIONS = ['state', 'catalogIcons', 'search', 'launchInput', 'clearInput', 'launch', 'pin', 'window', 'settings', 'startup', 'rescan', 'pickSearchPath', 'clips', 'clipAction', 'pads', 'savePad', 'deletePad', 'exportPad', 'pluginInstall', 'pluginToggle', 'pluginRemove', 'pluginInspect', 'pluginSession', 'toolSession', 'marketplace', 'marketInstall', 'fileSearch', 'fileSearchStatus', 'fileAction', 'openData', 'updateReady','updateCheck', 'updateDownload', 'updateInstall', 'updatePortable'] as const;
 export type HostAction = typeof HOST_ACTIONS[number];
 export interface HostApi { pathForFile(file:File):string; call<T = unknown>(action: HostAction, payload?: unknown): Promise<T>; onChange(callback: (event: string) => void): () => void; }
 declare global { interface Window { nexlet: HostApi; } }
