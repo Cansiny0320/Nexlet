@@ -56,6 +56,12 @@ Windows 运行便携 EXE 即可。首次解压会稍慢，关闭主窗口后程�
 
 便携版更新时，先从托盘选择「退出 Nexlet」，再运行新版 EXE；直接双击新版会唤起仍在运行的旧实例。JSON 临时输入请在退出前复制保留。标题栏左侧手柄、工具名称及空白处可拖动窗口，按钮和输入框保留原有交互。
 
+### 应用更新
+
+设置页的「检查更新」检查 GitHub 上已公开的正式 Release，随后由用户选择下载和重启安装；不会自动下载、降级或安装预发布版本。Mac 和 Windows 安装版支持直接更新，Windows 便携版提供新版 EXE 下载入口，下载后手动替换。首次使用需手动安装带此功能的版本；当前已发布的旧版本没有更新器。
+
+安装前会等待所有稿纸窗口保存，保存失败时中止安装。已保存的剪贴板、稿纸、设置和插件数据会保留；JSON 等临时输入请在重启前复制保留。开发模式不检查更新。
+
 ### 文件搜索
 
 Windows 版随包提供官方稳定版 Everything 便携引擎。首次输入搜索词时，Nexlet 启动自己的后台实例，默认以普通权限索引本地固定磁盘中可访问的文件。空输入保持待输入状态；索引尚未就绪时显示等待提示并自动重试。可在设置中添加目录，将索引范围缩小到工作文件夹。
@@ -67,7 +73,7 @@ Windows 版随包提供官方稳定版 Everything 便携引擎。首次输入搜
 - 搜索结果右键固定到首页；拖入文件或粘贴图片可以收进剪贴板。
 - 计算稿纸中 `Enter` 将结果带入下一行，`Ctrl/Cmd+B` 添加备注，`Ctrl/Cmd+N` 新建稿纸。
 - 剪贴板支持 `Ctrl/Cmd` 或 `Shift` 多选、文本合并复制、文件路径去重与悬浮中转。
-- 自动回贴需要先在目标应用中按快捷键打开 Nexlet；macOS 需要辅助功能权限。目标窗口不可用时会提示，仍可手动粘贴。
+- 自动回贴需要先在目标应用中按快捷键打开 Nexlet；macOS 缺少辅助功能权限时会请求系统授权引导，请在“系统设置 → 隐私与安全性 → 辅助功能”中允许 Nexlet 后重新回贴。未授权或目标窗口不可用时仍可手动粘贴。
 - JSON 支持 50 万字符以内的内容，保留大整数原文；忽略对象键顺序可选，数组顺序始终参与比较。
 
 ## 插件市场与开发
@@ -102,9 +108,27 @@ npm start
 npm run typecheck       # 类型检查
 npm test                # 逻辑、数据和边界测试
 npm run test:e2e         # Windows 桌面集成测试，会构建应用
-npm run package:win     # Windows x64 便携包
-npm run package:mac     # 在 Mac 上构建通用 DMG
+npm run package:win     # Windows x64 安装包和便携包
+npm run package:mac     # 固定签名的通用 DMG + 更新 ZIP
+npm run package:mac:local # 固定签名的本机架构 DMG + 更新 ZIP
 ```
+
+### 本机固定签名
+
+个人开发机可用长期保留的自签名代码证书构建，避免每次使用新的 ad-hoc 代码身份。首次切换身份仍需重新授权；是否保留辅助功能权限以实际跨版本升级验证为准。
+
+2026-10-12 已在 macOS 26.5.2 arm64 上验证：同一证书从 `0.2.2-local.1` 覆盖升级到 `0.2.2-local.2` 后，用户确认无需重新授权即可自动回贴。验证范围与焦点干扰说明见 [验证记录](docs/validation.md#macos-本机固定签名验证2026-10-12)。
+
+`package:mac:local` 读取仓库外的 `~/Library/Application Support/Nexlet Signing/`（可通过 `NEXLET_SIGNING_DIR` 指定其他目录）：`identity.json` 保存证书名称、SHA-1 指纹和专用钥匙串路径，`certificate.cer` 为公开证书，`keychain-password` 用于解锁该钥匙串。签名身份应提前配置并仅按需要授予当前用户的代码签名信任，脚本不会创建证书或调整信任设置。
+
+```sh
+npm run package:mac:local
+npm run package:mac:local -- --version 0.2.2-local.1 --arch arm64
+```
+
+默认使用 `package.json` 版本和本机架构；`--version` 只覆盖产物版本，不修改源码版本。输出位于 `release/local-signed-<版本>-<架构>/`，包含 DMG、更新 ZIP、blockmap、更新清单与 `local-signing.json`（证书指纹、签名条件、安装包 SHA-256）。缺少证书或签名校验失败会直接报错，不退回 ad-hoc。构建期间临时加入专用钥匙串搜索路径，结束后移除并锁定钥匙串。
+
+签名目录应仅当前用户可读，证书与加密私钥、恢复所需密码须一起妥善备份；不要提交或公开上传。更换证书会改变应用身份。自签名产物未经过 Apple 公证，不提供 Developer ID 的公开分发信任；本地打包不会发布任何附件。
 
 `test:e2e` 使用 `.tmp` 中的隔离数据和文件夹索引，不扫描用户磁盘；会暂时使用剪贴板并恢复可读取的原内容。实时 GitHub 市场验收可在构建后运行 `node scripts/smoke-marketplace.mjs`。原生回贴专项与平台限制见 [验证记录](docs/validation.md)。
 
@@ -114,7 +138,9 @@ npm run package:mac     # 在 Mac 上构建通用 DMG
 
 [Build and Release](.github/workflows/release.yml) 覆盖 Windows x64、macOS Intel 和 Apple Silicon：类型检查、单元测试、原生打包、实际启动；Windows 额外运行桌面集成与便携 EXE 验证。普通提交和手动运行上传保留 14 天的 artifacts。
 
-发版时更新 `package.json` 和 `package-lock.json` 的版本，提交后推送匹配的 `v*` 标签。CI 验证标签一致性，生成三个安装包、示例插件与 `SHA256SUMS.txt`，创建 **Release 草稿**，审核后手动公开发布。重跑可更新草稿，不覆盖已发布版本。不需要额外 PAT，也没有配置应用自动更新。
+发版时更新 `package.json` 和 `package-lock.json` 的版本，提交后推送匹配的 `v*` 标签。CI 验证标签一致性，生成 Windows 安装版和便携版、两种 Mac 架构的 DMG/ZIP、blockmap、更新清单、示例插件与 `SHA256SUMS.txt`，创建 **Release 草稿**，审核后手动公开发布。重跑可更新草稿，不覆盖已发布版本。双架构 Mac 清单会合并，并校验版本、文件大小和 SHA-512。
+
+Mac 的 main / 版本标签构建使用 `NEXLET_MAC_CERTIFICATE_P12`（加密 P12 的 Base64）和 `NEXLET_MAC_CERTIFICATE_PASSWORD` 两项 Actions Secrets，证书指纹固定为 `69397314808BC8B95C8B4AF0FBDFA53C0184FC2C`。脚本仅在临时钥匙串中导入，校验身份后打包，结束时移除信任和钥匙串；凭据缺失即失败。PR 构建仅使用 ad-hoc 签名，不接触凭据。签名仍未经过 Apple 公证。
 
 贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。问题与建议可提交到 [Issues](https://github.com/Cansiny0320/Nexlet/issues)。
 

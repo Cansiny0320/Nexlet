@@ -113,7 +113,7 @@ export class Platform {
       return;
     }
     if (process.platform === 'darwin') {
-      if (!systemPreferences.isTrustedAccessibilityClient(false)) throw new Error('自动回贴需要 macOS 辅助功能权限；内容已复制，可手动粘贴');
+      if (!systemPreferences.isTrustedAccessibilityClient(true)) throw new Error('请在系统设置 → 隐私与安全性 → 辅助功能中允许 Nexlet，授权后重新回贴；内容已复制，可手动粘贴');
       await this.jxa('ObjC.import("AppKit"); function run(argv){var target=$.NSRunningApplication.runningApplicationWithProcessIdentifier(Number(argv[0]));if(!target)throw Error("原应用已关闭");target.activateWithOptions(2);}', [String(target.pid)]);
       await sleep(150);
       const current = await this.jxa('ObjC.import("AppKit"); String($.NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier);');

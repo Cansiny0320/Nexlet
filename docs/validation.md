@@ -1,5 +1,17 @@
 # Nexlet 验证记录
 
+## macOS 本机固定签名验证（2026-10-12）
+
+- 新增 `package:mac:local`，使用仓库外长期保留的专用代码签名身份。已获用户授权的信任仅限当前用户的 Code Signing，不包含 SSL/TLS 或系统级信任。
+- 已构建 `0.2.2-local.1`、`0.2.2-local.2` 两个 arm64 DMG，`codesign --verify --deep --strict`、双方签名条件交叉校验与 `hdiutil verify` 均通过。证书 SHA-1 为 `69397314808BC8B95C8B4AF0FBDFA53C0184FC2C`，Bundle ID 为 `app.nexlet.desktop`。
+- 两版 CDHash 分别为 `56e06245e9f135523ade636ae93c4ef76e1a2f7e`、`afc05f2a63ef454bc37a8059a3ec9caf7e1f562d`。代码发生变化但签名身份条件相同；此结果不能代替真实 TCC 授权保留验证。
+- DMG SHA-256：第一版 `b5e0a329179c918fc65e80c7dc34d5049996b8c2046a72b067e3dcc7f6d4ccc0`，第二版 `19204358b52b3ac9e9353c7d8e5c9a02025d5e90d290719266a4af3b2e26cc86`。产物和 `local-signing.json` 位于对应 `release/local-signed-<版本>-arm64/`。
+- 缺失身份与钥匙串不可用的负向检查均返回退出码 1，错误输出未泄露测试密码；脚本语法及 `git diff --check` 通过。构建结束后，用户钥匙串搜索列表已恢复为原有 `login.keychain-db`。
+- 首次辅助功能提示修订已通过 70 项单元测试（另 4 项 Windows 专用测试跳过）、typecheck 和 build；原 ad-hoc 安装在用户重新添加辅助功能权限后，用户确认自动回贴成功。
+- 本机 macOS 26.5.2 arm64 上已完成升级实测：第一版首次授权后，用户手动回贴成功；覆盖安装并启动 `0.2.2-local.2` 后，用户再次确认“成功，未重新授权”。升级期间没有重置、移除或切换辅助功能权限。17:22:19 的 TCC 日志确认第二版进程的签名条件匹配，并以 `Allowed (System Set), DB Action:None` 处理 Accessibility 请求。当前 `/Applications/Nexlet.app` 保留第二版。
+- 初次失败时，17:05 的 TCC 日志确认 Accessibility、AppleEvents 和 PostEvent 请求获准，固定证书签名条件匹配；后续捕获到回贴目标为 uTools 或当前聊天应用，出现“无法恢复原应用焦点”。为排除快捷键及自动化操作的干扰，跨版本验收改为 `Ctrl+Option+Space` 下连续手动操作，以用户确认的目标文档结果为准。测试后按用户要求恢复 `Option+Space`，已回读设置为 `Alt+Space`；恢复后的同键干扰未重新验收。
+- 已备份原 ad-hoc 应用及第一版固定签名应用。本次结论仅证明这台 Mac 上同一固定证书的两版升级保留了授权，不代表其他 macOS 环境或更换证书后的行为。此轮没有 commit、push、修改远端发布流程或 Apple 公证。
+
 ## 0.2.2 本地修订（2026-10-12）
 
 - 文件搜索空输入现在返回待输入状态，不启动 Everything 或执行探测查询；清空搜索框后，旧查询返回的结果或错误不会覆盖待输入页面。
@@ -85,3 +97,20 @@ node scripts/smoke-portable.mjs
 - Linux 没有发行包；文件剪贴板、自动回贴和 Everything 集成未支持。
 
 当前机器的 `Alt+Space` 被其他应用占用，Nexlet 正确提示冲突，未改动其他应用。测试和市场验收使用独立用户目录；现有 Nexlet 数据与正在运行的旧版本保留。
+
+
+## 主程序更新验证（2026-10-12）
+
+以下为提交前的本地验证。两个正式格式版本号仅用于隔离测试，不代表 GitHub 已发布这些版本。
+
+- 已配置并回读仓库 Actions Secrets 名称：`NEXLET_MAC_CERTIFICATE_P12`、`NEXLET_MAC_CERTIFICATE_PASSWORD`。没有输出私钥或密码。
+- macOS 26.5.2 arm64、Electron 44.7.0、electron-updater 6.8.10：固定证书构建 `0.2.3` / `0.2.4`，两份 DMG 与应用签名校验通过，ZIP、blockmap 和更新清单均生成。
+- 原生更新链路使用 localhost feed、独立应用副本与 `.tmp/update-smoke/userdata`。为确保系统自动重启后仍使用隔离目录，仅在测试副本的入口注入固定测试目录和启动证据记录，再以同一证书重新签名；产品代码与更新器未替换为模拟实现。
+- 错误签名 ZIP（主应用改为 ad-hoc 签名）经真实 Squirrel.Mac 拒绝，应用停留 `0.2.3` 并显示校验失败。随后重新检查正确签名 ZIP，下载、验证、安装与系统自动重启通过，启动记录读回 `0.2.4` 与新 PID；SQLite 中测试标记保留。原 `/Applications/Nexlet.app` 和用户数据未替换。
+- 证据：本地 `.tmp/update-smoke/result.json`；两份构建的 `.tmp/update-e2e-a/local-signing.json`、`.tmp/update-e2e-b/local-signing.json`。这些临时测试产物不发布。
+- `npm run typecheck`、`npm run build`、`git diff --check` 通过；当前工作区单元测试 98 项通过、4 项 Windows 专用测试跳过。构建保留原有大于 500 kB 的 chunk 提示。
+- 设置页更新入口已通过真实界面检查；测试模式的检查按钮正确禁用。
+- `actionlint 1.7.12` 检查更新后的 workflow 通过。版本、资产大小与 SHA-512 不符会使更新清单合并失败；回归测试覆盖双架构合并、状态转换、签名/网络失败、安装前保存确认与超时。
+- Windows 安装版与便携版配置已接入；本机没有 Windows 运行环境，尚未验证 NSIS 安装或跨版本自动更新。更新后的 GitHub CI 也尚未运行。不能用原有版本的 CI 成功替代本轮验证。
+
+- 提交前额外导出仅含本次签名/更新改动的源码快照，排除其他会话的内容启动和工具分离修改：typecheck、build 通过，86 项单元测试通过，4 项 Windows 专用测试跳过。

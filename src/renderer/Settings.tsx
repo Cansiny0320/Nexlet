@@ -1,3 +1,4 @@
+import { UpdatePanel } from './UpdatePanel';
 import { useState,useEffect } from 'react';
 import { Keyboard, Palette, ClipboardList, FolderSearch, FolderOpen, Plus, X, RefreshCw, Monitor } from 'lucide-react';
 import { api,useApp,errorText,PanelHeader,IconButton } from './common';
@@ -26,6 +27,7 @@ export function SettingsPanel(){
     <div className="tool-buttons"><button className="button" onClick={async()=>{try{const folder=await api<string|null>('pickSearchPath');if(folder&&!state.settings.fileSearchPaths.includes(folder))await update({fileSearchPaths:[...state.settings.fileSearchPaths,folder]});}catch(e){toast(errorText(e),true);}}}><Plus size={16}/>添加索引目录</button>{state.settings.fileSearchPaths.length>0?<button className="button" onClick={()=>void update({fileSearchPaths:[]})}>恢复全部本地磁盘</button>:<span className="subtle">当前：全部本地固定磁盘</span>}</div></>}
     {state.nativeStatus&&<div className="settings-warning">{state.nativeStatus}</div>}
     <div className="settings-section-title"><Monitor size={17}/>关于与数据</div><div className="setting-row"><div><strong>Nexlet {state.version}</strong><p>{state.platform==='win32'?'Windows':state.platform==='darwin'?'macOS':state.platform} · 本地存储</p></div><button className="button" onClick={()=>void api('openData').catch(e=>toast(errorText(e),true))}><FolderOpen size={16}/>打开数据目录</button></div>
+    <UpdatePanel/>
   </div>;
 }
 function Toggle({label,value,onChange,disabled=false}:{label:string;value:boolean;onChange:(v:boolean)=>void;disabled?:boolean}){return <button className={`toggle ${value?'on':''}`} role="switch" aria-label={label} aria-checked={value} disabled={disabled} onClick={()=>onChange(!value)}><i/></button>;}

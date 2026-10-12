@@ -17,8 +17,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "npm run build && playwright test",
-    "package:win": "npm run build && electron-builder --win portable --x64 --publish never",
-    "package:mac": "npm run build && electron-builder --mac dmg --universal --publish never",
+    "package:win": "npm run build && electron-builder --win portable nsis --x64 --publish never",
+    "package:mac": "node scripts/package-mac-local.mjs --arch universal",
+    "package:mac:local": "node scripts/package-mac-local.mjs",
     "smoke:package": "node scripts/smoke-package.mjs",
     "smoke:portable": "node scripts/smoke-portable.mjs"
   },
@@ -28,6 +29,7 @@
     "adm-zip": "^0.6.1",
     "codemirror": "^6.0.2",
     "decimal.js": "^10.6.0",
+    "electron-updater": "6.8.10",
     "jsonc-parser": "^3.3.1",
     "koffi": "^3.3.3",
     "lucide-react": "^0.468.0",
@@ -47,6 +49,7 @@
     "electron": "^44.7.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
+    "js-yaml": "4.3.2",
     "typescript": "^5.9.0",
     "vite": "^8.3.4",
     "vitest": "^4.0.0"
@@ -69,17 +72,34 @@
     "win": {
       "icon": "assets/icon.ico",
       "target": [
-        "portable"
+        "portable",
+        "nsis"
       ],
       "artifactName": "Nexlet-${version}-Windows-${arch}.${ext}"
     },
     "mac": {
       "icon": "assets/icon.png",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.productivity",
       "artifactName": "Nexlet-${version}-macOS-${arch}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Cansiny0320",
+        "repo": "Nexlet",
+        "releaseType": "release"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Nexlet-${version}-Windows-${arch}-Setup.${ext}"
     }
   }
 }

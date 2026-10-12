@@ -10,6 +10,7 @@ import { ToolsPanel, WebPanel } from './Tools';
 import { JsonTool } from './JsonTool';
 import { FileSearch } from './FileSearch';
 import { PluginsPanel } from './Plugins';
+import { saveBeforeUpdate } from './update-save';
 import { SettingsPanel } from './Settings';
 
 const params=new URLSearchParams(location.search);
@@ -25,7 +26,7 @@ export function App(){
   const refresh=useCallback(async()=>{try{setState(await api<AppState>('state'));}catch(e){setLoadError(errorText(e));}},[]);
   const navigate=useCallback((next:string,initial='')=>{setView(next);setPayload(initial);setQuery(next==='clipboard'?initial:'');},[]);
   const dialog=useCallback((spec:DialogSpec)=>new Promise<string|boolean|null>(resolve=>{resolver.current?.(null);resolver.current=resolve;setDialogSpec(spec);}),[]);
-  useEffect(()=>{void refresh();return window.nexlet?.onChange(event=>{if(event==='state')void refresh();if(event==='focus'){input.current?.focus();input.current?.select();}if(event.startsWith('error:'))toast(event.slice(6),true);if(event.startsWith('navigate:'))navigate(event.slice(9));});},[refresh,navigate,toast]);
+  useEffect(()=>{void refresh();return window.nexlet?.onChange(event=>{if(event==='state')void refresh();if(event.startsWith('update:prepare:'))void saveBeforeUpdate().then(()=>api('updateReady',{token:event.slice(15)}),error=>api('updateReady',{token:event.slice(15),error:errorText(error)}));if(event==='focus'){input.current?.focus();input.current?.select();}if(event.startsWith('error:'))toast(event.slice(6),true);if(event.startsWith('navigate:'))navigate(event.slice(9));});},[refresh,navigate,toast]);
   useEffect(()=>{void api('window',{action:'view',view}).catch(e=>toast(errorText(e),true));setTimeout(()=>input.current?.focus(),50);},[view,toast]);
   useEffect(()=>{if(!state)return;const media=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=state.settings.theme==='system'?(media.matches?'dark':'light'):state.settings.theme;apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);},[state?.settings.theme]);
   useEffect(()=>{const handle=(event:KeyboardEvent)=>{
@@ -45,7 +46,7 @@ export function App(){
   };
   if(!state)return <div className="loading-screen"><span className="brand-mark">N</span><p>{loadError||'正在打开 Nexlet…'}</p>{loadError&&<button className="button" onClick={()=>void refresh()}>重试</button>}</div>;
   const command=BUILTIN_COMMANDS.find(c=>c.id==='tool:'+view);
-  return <AppContext.Provider value={{state,refresh,toast,dialog,navigate}}><div className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files));}}} onPaste={e=>{if(view==='launcher'&&e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files));}}}>
+  return <AppContext.Provider value={{state,refresh,toast,dialog,navigate}}><div inert={state.update.phase==='installing'} className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files));}}} onPaste={e=>{if(view==='launcher'&&e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files));}}}>
     <header className="titlebar">
       <div className="window-drag-handle" aria-label="拖动窗口" title="拖动窗口"><GripVertical size={17}/></div>
       {view==='launcher'?<input ref={input} className="launcher-input" aria-label="搜索功能、应用或快捷方式" placeholder="搜索功能 / 粘贴文件、图片" value={query} onChange={e=>setQuery(e.target.value)} autoComplete="off" spellCheck={false}/>:

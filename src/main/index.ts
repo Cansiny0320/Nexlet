@@ -1,3 +1,5 @@
+import { autoUpdater } from 'electron-updater';
+import { AppUpdates, UpdateSaveBarrier } from './updater';
 import { app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, globalShortcut, ipcMain, clipboard, ClipboardItem, dialog, shell, screen, protocol } from 'electron';
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { copyFile, writeFile } from 'node:fs/promises';
@@ -44,6 +46,11 @@ async function bootstrap() {
   const files=new EverythingSearch(()=>store.settings().fileSearchPaths);
   const startup=new StartupManager(app,process.platform,process.execPath,process.env.PORTABLE_EXECUTABLE_FILE);
   const loginLaunch=startup.wasOpenedAtLogin(process.argv);
+  const updateMode = !app.isPackaged || testMode || !['darwin','win32'].includes(process.platform) ? 'unsupported' : process.env.PORTABLE_EXECUTABLE_FILE ? 'portable' : 'automatic';
+  const updateTransport = updateMode === 'automatic' || (testMode && app.isPackaged) ? autoUpdater : null;
+  if(updateTransport){updateTransport.autoDownload=false;updateTransport.autoInstallOnAppQuit=false;updateTransport.allowPrerelease=false;updateTransport.allowDowngrade=false;}
+  const updateSaves = new UpdateSaveBarrier();
+  const updates = new AppUpdates(app.getVersion(),updateMode,updateTransport,()=>{if(updates.read().phase==='error')quitting=false;notify();},async()=>{await updateSaves.prepare([...hosts.keys()],(id,token)=>hosts.get(id)?.webContents.send('host-change','update:prepare:'+token));quitting=true;});
   const iconFile=path.join(__dirname,'../../assets/icon.png');
   const appIcon=existsSync(iconFile)?nativeImage.createFromPath(iconFile):createIcon();
   protocol.handle('nexlet-image',request=>{
@@ -87,7 +94,7 @@ async function bootstrap() {
     const visibleIds=new Set([...pinned,...recent.slice(0,18)]);
     const decorated=await catalog.withIcons(commands.filter(c=>visibleIds.has(c.id)));
     const icons=new Map(decorated.map(c=>[c.id,c.icon]));
-    return {version:app.getVersion(),platform:process.platform,settings,startup:startup.read(),pinned,recent,commands:commands.map(c=>({...c,icon:icons.get(c.id)||c.icon})),plugins:plugins.records(),shortcutError,catalogLoading:catalog.loading,nativeStatus:platform.status||clips.error,canPaste:!!platform.target};
+    return {update:updates.read(),version:app.getVersion(),platform:process.platform,settings,startup:startup.read(),pinned,recent,commands:commands.map(c=>({...c,icon:icons.get(c.id)||c.icon})),plugins:plugins.records(),shortcutError,catalogLoading:catalog.loading,nativeStatus:platform.status||clips.error,canPaste:!!platform.target};
   }
   function recordRecent(id:string) {store.set('recent',[id,...store.get<string[]>('recent',[]).filter(v=>v!==id)].slice(0,60));notify();}
   async function withDialog<T>(callback:()=>Promise<T>):Promise<T>{modalCount++;try{return await callback();}finally{modalCount--;}}
@@ -101,6 +108,11 @@ async function bootstrap() {
     if(!window||event.senderFrame!==event.sender.mainFrame||!isHostDocument(event.senderFrame.url,html)||!HOST_ACTIONS.includes(action as any))throw new Error('不允许的调用来源');
     switch(action){
       case 'state':return state();
+      case 'updateReady':{const args=inputObject(payload);updateSaves.ready(event.sender.id,args.token,args.error);return true;}
+      case 'updateCheck':await updates.check();return updates.read();
+      case 'updateDownload':await updates.download();return updates.read();
+      case 'updateInstall':await updates.install();return true;
+      case 'updatePortable':await shell.openExternal(updates.downloadUrl());return true;
       case 'search':{
         const query=text(payload,1024);const current=await state();
         return catalog.withIcons(searchCommands(current.commands,query,current.recent));
@@ -205,7 +217,7 @@ async function bootstrap() {
   let cleanedUp=false;
   app.on('before-quit',event=>{quitting=true;clips.stop();globalShortcut.unregisterAll();plugins.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void files.close().finally(()=>app.quit());}});
   app.once('will-quit',()=>store.close());
-  if(testMode)(globalThis as any).__nexlet={store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts};
+  if(testMode)(globalThis as any).__nexlet={updates,autoUpdater,store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts};
 }
 
 function createIcon(){const size=32,data=Buffer.alloc(size*size*4);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const offset=(y*size+x)*4;const letter=(x>=8&&x<=11&&y>=7&&y<=24)||(x>=21&&x<=24&&y>=7&&y<=24)||(y>=7&&y<=24&&Math.abs(x-(9+(y-7)*14/17))<=2);data[offset]=letter?255:245;data[offset+1]=letter?255:94;data[offset+2]=letter?255:101;data[offset+3]=255;}return nativeImage.createFromBitmap(data,{width:size,height:size});}

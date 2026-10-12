@@ -1,6 +1,7 @@
 import { useState,useRef,useEffect,useLayoutEffect,useCallback } from 'react';
 import { Palette, LockKeyhole, LockKeyholeOpen, Trash2, PencilLine, Images, Plus, MessageSquare, Check, Circle, Info } from 'lucide-react';
 import type { Scratchpad, CalcLine } from '../shared/types';
+import { registerUpdateSave } from './update-save';
 import { calculate } from '../shared/calculator';
 import { api,useApp,errorText,IconButton,Empty } from './common';
 
@@ -23,6 +24,12 @@ export function ScratchpadPanel({initialExpression}:{initialExpression:string}){
       setSaved('已保存');
     }finally{saving.current=false;}
   },[toast]);
+  useEffect(()=>registerUpdateSave(async()=>{
+    if(timer.current)clearTimeout(timer.current);
+    while(saving.current)await new Promise(resolve=>setTimeout(resolve,20));
+    await flush();
+    if(pending.current.size)throw Error('稿纸尚未保存，请处理保存错误后再安装更新');
+  }),[flush]);
   const queue=(pad:Scratchpad)=>{updateList(current.current.some(p=>p.id===pad.id)?current.current.map(p=>p.id===pad.id?pad:p):[pad,...current.current]);pending.current.set(pad.id,pad);setSaved('未保存');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void flush(),250);};
   const load=useCallback(async()=>{try{const list=await api<Scratchpad[]>('pads');if(pending.current.size||saving.current)return;for(const p of list)versions.current.set(p.id,p.updatedAt);updateList(list);setActive(old=>list.some(p=>p.id===old)?old:list.some(p=>p.id===localStorage.getItem('active-pad'))?localStorage.getItem('active-pad')!:list[0]?.id||'');}catch(e){toast(errorText(e),true);}},[toast]);
   useEffect(()=>{
