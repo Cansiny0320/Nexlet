@@ -52,8 +52,8 @@ test('JSON 双栏和对比结果随分离保留',async()=>{
  const popup=await detach();await expect(popup.getByRole('tab',{name:'JSON 对比',exact:true})).toHaveAttribute('aria-selected','true');await expect(popup.getByLabel('原始 JSON 差异')).toContainText('old');await expect(popup.locator('.cm-deletedLine').first()).toBeVisible();await popup.getByRole('button',{name:'关闭窗口',exact:true}).click();
 });
 test('编码输入输出、UUID 和时间戳随分离保留',async()=>{
- await open('编码转换');await page.getByLabel('工具输入').fill('未保存的输入');await page.getByRole('button',{name:'编码',exact:true}).click();const output=await page.getByLabel('工具结果').inputValue();let popup=await detach();await expect(popup.getByLabel('工具输入')).toHaveValue('未保存的输入');await expect(popup.getByLabel('工具结果')).toHaveValue(output);await popup.getByRole('button',{name:'关闭窗口',exact:true}).click();
- await open('UUID');const uuid=await page.getByLabel('生成的 UUID').inputValue();popup=await detach();await expect(popup.getByLabel('生成的 UUID')).toHaveValue(uuid);await popup.getByRole('button',{name:'关闭窗口',exact:true}).click();
+ await open('编码转换');await page.getByLabel('工具输入').fill('未保存的输入');await page.getByRole('button',{name:'编码',exact:true}).click();await expect(page.getByLabel('工具结果')).not.toHaveValue('');const output=await page.getByLabel('工具结果').inputValue();let popup=await detach();await expect(popup.getByLabel('工具输入')).toHaveValue('未保存的输入');await expect(popup.getByLabel('工具结果')).toHaveValue(output);await popup.getByRole('button',{name:'关闭窗口',exact:true}).click();
+ await open('UUID');await expect(page.getByLabel('生成的 UUID')).toHaveValue(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);const uuid=await page.getByLabel('生成的 UUID').inputValue();popup=await detach();await expect(popup.getByLabel('生成的 UUID')).toHaveValue(uuid);await popup.getByRole('button',{name:'关闭窗口',exact:true}).click();
  await open('时间戳');await page.getByLabel('Unix 时间戳').fill('12345');popup=await detach();await expect(popup.getByLabel('Unix 时间戳')).toHaveValue('12345');await popup.getByRole('button',{name:'关闭窗口',exact:true}).click();
 });
 test('稿纸未保存内容在分离前落盘，保存失败保留源视图',async()=>{
