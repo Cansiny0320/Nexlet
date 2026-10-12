@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, ipcMain, shell, nativeImage } from 'electron';
+import { BrowserWindow, clipboard, dialog, ipcMain, shell, nativeImage, net, safeStorage } from 'electron';
 import { mkdir, readFile, writeFile, rm, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -9,15 +9,21 @@ import { readPluginDirectory, readPluginZip, type PluginBundle } from './plugin-
 import type { Command, PluginRecord, PluginPermission } from '../shared/types';
 import { inputContext, textInput } from '../shared/launch';
 import type { LaunchInputs, InputSnapshot } from './launch-input';
+import { PluginNetwork } from './plugin-network';
+import { PluginSecrets } from './plugin-secrets';
 
-const PERMISSION_LABELS: Record<PluginPermission, string> = { 'clipboard.read':'读取当前系统剪贴板文本', 'clipboard.write':'写入系统剪贴板文本', 'shell.openExternal':'使用系统浏览器打开 HTTP / HTTPS 链接' };
+const PERMISSION_LABELS: Record<PluginPermission, string> = { 'clipboard.read':'读取当前系统剪贴板文本', 'clipboard.write':'写入系统剪贴板文本', 'shell.openExternal':'使用系统浏览器打开 HTTP / HTTPS 链接', 'network.request':'向你允许的服务地址发送网络请求（首次连接单独确认）', 'secrets':'保存和读取此插件的加密密钥' };
 export class PluginManager {
   private installing=false;
+  private authorizing=false;
+  readonly network=new PluginNetwork((url,init)=>net.fetch(url,init));
+  readonly secrets:PluginSecrets;
   readonly runtime:PluginRuntime;
   private root: string;
   constructor(private store: Store, private changed: (event?: string) => void,private inputs:LaunchInputs) {
     this.root = path.join(store.directory, 'plugins');
-    this.runtime=new PluginRuntime(inputs);
+    this.secrets=new PluginSecrets(store,safeStorage);
+    this.runtime=new PluginRuntime(inputs,id=>{this.network.close(id);this.secrets.close(id);});
     ipcMain.handle('plugin-api', async (event, method: unknown, args: unknown) => {
       const caller = this.runtime.callers.get(event.sender.id);
       const frame = event.senderFrame;
@@ -25,10 +31,32 @@ export class PluginManager {
       const { record } = caller;
       if(method==='ready'){this.runtime.ready(event.sender.id);return true;}
       if(method==='lifecycleAck'){this.runtime.acknowledge(event.sender.id,args);return true;}
+      if(caller.closing&&(typeof method!=='string'||!['storage.get','storage.set'].includes(method)))throw new Error('插件会话已结束');
       if (!this.records().find(p => p.manifest.id === record.manifest.id)?.enabled) throw new Error('插件已停用');
       const requirePermission = (permission: PluginPermission) => { if (!record.manifest.permissions.includes(permission)) throw new Error(`未授权：${permission}`); };
       const key = () => { if (typeof args !== 'object' || !args) throw new Error('参数无效'); const value = (args as {key?:unknown}).key; if (typeof value !== 'string' || !/^[a-zA-Z0-9_.-]{1,100}$/.test(value) || ['__proto__','constructor','prototype'].includes(value)) throw new Error('存储键无效'); return value; };
       switch (method) {
+        case 'network.request': {
+          requirePermission('network.request');
+          return this.network.request(event.sender.id,args,async origin=>{
+            const current=()=>this.runtime.callers.get(event.sender.id)===caller&&!caller.closing&&!caller.disposed;
+            if(!current())throw new Error('插件会话已结束');
+            const grants=this.store.get<string[]>('plugin-network:'+record.manifest.id,[]);
+            if(grants.includes(origin))return;
+            if(this.authorizing)throw new Error('请先完成当前联网授权，再重试');
+            this.authorizing=true;const owner=caller.owner;this.runtime.overlay(owner,true);
+            try{
+              const result=await dialog.showMessageBox(owner,{type:'question',title:'允许插件连接服务？',message:`「${record.manifest.name}」请求联网`,detail:`目标地址：${origin}\n\n允许后，此插件可以向该地址发送你输入的内容和配置的 API Key。请确认这是你要使用的服务。`,buttons:['取消','允许此地址'],defaultId:0,cancelId:0});
+              if(!current())throw new Error('插件会话已结束');
+              if(result.response!==1)throw new Error('已取消联网授权');
+              this.store.set('plugin-network:'+record.manifest.id,[...new Set([...grants,origin])]);
+            }finally{this.authorizing=false;this.runtime.overlay(owner,false);}
+          });
+        }
+        case 'network.cancel':requirePermission('network.request');return this.network.cancel(event.sender.id,args);
+        case 'network.resetPermissions':requirePermission('network.request');this.network.close(event.sender.id);this.store.set('plugin-network:'+record.manifest.id,[]);return true;
+        case 'secrets.get':requirePermission('secrets');return this.secrets.get(record.manifest.id,event.sender.id,key());
+        case 'secrets.set':requirePermission('secrets');return this.secrets.set(record.manifest.id,event.sender.id,key(),(args as {value:unknown}).value);
         case 'info': return { name:record.manifest.name, version:record.manifest.version, code:caller.code, payload:caller.payload };
         case 'context':return inputContext(caller.input,caller.code);
         case 'input.read':return this.inputs.read(event.sender.id,args);
@@ -85,7 +113,7 @@ export class PluginManager {
     this.changed(); return true;
   }
   async toggle(id: string, enabled: boolean): Promise<void> { const records=this.records(); const record=records.find(p=>p.manifest.id===id); if(!record)throw new Error('插件不存在'); record.enabled=enabled; if(!enabled)await this.runtime.stop(id); this.store.set('plugins',records); this.changed(); }
-  async remove(id: string, deleteData: boolean): Promise<void> { const record=this.records().find(p=>p.manifest.id===id); if(!record)throw new Error('插件不存在'); await this.runtime.stop(id); this.store.set('plugins',this.records().filter(p=>p.manifest.id!==id)); if(!record.development)await this.removeManaged(record.directory); if(deleteData)this.store.set('plugin-data:'+id,{}); this.changed(); }
+  async remove(id: string, deleteData: boolean): Promise<void> { const record=this.records().find(p=>p.manifest.id===id); if(!record)throw new Error('插件不存在'); await this.runtime.stop(id); this.store.set('plugins',this.records().filter(p=>p.manifest.id!==id)); if(!record.development)await this.removeManaged(record.directory); if(deleteData){this.store.set('plugin-data:'+id,{});this.secrets.remove(id);this.store.set('plugin-network:'+id,[]);} this.changed(); }
   async launch(id:string,code:string,payload='',snapshot?:InputSnapshot):Promise<void>{
     const record=this.records().find(p=>p.manifest.id===id&&p.enabled);
     if(!record)throw new Error('插件未安装或已停用');

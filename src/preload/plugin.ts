@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('nexlet', Object.freeze({
   onOut:(callback:Callback)=>subscribe('out',callback),
   onDetach:(callback:Callback)=>subscribe('detach',callback),
   storage: Object.freeze({ get:(key:string)=>ipcRenderer.invoke('plugin-api','storage.get',{key}), set:(key:string,value:unknown)=>ipcRenderer.invoke('plugin-api','storage.set',{key,value}) }),
+  network: Object.freeze({ request:(request:unknown)=>ipcRenderer.invoke('plugin-api','network.request',request), cancel:(id:string)=>ipcRenderer.invoke('plugin-api','network.cancel',id), resetPermissions:()=>ipcRenderer.invoke('plugin-api','network.resetPermissions') }),
+  secrets: Object.freeze({ get:(key:string)=>ipcRenderer.invoke('plugin-api','secrets.get',{key}), set:(key:string,value:string|null)=>ipcRenderer.invoke('plugin-api','secrets.set',{key,value}) }),
   clipboard: Object.freeze({ readText:()=>ipcRenderer.invoke('plugin-api','clipboard.readText'), writeText:(text:string)=>ipcRenderer.invoke('plugin-api','clipboard.writeText',text) }),
   openExternal:(url:string)=>ipcRenderer.invoke('plugin-api','openExternal',url),
   onActivate:(callback:(value:unknown)=>void)=>{ const listener=(_event:unknown,value:unknown)=>callback(value); ipcRenderer.on('plugin-activate',listener); return()=>ipcRenderer.removeListener('plugin-activate',listener); }

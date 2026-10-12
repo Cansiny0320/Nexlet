@@ -119,3 +119,33 @@ const offOut = nexlet.onOut(context => { /* 会话即将退出，可保存少量
 `info()` 和 `onActivate` 保留旧合同：payload 始终为字符串（最多 65536 字符，资源输入为空字符串），onActivate 仅再次激活触发。新插件使用 context/onEnter 接收完整输入，不假定 ready 时 DOM 已绘制完成。
 
 隐藏主窗口保留会话；返回首页、切换工具、Escape 退出、禁用/更新/卸载结束会话。分离转移同一个 WebContentsView，不刷新页面，不重新 ready/enter；再次启动已分离插件聚焦它并发送新 enter。插件不得调用宿主工具的 IPC。宿主弹出对话框时暂时隐藏插件内容，避免覆盖确认界面。
+
+## 受控网络与加密密钥（Nexlet 0.2.7+）
+
+插件仍不能直接 `fetch`，需在 manifest 声明 `network.request` 权限，再调用宿主桥接。第一次连接每个 origin 时会显示宿主授权对话框，明确插件名称与目标地址；用户允许后按插件记住，拒绝不会发出请求。请求不会携带宿主 Cookie，不允许重定向。
+
+```js
+const result = await nexlet.network.request({
+  id: 'request-1', // 当前会话内唯一；由插件生成，用于取消
+  url: 'https://example.com/v1/chat/completions',
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ...' },
+  body: JSON.stringify({ model: 'your-model', messages: [{ role: 'user', content: 'Hello' }] }),
+  timeoutMs: 60000
+});
+// { status: 200, body: '...' }；HTTP 错误状态也返回，由插件解释；网络/取消/超时 reject。
+await nexlet.network.cancel('request-1');
+await nexlet.network.resetPermissions(); // 取消本会话请求并清除当前插件的 origin 授权
+```
+
+只支持 HTTPS，以及 `localhost` / `127.0.0.1` / `[::1]` 的 HTTP 地址。URL 不得含账号、密码或 fragment；方法为 GET（默认）或 POST。请求头仅支持 `Accept`、`Content-Type`、`Authorization`、`X-API-Key`。正文最多 256 KB，响应最多 2 MB，每会话最多 4 个请求。默认超时 30 秒，可设置 1–120000 ms；超时从目标授权完成后开始。退出、停用、卸载、更新或崩溃会取消该会话请求；分离窗口保留会话。未授权插件不能使用桥接。
+
+密钥需声明 `secrets` 权限，按插件隔离，名称规则与 storage 相同：
+
+```js
+const { persistent } = await nexlet.secrets.set('apiKey', 'user-provided-key');
+const key = await nexlet.secrets.get('apiKey'); // string | null
+await nexlet.secrets.set('apiKey', null); // 删除
+```
+
+`persistent: true` 表示经系统 safeStorage 加密后落盘；无可用系统加密或 Linux 使用 `basic_text` 时，仅在当前插件会话内保存并返回 `false`，插件应明确提示用户。分离窗口保留临时密钥，退出会清除；无法解密旧数据会 reject，插件应允许重新填写。不要把密钥放入普通 `storage`、日志或 URL。卸载保留数据时也保留密文和 origin 授权，选择清理数据则一起清除。此能力是本机静态存储保护，不能阻止已获授权的插件读取自己的密钥。

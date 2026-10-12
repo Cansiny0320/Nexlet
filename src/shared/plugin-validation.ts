@@ -1,7 +1,7 @@
 import type { PluginManifest, PluginPermission } from './types';
 import { validateMatches } from './launch';
 
-export const KNOWN_PERMISSIONS: PluginPermission[] = ['clipboard.read', 'clipboard.write', 'shell.openExternal'];
+export const KNOWN_PERMISSIONS: PluginPermission[] = ['clipboard.read', 'clipboard.write', 'shell.openExternal', 'network.request', 'secrets'];
 export function safeEntryPath(path: string): string {
   const normalized = path.replaceAll('\\', '/');
   if (!normalized || normalized.length > 240 || /[:\0%]/.test(normalized) || normalized.startsWith('/') || normalized.split('/').some(s => !s || s === '..' || s === '.' || /[. ]$/.test(s) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(s))) throw new Error('插件资源路径不安全');

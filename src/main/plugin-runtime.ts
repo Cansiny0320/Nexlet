@@ -29,7 +29,7 @@ export class PluginRuntime {
   private entryQueue:Promise<unknown>=Promise.resolve();
   private suspended=false;
   private overlays=new Set<number>();
-  constructor(private inputs:LaunchInputs){}
+  constructor(private inputs:LaunchInputs,private releaseSession:(id:number)=>void=()=>{}){}
   configure(host:PluginHost){this.host=host;}
   state(owner:BrowserWindow):PluginSessionState|null {
     const current=this.forWindow(owner);
@@ -156,6 +156,7 @@ export class PluginRuntime {
     this.epochs.set(id,(this.epochs.get(id)||0)+1);
     const active=this.sessions.get(id);if(!active||active.closing)return;
     active.closing=true;this.sessions.delete(id);
+    this.releaseSession(active.view.webContents.id);
     if(!active.owner.isDestroyed()){active.owner.contentView.removeChildView(active.view);if(notify)this.host?.changed(active.owner);}
     active.rejectReady(new Error('插件启动已取消'));
     if(active.activated)await this.emit(active,'out',inputContext(active.input,active.code));
@@ -169,7 +170,7 @@ export class PluginRuntime {
     if(!active.owner.isDestroyed())active.owner.contentView.removeChildView(active.view);
     for(const finish of active.acknowledgements.values())finish();
     // Capture ID before closing: Electron no longer exposes it after destruction.
-    for(const [id,caller] of this.callers)if(caller===active){this.callers.delete(id);this.inputs.revoke(id);}
+    for(const [id,caller] of this.callers)if(caller===active){this.callers.delete(id);this.inputs.revoke(id);this.releaseSession(id);}
     if(!active.view.webContents.isDestroyed())active.view.webContents.close({waitForBeforeUnload:false});
     void active.isolated.clearStorageData().catch(()=>{});
     if(active.detached&&!active.owner.isDestroyed())active.owner.destroy();
