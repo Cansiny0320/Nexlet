@@ -1,6 +1,6 @@
 import { ToolSessionContext,createToolSession } from './tool-session';
 import type { ToolSessionSnapshot } from '../shared/tool-session';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { lazy, useState, useEffect, useRef, useCallback, useTransition } from 'react';
 import { Settings as SettingsIcon, Pin, Minus, Square, X, ChevronLeft, ExternalLink, GripVertical } from 'lucide-react';
 import type { AppState, PluginSessionState } from '../shared/types';
 import { BUILTIN_COMMANDS } from '../shared/types';
@@ -8,14 +8,17 @@ import { INPUT_TEXT_LIMIT, type LaunchInput, type InputSource } from '../shared/
 import { AppContext, api, errorText, IconButton, Modal, ToolIcon, type DialogSpec } from './common';
 import { Launcher } from './Launcher';
 import { LaunchInputChip } from './LaunchInputChip';
-import { ClipboardPanel } from './Clipboard';
-import { ScratchpadPanel } from './Scratchpad';
-import { ToolsPanel, WebPanel } from './Tools';
-import { JsonTool } from './JsonTool';
-import { FileSearch } from './FileSearch';
-import { PluginsPanel } from './Plugins';
 import { saveBeforeUpdate } from './update-save';
-import { SettingsPanel } from './Settings';
+import { ToolBoundary } from './ToolBoundary';
+
+const ClipboardPanel = lazy(() => import('./Clipboard').then(module => ({ default: module.ClipboardPanel })));
+const ScratchpadPanel = lazy(() => import('./Scratchpad').then(module => ({ default: module.ScratchpadPanel })));
+const ToolsPanel = lazy(() => import('./Tools').then(module => ({ default: module.ToolsPanel })));
+const WebPanel = lazy(() => import('./Tools').then(module => ({ default: module.WebPanel })));
+const JsonTool = lazy(() => import('./JsonTool').then(module => ({ default: module.JsonTool })));
+const FileSearch = lazy(() => import('./FileSearch').then(module => ({ default: module.FileSearch })));
+const PluginsPanel = lazy(() => import('./Plugins').then(module => ({ default: module.PluginsPanel })));
+const SettingsPanel = lazy(() => import('./Settings').then(module => ({ default: module.SettingsPanel })));
 
 const params=new URLSearchParams(location.search);
 const detached=params.get('detached')==='1';
@@ -23,6 +26,8 @@ const board=params.get('board')==='1';
 const transfer=params.get('transfer')||'';
 export function App(){
   const [session,setSession]=useState(()=>createToolSession()),[restoring,setRestoring]=useState(!!transfer),[transferring,setTransferring]=useState(false);
+  const [readySession,setReadySession]=useState<typeof session|null>(null);
+  const [openingTool,startNavigation]=useTransition();
   const [state,setState]=useState<AppState|null>(null),[loadError,setLoadError]=useState('');
   const [view,setView]=useState(params.get('view')||'launcher'),[query,setQuery]=useState(''),[payload,setPayload]=useState('');
   const [launchInput,setLaunchInput]=useState<(LaunchInput&{preview?:string})|null>(null),[inputSource,setInputSource]=useState<InputSource>('input');
@@ -34,7 +39,7 @@ export function App(){
   const resolver=useRef<((r:string|boolean|null)=>void)|null>(null),input=useRef<HTMLInputElement>(null),toastTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const toast=useCallback((text:string,error=false)=>{setNotification({text,error});if(toastTimer.current)clearTimeout(toastTimer.current);toastTimer.current=setTimeout(()=>setNotification(null),error?6500:2500);},[]);
   const refresh=useCallback(async()=>{try{setState(await api<AppState>('state'));}catch(e){setLoadError(errorText(e));}},[]);
-  const navigate=useCallback((next:string,initial='')=>{captureGeneration.current++;setCapturing(false);if(next!=='plugin')void api('window',{action:'exitPlugin'});setLaunchInput(null);setSession(createToolSession());setView(next);setPayload(initial);setQuery(next==='clipboard'?initial:'');void api('clearInput');},[]);
+  const navigate=useCallback((next:string,initial='')=>{captureGeneration.current++;setCapturing(false);if(next!=='plugin')void api('window',{action:'exitPlugin'});startNavigation(()=>{setLaunchInput(null);setSession(createToolSession());setView(next);setPayload(initial);setQuery(next==='clipboard'?initial:'');});void api('clearInput');},[startNavigation]);
   const clearLaunchInput=useCallback(()=>{captureGeneration.current++;setCapturing(false);setLaunchInput(null);setQuery('');setInputSource('input');void api('clearInput');input.current?.focus();},[]);
   const dialog=useCallback((spec:DialogSpec)=>new Promise<string|boolean|null>(resolve=>{resolver.current?.(null);resolver.current=resolve;setDialogSpec(spec);}),[]);
   useEffect(()=>{void refresh();void syncPlugin();return window.nexlet?.onChange(event=>{if(event==='state')void refresh();if(event==='plugin-changed')void syncPlugin();if(event.startsWith('update:prepare:'))void saveBeforeUpdate().then(()=>api('updateReady',{token:event.slice(15)}),error=>api('updateReady',{token:event.slice(15),error:errorText(error)}));if(event==='focus'){input.current?.focus();input.current?.select();}if(event.startsWith('error:'))toast(event.slice(6),true);if(event.startsWith('navigate:'))navigate(event.slice(9));});},[refresh,navigate,toast,syncPlugin]);
@@ -47,7 +52,8 @@ export function App(){
     if(event.key==='Escape'&&!event.defaultPrevented){if(query)setQuery('');else if(launchInput)clearLaunchInput();else if(view!=='launcher'&&!detached)navigate('launcher');else void api('window',{action:'hide'});}
   };window.addEventListener('keydown',handle);return()=>window.removeEventListener('keydown',handle);},[view,query,launchInput,dialogSpec,transferring,navigate,clearLaunchInput]);
   useEffect(()=>{if(!transfer)return;void api<ToolSessionSnapshot>('toolSession',{action:'read',token:transfer}).then(snapshot=>{setSession(createToolSession(snapshot.state));setQuery(snapshot.query);setView(snapshot.view);setRestoring(false);}).catch(e=>{setLoadError(errorText(e));void api('toolSession',{action:'ready',token:transfer,error:errorText(e)});});},[]);
-  useEffect(()=>{if(!transfer||restoring||!state||transferDone.current)return;let live=true;const timer=setTimeout(()=>{void Promise.all([...session.restores]).then(()=>{if(live&&!transferDone.current){transferDone.current=true;void api('toolSession',{action:'ready',token:transfer}).catch(()=>{});}},e=>{if(live&&!transferDone.current){transferDone.current=true;void api('toolSession',{action:'ready',token:transfer,error:errorText(e)}).catch(()=>{});}});},50);return()=>{live=false;clearTimeout(timer);};},[session,restoring,!!state]);
+  const toolReady=useCallback(()=>{setReadySession(session);if(transfer&&!transferDone.current){transferDone.current=true;void api('toolSession',{action:'ready',token:transfer}).catch(()=>{});}},[session]);
+  const toolError=useCallback((error:Error)=>{if(transfer&&!transferDone.current){transferDone.current=true;void api('toolSession',{action:'ready',token:transfer,error:errorText(error)}).catch(()=>{});}},[]);
   const detachTool=async()=>{if(transferring||detached)return;setTransferring(true);try{if(view==='plugin')await api('window',{action:'detach',view});else{await Promise.all([...session.before].map(save=>save()));await api('window',{action:'detach',view,snapshot:{version:1,view,query,state:session.values}});navigate('launcher');}}catch(e){toast(errorText(e),true);}finally{setTransferring(false);}};
   const control=async(action:string)=>{try{const value=await api<boolean>('window',{action});if(action==='pin')setPinned(value);}catch(e){toast(errorText(e),true);}};
   const acceptFiles=async(files:File[],from:'drop'|'paste')=>{
@@ -63,7 +69,7 @@ export function App(){
   };
   if(!state||restoring)return <div className="loading-screen"><span className="brand-mark">N</span><p>{loadError||'正在打开 Nexlet…'}</p>{loadError&&<button className="button" onClick={()=>void refresh()}>重试</button>}</div>;
   const command=BUILTIN_COMMANDS.find(c=>c.id==='tool:'+view);
-  return <ToolSessionContext.Provider value={session}><AppContext.Provider value={{state,refresh,toast,dialog,navigate,detach:detachTool,canDetach:!detached}}><div inert={state.update.phase==='installing'} className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files),'drop');}}} onPaste={e=>{if(view!=='launcher')return;if(e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files),'paste');}else if(e.target===input.current){e.preventDefault();const next=query.slice(0,input.current?.selectionStart??0)+e.clipboardData.getData('text/plain')+query.slice(input.current?.selectionEnd??query.length);if(next.length>INPUT_TEXT_LIMIT){toast('输入最多 50 万字符',true);return;}captureGeneration.current++;setCapturing(false);setInputSource('paste');setQuery(next);}}}>
+  return <ToolSessionContext.Provider value={session}><AppContext.Provider value={{state,refresh,toast,dialog,navigate,detach:detachTool,canDetach:!detached&&readySession===session}}><div inert={state.update.phase==='installing'} className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files),'drop');}}} onPaste={e=>{if(view!=='launcher')return;if(e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files),'paste');}else if(e.target===input.current){e.preventDefault();const next=query.slice(0,input.current?.selectionStart??0)+e.clipboardData.getData('text/plain')+query.slice(input.current?.selectionEnd??query.length);if(next.length>INPUT_TEXT_LIMIT){toast('输入最多 50 万字符',true);return;}captureGeneration.current++;setCapturing(false);setInputSource('paste');setQuery(next);}}}>
     <header className="titlebar">
       <div className="window-drag-handle" aria-label="拖动窗口" title="拖动窗口"><GripVertical size={17}/></div>
       {view==='launcher'?<>{launchInput&&<LaunchInputChip key={launchInput.id} input={launchInput} preview={launchInput.preview} onClear={clearLaunchInput}/>}<input ref={input} className="launcher-input" aria-label="搜索功能、应用或快捷方式" placeholder={launchInput?'筛选处理功能…':'搜索功能 / 粘贴文件、图片'} maxLength={INPUT_TEXT_LIMIT} value={query} onChange={e=>{captureGeneration.current++;setCapturing(false);setInputSource('input');setQuery(e.target.value);}} autoComplete="off" spellCheck={false}/></>:
@@ -72,12 +78,13 @@ export function App(){
       <div className="titlebar-spacer"/>
       <div className="window-controls">
         {!detached&&view!=='launcher'&&<IconButton title="返回首页" onClick={()=>navigate('launcher')}><ChevronLeft size={17}/></IconButton>}
-        {view!=='launcher'&&view!=='settings'&&view!=='plugins'&&view!=='web'&&!detached&&<IconButton title="分离为独立窗口" disabled={transferring} onClick={()=>void detachTool()}><ExternalLink size={16}/></IconButton>}
+        {view!=='launcher'&&view!=='settings'&&view!=='plugins'&&view!=='web'&&!detached&&<IconButton title="分离为独立窗口" disabled={transferring||(view!=='plugin'&&readySession!==session)} onClick={()=>void detachTool()}><ExternalLink size={16}/></IconButton>}
         {view!=='launcher'&&<IconButton title="固定窗口" active={pinned} onClick={()=>void control('pin')}><Pin size={16}/></IconButton>}
         {view==='launcher'?<button className="brand-button" title="设置" aria-label="打开设置" onClick={()=>navigate('settings')}><span>N</span>{state.shortcutError&&<i/>}</button>:<><IconButton title="最小化" onClick={()=>void control('minimize')}><Minus size={16}/></IconButton><IconButton title="最大化" onClick={()=>void control('maximize')}><Square size={13}/></IconButton><IconButton title="关闭窗口" onClick={()=>void control('close')}><X size={17}/></IconButton></>}
       </div>
     </header>
     <main className="main-content" inert={transferring}>
+      <ToolBoundary session={session} onReady={toolReady} onError={toolError} onBack={()=>navigate('launcher')}>
       {view==='launcher'&&<Launcher query={query} setQuery={setQuery} input={input} launchInput={launchInput} source={inputSource} capturing={capturing}/>}
       {view==='clipboard'&&<ClipboardPanel query={query} setQuery={setQuery} board={board}/>}
       {view==='scratchpad'&&<ScratchpadPanel initialExpression={payload}/>}
@@ -87,7 +94,9 @@ export function App(){
       {view==='web'&&<WebPanel/>}
       {view==='plugins'&&<PluginsPanel/>}
       {view==='settings'&&<SettingsPanel/>}
+      </ToolBoundary>
     </main>
+    {openingTool&&<div className="handoff-overlay" role="status">正在加载工具…</div>}
     {transferring&&<div className="handoff-overlay" role="status">正在恢复独立窗口…</div>}
     {notification&&<div className={`toast ${notification.error?'error':''}`} role="status" onClick={()=>setNotification(null)}>{notification.text}</div>}
     {dialogSpec&&<Modal key={dialogSpec.title} spec={dialogSpec} onResolve={result=>{setDialogSpec(null);resolver.current?.(result);resolver.current=null;}}/>}

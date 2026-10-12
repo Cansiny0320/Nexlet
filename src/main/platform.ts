@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { systemPreferences } from 'electron';
 import koffi from 'koffi';
+import { createMacPasteboardReader } from './mac-pasteboard';
 
 const exec = promisify(execFile);
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -12,6 +13,7 @@ export class Platform {
   status: string | null = null;
   target: PasteTarget | null = null;
   private win: Record<string, (...args: any[]) => any> | null = null;
+  private macSequence: (() => number) | null | undefined;
   constructor(private ownerHandle: () => Buffer | undefined) {
     if (process.platform === 'win32') {
       try {
@@ -41,7 +43,19 @@ export class Platform {
       } catch (error) { this.status = `Windows 系统桥接未就绪：${(error as Error).message}`; }
     } else if (process.platform !== 'darwin') this.status = 'Linux 当前提供基础界面；文件剪贴板和自动回贴尚未支持';
   }
-  sequence(): number | null { return this.win ? this.win.sequence() : null; }
+  sequence(): number | null {
+    if (this.win) return this.win.sequence();
+    if (process.platform === 'darwin') {
+      try {
+        if (this.macSequence === undefined) this.macSequence = createMacPasteboardReader();
+        return this.macSequence?.() ?? null;
+      } catch (error) {
+        this.macSequence = null;
+        console.warn('macOS 剪贴板变更检测不可用，已退回内容轮询：', (error as Error).message);
+      }
+    }
+    return null;
+  }
   async rememberTarget(): Promise<void> {
     if (this.win) {
       const handle = this.win.foreground(); const pid = [0]; this.win.getPid(handle, pid);
