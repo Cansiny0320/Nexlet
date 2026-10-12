@@ -2,18 +2,36 @@ import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { app } from 'electron';
+import { app, shell } from 'electron';
 import type { Command } from '../shared/types';
 import { loadCatalogIcon } from './catalog-icons';
 import { loadMacCatalogIcons } from './catalog-mac';
 import { readWindowsApplications } from './catalog-windows';
+
+function shortcutIdentity(file: string): string | undefined {
+  if (process.platform !== 'win32' || !/\.lnk$/i.test(file)) return;
+  try {
+    const { target, args, cwd } = shell.readShortcutLink(file);
+    if (!target || !path.win32.isAbsolute(target)) return;
+    // Arguments may be case-sensitive. A distinct working directory can also
+    // change behavior, so only normalize the Windows paths.
+    return JSON.stringify([
+      path.win32.normalize(target).toLowerCase(), args || '',
+      cwd ? path.win32.normalize(cwd).toLowerCase() : ''
+    ]);
+  } catch { return; } // An unreadable link remains a separate, launchable entry.
+}
 
 export class Catalog {
   items: Command[] = [];
   loading = false;
   private icons = new Map<string, string>();
   private iconSources = new Map<string, string>();
+  private aliases = new Map<string, string>();
   constructor(private changed: () => void) {}
+  resolveIds(ids: string[]): string[] {
+    return [...new Set(ids.map(id => this.aliases.get(id) || id))];
+  }
   async scan(extra: string[] = []): Promise<void> {
     if (this.loading) return;
     this.loading = true; this.changed();
@@ -26,6 +44,8 @@ export class Catalog {
         app.getPath('desktop'), path.join(process.env.PUBLIC || 'C:/Users/Public', 'Desktop')
       ] : process.platform === 'darwin' ? ['/Applications', '/System/Applications', path.join(homedir(), 'Applications'), app.getPath('desktop')] : ['/usr/share/applications', path.join(homedir(), '.local/share/applications')];
       const found = new Map<string, Command>();
+      const identities = new Map<string, string>();
+      const aliases = new Map<string, string>();
       const visit = async (directory: string, depth: number): Promise<void> => {
         if (depth > 8 || found.size > 5000) return;
         let entries; try { entries = await readdir(directory, { withFileTypes: true }); } catch { return; }
@@ -38,6 +58,14 @@ export class Catalog {
           if (macApp || shortcut || executable) {
             const id = 'app:' + createHash('sha256').update(process.platform === 'win32' ? full.toLowerCase() : full).digest('hex').slice(0, 20);
             const name = entry.name.replace(/\.(lnk|url|app|exe)$/i, '');
+            const identity = shortcutIdentity(full);
+            const existing = identity ? found.get(identities.get(identity) || '') : undefined;
+            if (existing) {
+              aliases.set(id, existing.id);
+              if (name !== existing.name && !existing.keywords.includes(name)) existing.keywords.push(name);
+              continue;
+            }
+            if (identity) identities.set(identity, id);
             found.set(id, { id, name, subtitle: shortcut ? `快捷方式 · ${directory}` : directory, kind: shortcut ? 'shortcut' : 'app', keywords: [], path: full, icon: this.icons.get(id) });
           } else if (entry.isDirectory()) await visit(full, depth + 1);
         }
@@ -54,6 +82,7 @@ export class Catalog {
           }
         } catch (error) { console.warn('系统应用索引暂不可用', (error as Error).message); }
       }
+      this.aliases = aliases;
       this.items = [...found.values()].sort((a,b) => a.name.localeCompare(b.name,'zh-CN'));
     } finally { this.loading = false; this.changed(); }
   }

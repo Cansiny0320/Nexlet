@@ -94,8 +94,8 @@ async function bootstrap() {
   async function state():Promise<AppState> {
     const settings=store.settings();
     const commands:Command[]=[...BUILTIN_COMMANDS,...catalog.items,...plugins.commands(),...settings.webShortcuts.map(w=>({id:'web:'+w.id,name:w.name,subtitle:w.url,kind:'web' as const,keywords:[],color:'#3188ef'}))];
-    const pinned=store.get('pinned',['tool:plugins','tool:clipboard','tool:scratchpad','tool:web','tool:json','tool:timestamp','tool:filesearch']);
-    const recent=store.get<string[]>('recent',[]);
+    const pinned=catalog.resolveIds(store.get('pinned',['tool:plugins','tool:clipboard','tool:scratchpad','tool:web','tool:json','tool:timestamp','tool:filesearch']));
+    const recent=catalog.resolveIds(store.get<string[]>('recent',[]));
     const visibleIds=new Set([...pinned,...recent.slice(0,18)]);
     const decorated=await catalog.withIcons(commands.filter(c=>visibleIds.has(c.id)));
     const icons=new Map(decorated.map(c=>[c.id,c.icon]));
