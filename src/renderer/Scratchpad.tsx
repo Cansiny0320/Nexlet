@@ -1,4 +1,4 @@
-import { useState,useRef,useEffect,useCallback } from 'react';
+import { useState,useRef,useEffect,useLayoutEffect,useCallback } from 'react';
 import { Palette, LockKeyhole, LockKeyholeOpen, Trash2, PencilLine, Images, Plus, MessageSquare, Check, Circle, Info } from 'lucide-react';
 import type { Scratchpad, CalcLine } from '../shared/types';
 import { calculate } from '../shared/calculator';
@@ -10,6 +10,7 @@ const format=(value:string)=>{if(value.includes('e'))return value;const [integer
 export function ScratchpadPanel({initialExpression}:{initialExpression:string}){
   const {toast,dialog}=useApp();
   const [pads,setPads]=useState<Scratchpad[]>([]),[active,setActive]=useState(''),[focused,setFocused]=useState(0),[saved,setSaved]=useState('已保存'),[palette,setPalette]=useState(false);
+  const [focusRequest,setFocusRequest]=useState<{id:string}|null>(null);
   const current=useRef<Scratchpad[]>([]),versions=useRef(new Map<string,number>()),pending=useRef(new Map<string,Scratchpad>()),saving=useRef(false),timer=useRef<ReturnType<typeof setTimeout>|null>(null),inputs=useRef(new Map<string,HTMLTextAreaElement>()),initialized=useRef(false);
   const updateList=(list:Scratchpad[])=>{current.current=list;setPads(list);};
   const flush=useCallback(async()=>{
@@ -34,7 +35,10 @@ export function ScratchpadPanel({initialExpression}:{initialExpression:string}){
   },[]);
   useEffect(()=>{if(active)localStorage.setItem('active-pad',active);},[active]);
   const pad=pads.find(p=>p.id===active);
-  const focus=(index:number,id?:string)=>{setFocused(index);requestAnimationFrame(()=>{const row=id||current.current.find(p=>p.id===active)?.lines[index]?.id;if(row){const input=inputs.current.get(row);input?.focus();input?.setSelectionRange(input.value.length,input.value.length);input?.scrollIntoView({block:'nearest'});}});};
+  const focus=(index:number,id?:string)=>{setFocused(index);const row=id||current.current.find(p=>p.id===active)?.lines[index]?.id;if(row)setFocusRequest({id:row});};
+  // Position the caret in the same commit as the row update, before another
+  // input event can select text or move focus elsewhere.
+  useLayoutEffect(()=>{const input=focusRequest&&inputs.current.get(focusRequest.id);if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);input.scrollIntoView({block:'nearest'});}},[focusRequest]);
   const add=()=>{const created=newPad();queue(created);setActive(created.id);focus(0,created.lines[0].id);};
   const editLine=(index:number,value:string)=>{if(!pad||pad.locked)return;const lines=pad.lines.map((line,i)=>i===index?{...line,expression:value}:line);if(index===lines.length-1&&value.trim()&&lines.length<1000)lines.push(blankLine());queue({...pad,lines});};
   const remark=async(index:number)=>{if(!pad||pad.locked)return;const line=pad.lines[index];const value=await dialog({title:'为当前计算添加备注',input:line.note,placeholder:'备注'});if(typeof value==='string')queue({...pad,lines:pad.lines.map((l,i)=>i===index?{...l,note:value.slice(0,1000)}:l)});};
