@@ -16,6 +16,7 @@ if (toggle && navigation) {
   window.matchMedia('(min-width: 761px)').addEventListener('change', close);
 }
 import { selectPlatform } from './platform.mjs';
+import { refreshRelease } from './releases.mjs';
 
 const controls=[...document.querySelectorAll('[data-download-control]')];
 let manualChoice=false, detectedPlatform=null;
@@ -39,7 +40,7 @@ function clearPlatform(){
   control.querySelector('[data-primary-download]').href='/download/';
   control.querySelector('[data-download-label]').textContent='下载 Nexlet';
   control.querySelector('[data-platform-icon]').innerHTML='';
-  control.querySelector('[data-download-hint]').textContent='预览版 · 选择适合你的平台';
+  control.querySelector('[data-download-hint]').textContent='选择适合你的平台';
   for(const item of control.querySelectorAll('[data-platform]')){item.classList.remove('is-selected');item.setAttribute('aria-pressed','false');item.querySelector('.selection-label').textContent='';}
  }
 }
@@ -61,6 +62,8 @@ if(controls.length){
  const initial=selectPlatform(base);if(initial){detectedPlatform=initial;choosePlatform(initial,true);}
  navigator.userAgentData?.getHighEntropyValues?.(['architecture','bitness']).then(data=>{if(manualChoice)return;const platform=selectPlatform({...base,...data});if(platform){detectedPlatform=platform;choosePlatform(platform,true);}else if(data.architecture||data.bitness){clearPlatform();}}).catch(()=>{});
 }
+
+void refreshRelease();
 
 let toastTimer;
 for(const button of document.querySelectorAll('[data-copy]'))button.addEventListener('click',async()=>{

@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
 const base=process.env.SITE_URL||'http://127.0.0.1:4173';
 const routes=['/','/download/','/privacy/','/plugins/'];
+const downloads=require('../downloads.json');
 (async()=>{
  const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',headless:true});
  try{
@@ -46,7 +47,7 @@ const routes=['/','/download/','/privacy/','/plugins/'];
   await page.locator('.privacy-sidebar a[href="#website"]').click();assert.equal(await page.locator('#website').getAttribute('open'),'');
   const nojs=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const plain=await nojs.newPage();
   for(const route of routes){await plain.goto(base+route);assert.equal(await plain.locator('#navigation').isVisible(),true);assert.equal(await plain.locator('h1').isVisible(),true);}
-  await plain.goto(base+'/download/');assert.equal(await plain.locator('[data-direct-download]').count(),3);for(const a of await plain.locator('[data-direct-download]').all())assert.match(await a.getAttribute('href'),/releases\/download\/v0.1.0\/.+\.(exe|dmg)$/);
+  await plain.goto(base+'/download/');assert.equal(await plain.locator('[data-direct-download]').count(),3);for(const a of await plain.locator('[data-direct-download]').all())assert.equal(await a.getAttribute('href'),downloads.platforms[await a.getAttribute('data-direct-download')].url);
   await nojs.close();
   // A late high-entropy response must never replace the user's selected architecture.
   const delayed=await browser.newContext();await delayed.addInitScript(()=>{Object.defineProperty(navigator,'userAgentData',{value:{platform:'macOS',mobile:false,getHighEntropyValues:()=>new Promise(resolve=>{window.resolvePlatform=resolve;})}});Object.defineProperty(navigator,'userAgent',{value:'Macintosh; Intel Mac OS X'});});
