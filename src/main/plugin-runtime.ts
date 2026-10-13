@@ -114,7 +114,7 @@ export class PluginRuntime {
     view.webContents.once('destroyed',()=>this.dispose(active,true));
     let timer:ReturnType<typeof setTimeout>;
     const deadline=new Promise<never>((_resolve,reject)=>{timer=setTimeout(()=>reject(new Error('插件加载超时')),12000);});
-    active.loaded=Promise.race([view.webContents.loadURL(`nexlet-plugin://${id}/${record.manifest.main}`).then(()=>handshake),deadline]).then(()=>{clearTimeout(timer);},error=>{clearTimeout(timer);if(!active.closing)this.fail(active,error instanceof Error?error.message:'加载失败');throw error;});
+    active.loaded=Promise.race([view.webContents.loadURL(`nexlet-plugin://${id}/${record.manifest.main}`).then(()=>handshake),deadline]).then(()=>{clearTimeout(timer);},error=>{clearTimeout(timer);if(active.closing)throw new Error('插件启动已取消');this.fail(active,error instanceof Error?error.message:'加载失败');throw error;});
     void active.loaded.catch(()=>{});return active;
   }
   ready(contentsId:number){this.callers.get(contentsId)?.ready();}
