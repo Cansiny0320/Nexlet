@@ -1,4 +1,4 @@
-Nexlet 0.2.15 新增可配置启动器、超级面板、离线 OCR 和 Linux 安装包，并扩展插件能力。
+Nexlet 0.2.16 新增可配置启动器、超级面板、离线 OCR 和 Linux 安装包，并扩展插件能力。
 
 ## 启动器与桌面工具
 
@@ -12,15 +12,16 @@ Nexlet 0.2.15 新增可配置启动器、超级面板、离线 OCR 和 Linux 安
 
 - 扩展插件 SDK，支持隔离后端及宿主能力服务。
 - 退出时完成插件持久化，并等待原生操作取消后再结束进程。
+- 修复插件页面加载中退出时的取消竞态，取消后仍可正常重新打开。
 - 沿用市场插件打开时自动更新的机制，保留本地配置和本次输入。
 
 ## 平台与下载
 
-- Windows x64：安装版 `Nexlet-0.2.15-Windows-x64-Setup.exe`，便携版 `Nexlet-0.2.15-Windows-x64.exe`。
-- Apple Silicon Mac：`Nexlet-0.2.15-macOS-arm64.dmg`。
-- Intel Mac：`Nexlet-0.2.15-macOS-x64.dmg`。
-- Linux x64：`Nexlet-0.2.15-Linux-x86_64.AppImage`、`Nexlet-0.2.15-Linux-amd64.deb`。
-- Linux arm64：`Nexlet-0.2.15-Linux-arm64.AppImage`、`Nexlet-0.2.15-Linux-arm64.deb`。
+- Windows x64：安装版 `Nexlet-0.2.16-Windows-x64-Setup.exe`，便携版 `Nexlet-0.2.16-Windows-x64.exe`。
+- Apple Silicon Mac：`Nexlet-0.2.16-macOS-arm64.dmg`。
+- Intel Mac：`Nexlet-0.2.16-macOS-x64.dmg`。
+- Linux x64：`Nexlet-0.2.16-Linux-x86_64.AppImage`、`Nexlet-0.2.16-Linux-amd64.deb`。
+- Linux arm64：`Nexlet-0.2.16-Linux-arm64.AppImage`、`Nexlet-0.2.16-Linux-arm64.deb`。
 - macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新；`SHA256SUMS.txt` 提供下载校验值。
 
 Linux 的桌面能力以 X11 为主要验证环境，GNOME/KDE Wayland 的能力限制见仓库 `docs/linux.md`。
