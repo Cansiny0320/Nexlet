@@ -34,7 +34,7 @@ Nexlet 是一个开源桌面工具箱，提供应用与快捷方式搜索、剪�
 <tr><td><img src="docs/screenshots/scratchpad.png" alt="逐行计算稿纸"></td><td><img src="docs/screenshots/clipboard.png" alt="剪贴板历史"></td></tr>
 <tr><td align="center">续算、备注、锁定和自动保存</td><td align="center">文本、图片、文件与收藏</td></tr>
 <tr><td><img src="docs/screenshots/json-diff.png" alt="JSON 红绿差异对比"></td><td><img src="docs/screenshots/marketplace-live.png" alt="真实插件市场"></td></tr>
-<tr><td align="center">JSON 对比与键顺序选项</td><td align="center">独立数据与安装权限说明</td></tr>
+<tr><td align="center">JSON 对比与键顺序选项</td><td align="center">独立数据与插件能力说明</td></tr>
 </table>
 
 ## 下载和开始使用
@@ -80,7 +80,7 @@ macOS 版使用系统 Spotlight 索引，支持中文文件名、多关键词（
 
 ## 插件市场与开发
 
-公开市场由 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) 托管，目录来自版本化 JSON，安装包来自 GitHub Releases。当前提供可直接使用的「便笺」插件。安装时显示所需权限；更新保留独立数据，下载失败或取消不会替换旧版本。市场列表有本地缓存，不会自动更新已安装插件。
+公开市场由 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) 托管，目录来自版本化 JSON，安装包来自 GitHub Releases。当前提供可直接使用的「便笺」插件。点击安装后直接安装，不再弹出权限确认；更新保留独立数据，下载失败不会替换旧版本。市场列表有本地缓存，不会自动更新已安装插件。
 
 外部插件使用 Nexlet 自有 API，由 HTML、CSS、JavaScript 和 `plugin.json` 组成。支持开发目录与 `.zip` / `.nexlet` 包导入。插件在独立沙箱窗口运行，没有 Node.js、任意宿主 IPC 或直接联网能力。
 

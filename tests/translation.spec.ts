@@ -42,21 +42,60 @@ test.beforeAll(async()=>{
  const env:Record<string,string>={...Object.fromEntries(Object.entries(process.env).filter((entry):entry is [string,string]=>entry[1]!==undefined)),NEXLET_TEST_MODE:'1',NEXLET_USER_DATA:path.join(folder,'data')};delete env.ELECTRON_RUN_AS_NODE;
  app=await electron.launch({args:[root],env});page=await app.firstWindow();await expect(page.getByLabel('搜索功能、应用或快捷方式')).toBeVisible();
  await app.evaluate(({dialog,clipboard,safeStorage,nativeTheme},source)=>{
-  const g=globalThis as any;g.__translationPrompts=[];g.__translationAllow=true;
+  const g=globalThis as any;g.__translationPrompts=[];
   dialog.showOpenDialog=(async()=>({canceled:false,filePaths:[source]})) as any;
-  dialog.showMessageBox=(async(_owner:unknown,options:any)=>{g.__translationPrompts.push(options);return {response:g.__translationAllow?1:0};}) as any;
+  dialog.showMessageBox=(async(_owner:unknown,options:any)=>{g.__translationPrompts.push(options);throw new Error('不应出现插件安装或联网确认弹窗');}) as any;
   clipboard.writeText=(async(text:string)=>{g.__translationCopied=text;}) as any;
   safeStorage.isEncryptionAvailable=()=>false;nativeTheme.themeSource='light';
+  const network=g.__nexlet.plugins.network,fetcher=network.fetcher.bind(network);
+  g.__googleRequests=[];g.__googleLive=false;
+  network.fetcher=async(url:string,init:RequestInit)=>{
+   if(!url.startsWith('https://translate.googleapis.com/')||g.__googleLive)return fetcher(url,init);
+   const params=new URL(url).searchParams,text=params.get('q');g.__googleRequests.push({text,target:params.get('tl')});
+   if(text==='slow-google')await new Promise<void>(resolve=>{g.__resolveGoogle=resolve;});
+   return new Response(JSON.stringify([[[`Google：${text}`]],null,'en']));
+  };
  },source);
  await call('pluginInstall',{development:true});await launch('Hello from launcher');
 });
 test.afterAll(async()=>{for(const response of delayed)response.destroy();await app?.close();if(server){server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}});
 
-test('导入后带入文字但不自动联网，配置 LLM 并经宿主授权翻译和复制',async()=>{
+test('插件标签显示声明的图标',async()=>{
+ const icon=(await call('state')).plugins.find((p:any)=>p.manifest.id==='org.nexlet.translate').icon;
+ expect(icon).toMatch(/^data:image\//);await expect(page.locator('.plugin-pill img')).toHaveAttribute('src',icon);
+ await expect.poll(()=>page.locator('.plugin-pill img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
+ await page.locator('.titlebar').screenshot({path:path.join(root,'test-results','translation-titlebar.png')});
+});
+
+test('Google 自动翻译支持带入、防抖、输入法、语言切换和撤销',async()=>{
+ await expect(plugin.locator('#output')).toHaveValue('Google：Hello from launcher');
+ await plugin.clock.install();await plugin.clock.pauseAt(new Date());
+ const hits=()=>app.evaluate(()=>(globalThis as any).__googleRequests.length);
+ const before=await hits();
+ await plugin.locator('#input').fill('H');await plugin.clock.runFor(250);await plugin.locator('#input').fill('Hello');await plugin.clock.runFor(399);expect(await hits()).toBe(before);
+ await plugin.clock.runFor(1);await expect(plugin.locator('#output')).toHaveValue('Google：Hello');expect(await hits()).toBe(before+1);
+ await plugin.locator('#input').dispatchEvent('compositionstart');await plugin.locator('#input').fill('ni');await plugin.clock.runFor(800);expect(await hits()).toBe(before+1);
+ await plugin.locator('#input').fill('你好');await plugin.locator('#input').dispatchEvent('compositionend');await plugin.clock.runFor(400);await expect(plugin.locator('#output')).toHaveValue('Google：你好');
+ await plugin.locator('#target').selectOption('en');await plugin.clock.runFor(400);await expect.poll(()=>hits()).toBe(before+3);
+ expect(await app.evaluate(()=>(globalThis as any).__googleRequests.at(-1).target)).toBe('en');
+ await plugin.locator('#input').fill('manual');await plugin.locator('#translate').click();await expect(plugin.locator('#output')).toHaveValue('Google：manual');await plugin.clock.runFor(800);expect(await hits()).toBe(before+4);
+ await plugin.locator('#input').fill('discard');await plugin.locator('#clear-input').click();await plugin.clock.runFor(800);expect(await hits()).toBe(before+4);await expect(plugin.locator('#output')).toHaveValue('');
+ for(const value of ['   ','x'.repeat(5001)]){await plugin.locator('#input').fill(value);await plugin.clock.runFor(500);}expect(await hits()).toBe(before+4);
+ await plugin.locator('#input').fill('slow-google');await plugin.clock.runFor(400);await expect.poll(()=>hits()).toBe(before+5);
+ await plugin.locator('#input').fill('fresh-google');await plugin.clock.runFor(400);await expect(plugin.locator('#output')).toHaveValue('Google：fresh-google');
+ await app.evaluate(()=>(globalThis as any).__resolveGoogle());await expect(plugin.locator('#output')).toHaveValue('Google：fresh-google');
+ await plugin.locator('#input').fill('switch away');await chooseLLM();await plugin.clock.runFor(800);expect(await hits()).toBe(before+6);
+ await plugin.locator('#input').fill('Hello from launcher');await plugin.clock.runFor(800);expect(received).toHaveLength(0);
+ await plugin.locator('#target').selectOption('zh-CN');
+ await plugin.clock.resume();
+});
+
+test('直接安装且不弹确认，带入文字后按需翻译和复制',async()=>{
  expect(received).toHaveLength(0);await expect(plugin.locator('#input')).toHaveValue('Hello from launcher');
  await configure();await plugin.locator('#translate').click();await expect(plugin.locator('#output')).toHaveValue('译文：Hello from launcher');
  const request=received.at(-1)!;expect(request.path).toBe('/v1/chat/completions');expect(request.authorization).toBe('Bearer fixture-secret');expect(request.body).toMatchObject({model:'fixture-model',stream:false});
- expect(await app.evaluate(()=>(globalThis as any).__translationPrompts.filter((p:any)=>p.title==='允许插件连接服务？').length)).toBe(1);
+ expect(await app.evaluate(()=>(globalThis as any).__translationPrompts)).toEqual([]);
+ await plugin.locator('#settings-toggle').click();await expect(plugin.locator('#reset-permissions')).toHaveCount(0);await plugin.locator('#settings-toggle').click();
  await plugin.locator('#copy').click();expect(await app.evaluate(()=>(globalThis as any).__translationCopied)).toBe('译文：Hello from launcher');
  const data=await app.evaluate(()=>(globalThis as any).__nexlet.store.get('plugin-data:org.nexlet.translate',{}));expect(JSON.stringify(data)).not.toContain('fixture-secret');expect(JSON.stringify(data)).not.toContain('Hello from launcher');
  expect(await plugin.evaluate(()=>fetch('https://example.com').then(()=>false,()=>true))).toBe(true);
@@ -64,10 +103,11 @@ test('导入后带入文字但不自动联网，配置 LLM 并经宿主授权翻
  await plugin.screenshot({path:path.join(root,'test-results','translation.png')});
 });
 
-test('拒绝联网授权不发送请求，允许一次后保存 origin，重定向不能绕过授权',async()=>{
+test('首次联网与兼容旧 resetPermissions 调用均不弹窗，仍拒绝重定向',async()=>{
  await plugin.evaluate(()=>(window as any).nexlet.network.resetPermissions());const before=received.length;
- await app.evaluate(()=>(globalThis as any).__translationAllow=false);await translate('denied');await expect(plugin.locator('#status')).toContainText('取消联网授权');expect(received.length).toBe(before);
- await app.evaluate(()=>(globalThis as any).__translationAllow=true);await translate('allowed');await expect(plugin.locator('#output')).toHaveValue('译文：allowed');
+ await translate('direct request');await expect(plugin.locator('#output')).toHaveValue('译文：direct request');expect(received.length).toBe(before+1);
+ expect(await app.evaluate(()=>(globalThis as any).__translationPrompts)).toEqual([]);
+ expect(await app.evaluate(()=>(globalThis as any).__nexlet.store.get('plugin-network:org.nexlet.translate',[]))).toEqual([]);
  const failure=await plugin.evaluate(async origin=>{try{await (window as any).nexlet.network.request({id:'redirect',url:origin+'/redirect'});return '';}catch(e){return String(e);}},origin);
  expect(failure).toContain('网络连接失败');expect(received.some(r=>r.path==='/should-not-be-requested')).toBe(false);
 });
@@ -98,7 +138,8 @@ test('停用清理请求和会话密钥，重新进入保留配置且未授权�
 
 test('Google 实际接口通过插件 HTTP 桥接返回译文',async()=>{
  test.skip(process.env.NEXLET_TRANSLATION_LIVE!=='1','仅显式启用时使用公开样例调用 Google');
- await plugin.locator('#translate').click();await expect(plugin.locator('#output')).toHaveValue(/你好|您好/,{timeout:45000});await expect(plugin.locator('#detected')).toContainText('英语');
+ await app.evaluate(()=>(globalThis as any).__googleLive=true);await plugin.locator('#target').selectOption('zh-CN');await plugin.locator('#input').fill('Hello, world!');await expect(plugin.locator('#output')).toHaveValue(/你好|您好/,{timeout:45000});await expect(plugin.locator('#detected')).toContainText('英语');
+ await app.evaluate(()=>(globalThis as any).__googleLive=false);
  await plugin.screenshot({path:path.join(root,'test-results','translation-google.png')});expect(errors).toEqual([]);
 });
 
@@ -109,5 +150,5 @@ test('打包产物可真实安装，配置保留，卸载清理数据和授权',
  expect(await plugin.evaluate(()=>(window as any).nexlet.storage.get('llm'))).toMatchObject({baseUrl:origin+'/v1',model:'fixture-model'});
  await call('pluginRemove',{id:'org.nexlet.translate',deleteData:true});
  const stored=await app.evaluate(()=>{const s=(globalThis as any).__nexlet.store;return {data:s.get('plugin-data:org.nexlet.translate',{}),secrets:s.get('plugin-secrets:org.nexlet.translate',{}),grants:s.get('plugin-network:org.nexlet.translate',[])};});
- expect(stored).toEqual({data:{},secrets:{},grants:[]});expect(errors).toEqual([]);
+ expect(stored).toEqual({data:{},secrets:{},grants:[]});expect(errors).toEqual([]);expect(await app.evaluate(()=>(globalThis as any).__translationPrompts)).toEqual([]);
 });

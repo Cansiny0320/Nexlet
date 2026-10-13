@@ -26,11 +26,11 @@ export function validateNetworkRequest(value:unknown):NetworkRequest {
   return {id:v.id,url:url.href,method,headers,...(v.body===undefined?{}:{body:v.body as string}),timeoutMs};
 }
 
-/** All requests belong to a live renderer; permissions and origin consent are checked by the caller. */
+/** All requests belong to a live renderer; manifest permissions are checked by the caller. */
 export class PluginNetwork {
   private pending=new Map<number,Map<string,AbortController>>();
   constructor(private fetcher:(url:string,init:RequestInit)=>Promise<Response>){}
-  async request(session:number,value:unknown,authorize:(origin:string)=>Promise<void>):Promise<{status:number;body:string}>{
+  async request(session:number,value:unknown):Promise<{status:number;body:string}>{
     const request=validateNetworkRequest(value);
     let requests=this.pending.get(session);if(!requests){requests=new Map();this.pending.set(session,requests);}
     if(requests.has(request.id))throw new Error('请求 ID 重复');
@@ -40,7 +40,6 @@ export class PluginNetwork {
     let onAbort!:()=>void;
     const aborted=new Promise<never>((_resolve,reject)=>{onAbort=()=>reject(controller.signal.reason);controller.signal.addEventListener('abort',onAbort,{once:true});});
     const run=async()=>{
-      await authorize(new URL(request.url).origin);controller.signal.throwIfAborted();
       timer=setTimeout(()=>controller.abort(new Error('请求超时，请稍后重试')),request.timeoutMs);
       let response:Response;
       try{response=await this.fetcher(request.url,{method:request.method,headers:request.headers,body:request.body,signal:controller.signal,credentials:'omit',redirect:'error'});}

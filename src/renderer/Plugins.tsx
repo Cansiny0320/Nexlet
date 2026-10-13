@@ -4,7 +4,7 @@ import { BUILTIN_COMMANDS } from '../shared/types';
 import { MarketPanel } from './Marketplace';
 import { api,useApp,errorText,PanelHeader,ToolIcon,Empty,IconButton } from './common';
 
-const permissionNames:Record<string,string>={'clipboard.read':'读取剪贴板','clipboard.write':'写入剪贴板','shell.openExternal':'打开外部链接','network.request':'连接已授权的服务地址','secrets':'插件独立加密密钥'};
+const permissionNames:Record<string,string>={'clipboard.read':'读取剪贴板','clipboard.write':'写入剪贴板','shell.openExternal':'打开外部链接','network.request':'网络请求','secrets':'插件独立加密密钥'};
 export function PluginsPanel(){
   const {state,toast,dialog,navigate}=useApp();const [busy,setBusy]=useState(false),[detail,setDetail]=useState<string|null>(null),[tab,setTab]=useState<'market'|'installed'>('market');
   const install=async(development:boolean)=>{setBusy(true);try{if(await api('pluginInstall',{development}))toast('插件已安装，可在主搜索框中搜索指令');}catch(e){toast(errorText(e),true);}finally{setBusy(false);}};

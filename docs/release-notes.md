@@ -1,33 +1,24 @@
-Nexlet 0.2.10 增加应用内文件夹浏览和文件信息预览，更新 Logo 与功能图标，并改进搜索准备和应用启动反馈。
+Nexlet 0.2.11 修复插件顶部标签缺少图标，并简化插件安装、更新和联网交互。
 
-## 文件搜索
+## 插件体验
 
-- 双击文件夹可直接在 Nexlet 内查看子项，支持面包屑、上一级和返回原搜索。
-- 单击文件或文件夹显示完整路径、类型、创建时间和修改时间；文件另显示大小。
-- 当前文件夹支持按名称筛选和分批加载，文件类型使用不同图标。双击文件仍由系统默认应用打开。
-- 独立窗口恢复保留目录位置和选择；读取失败、文件删除及权限不足会显示错误。
-- Windows 打开文件搜索即准备 Everything 索引，显示等待进度；修复引擎运行时重复覆盖文件，以及启动阶段误报不可用的问题。
-- macOS 文件搜索接入 Spotlight。
+- 插件顶部标签展示插件声明的图标，未提供图标时使用默认插件图标。
+- 点击安装或更新后直接执行，不再弹出安装权限确认。
+- 已安装插件声明 `network.request` 后可直接发起请求，不再逐地址弹窗确认。
+- 保留插件沙箱、manifest 能力检查、请求取消、超时与响应大小限制；更新保留插件独立数据。
 
-## 其他更新
+## 翻译插件
 
-- 更新应用 Logo 与七个内置功能图标，保留现有界面布局和主题色。
-- 工具按需加载，改进 macOS 剪贴板变化检测。
-- 修复 Windows 应用启动结果提示、启动器粘贴图片预览、更新说明渲染和下载进度展示。
-- 为插件提供受权限控制的网络请求和密钥存储 API。
+翻译插件另行通过插件市场更新至 1.1.0：保留现有 UI，Google 在停止输入 400 毫秒后自动翻译，支持粘贴、启动器带入文字和切换语言；中文输入法组词期间不发送请求，旧结果不会覆盖新输入。LLM 保留手动翻译。
 
 ## 下载与更新
 
-- Windows x64 安装版：`Nexlet-0.2.10-Windows-x64-Setup.exe`。
-- Windows x64 便携版：`Nexlet-0.2.10-Windows-x64.exe`。
-- Intel Mac：`Nexlet-0.2.10-macOS-x64.dmg`。
-- Apple Silicon Mac：`Nexlet-0.2.10-macOS-arm64.dmg`。
-- macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新。`hello-nexlet.nexlet` 为示例插件；`SHA256SUMS.txt` 提供下载校验值。
+- Windows x64 安装版：`Nexlet-0.2.11-Windows-x64-Setup.exe`。
+- Windows x64 便携版：`Nexlet-0.2.11-Windows-x64.exe`。
+- Intel Mac：`Nexlet-0.2.11-macOS-x64.dmg`。
+- Apple Silicon Mac：`Nexlet-0.2.11-macOS-arm64.dmg`。
+- macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新；`SHA256SUMS.txt` 提供下载校验值。
 
-手动安装前请从托盘退出旧版，已有本地数据沿用原数据目录。Windows 便携 EXE 请放在固定位置；移动文件后如需自启动，请在设置中重新开启。
+手动安装前请从托盘退出旧版，已有本地数据沿用原数据目录。Windows 便携 EXE 请放在固定位置。
 
-## 平台说明
-
-- Windows 包没有数字签名。Everything 仅在 Windows 提供，首次索引可能需要较长时间，不安装系统服务。
-- macOS 包使用固定签名身份以支持后续更新，但没有 Apple Developer ID 签名或公证；首次打开仍可能需要在系统设置中明确允许。
-- macOS 自动回贴需要辅助功能权限。文件夹浏览的交互回归在 Windows 完成；macOS 桌面交互仍需对应平台验证。
+Windows 包没有数字签名；macOS 包沿用固定签名身份，但没有 Apple Developer ID 签名或公证。

@@ -30,7 +30,7 @@ ZIP 包根目录必须直接包含 `plugin.json`。可直接选择开发目录�
 
 公开目录位于 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins)。客户端只从该仓库的 `index.json` 读取版本化目录，从同一仓库的 GitHub Releases 下载插件包。条目包含平台和最低 Nexlet 版本，安装包 ID / 版本必须一致，不要求 Hash 字段。
 
-市场安装、更新复用本地包校验和安装权限确认，成功后才替换安装记录。取消或失败保留旧版本与独立数据；开发目录不会被市场覆盖，也不会自动降级。离线时可浏览已缓存的目录，首次连接失败显示可重试提示。
+市场安装、更新复用本地包校验，用户点击安装或更新后直接执行，不再弹出权限确认框，成功后才替换安装记录。失败保留旧版本与独立数据；开发目录不会被市场覆盖，也不会自动降级。离线时可浏览已缓存的目录，首次连接失败显示可重试提示。
 
 ## API
 
@@ -64,7 +64,7 @@ const unsubscribe = nexlet.onActivate(({ code, payload }) => {
 
 ## 运行隔离
 
-每个插件使用独立内存 session 和 sandbox，默认通过 WebContentsView 内嵌主窗口，可分离为独立窗口。`nodeIntegration` 关闭，`contextIsolation` 开启，无 `require`、`process` 或任意 IPC。宿主根据调用 webContents、主 frame、插件来源及安装时授权快照检查每个请求。
+每个插件使用独立内存 session 和 sandbox，默认通过 WebContentsView 内嵌主窗口，可分离为独立窗口。`nodeIntegration` 关闭，`contextIsolation` 开启，无 `require`、`process` 或任意 IPC。宿主根据调用 webContents、主 frame、插件来源及安装时的 manifest 能力声明检查每个请求。
 
 资源从 `nexlet-plugin://<id>/...` 读取。宿主检查资源真实路径仍在插件根目录中，拒绝越界路径。CSP 默认只允许本地脚本和样式：请用 `<script src="main.js"></script>`，不要使用内联脚本、`eval`、iframe、远程依赖、内联事件处理器或表单提交。网络连接、窗口弹出和浏览器权限请求默认禁用。
 
@@ -122,7 +122,7 @@ const offOut = nexlet.onOut(context => { /* 会话即将退出，可保存少量
 
 ## 受控网络与加密密钥（Nexlet 0.2.7+）
 
-插件仍不能直接 `fetch`，需在 manifest 声明 `network.request` 权限，再调用宿主桥接。第一次连接每个 origin 时会显示宿主授权对话框，明确插件名称与目标地址；用户允许后按插件记住，拒绝不会发出请求。请求不会携带宿主 Cookie，不允许重定向。
+插件仍不能直接 `fetch`，需在 manifest 声明 `network.request`，再调用宿主桥接。已安装插件按声明直接使用联网能力，不再逐 origin 弹窗确认或记录地址授权。请求不会携带宿主 Cookie，不允许重定向。
 
 ```js
 const result = await nexlet.network.request({
@@ -135,10 +135,11 @@ const result = await nexlet.network.request({
 });
 // { status: 200, body: '...' }；HTTP 错误状态也返回，由插件解释；网络/取消/超时 reject。
 await nexlet.network.cancel('request-1');
-await nexlet.network.resetPermissions(); // 取消本会话请求并清除当前插件的 origin 授权
+// 旧插件兼容：resetPermissions() 仍可调用，取消本会话请求并清理旧授权数据；
+// 不会重新启用确认弹窗，新插件无需提供重置授权入口。
 ```
 
-只支持 HTTPS，以及 `localhost` / `127.0.0.1` / `[::1]` 的 HTTP 地址。URL 不得含账号、密码或 fragment；方法为 GET（默认）或 POST。请求头仅支持 `Accept`、`Content-Type`、`Authorization`、`X-API-Key`。正文最多 256 KB，响应最多 2 MB，每会话最多 4 个请求。默认超时 30 秒，可设置 1–120000 ms；超时从目标授权完成后开始。退出、停用、卸载、更新或崩溃会取消该会话请求；分离窗口保留会话。未授权插件不能使用桥接。
+只支持 HTTPS，以及 `localhost` / `127.0.0.1` / `[::1]` 的 HTTP 地址。URL 不得含账号、密码或 fragment；方法为 GET（默认）或 POST。请求头仅支持 `Accept`、`Content-Type`、`Authorization`、`X-API-Key`。正文最多 256 KB，响应最多 2 MB，每会话最多 4 个请求。默认超时 30 秒，可设置 1–120000 ms；超时从发起请求开始。退出、停用、卸载、更新或崩溃会取消该会话请求；分离窗口保留会话。未声明 network.request 的插件不能使用桥接。
 
 密钥需声明 `secrets` 权限，按插件隔离，名称规则与 storage 相同：
 
@@ -148,4 +149,4 @@ const key = await nexlet.secrets.get('apiKey'); // string | null
 await nexlet.secrets.set('apiKey', null); // 删除
 ```
 
-`persistent: true` 表示经系统 safeStorage 加密后落盘；无可用系统加密或 Linux 使用 `basic_text` 时，仅在当前插件会话内保存并返回 `false`，插件应明确提示用户。分离窗口保留临时密钥，退出会清除；无法解密旧数据会 reject，插件应允许重新填写。不要把密钥放入普通 `storage`、日志或 URL。卸载保留数据时也保留密文和 origin 授权，选择清理数据则一起清除。此能力是本机静态存储保护，不能阻止已获授权的插件读取自己的密钥。
+`persistent: true` 表示经系统 safeStorage 加密后落盘；无可用系统加密或 Linux 使用 `basic_text` 时，仅在当前插件会话内保存并返回 `false`，插件应明确提示用户。分离窗口保留临时密钥，退出会清除；无法解密旧数据会 reject，插件应允许重新填写。不要把密钥放入普通 `storage`、日志或 URL。卸载保留数据时也保留密文，选择清理数据则同时清除密文与旧版遗留的 origin 授权。此能力是本机静态存储保护，不能阻止已获授权的插件读取自己的密钥。

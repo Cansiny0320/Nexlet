@@ -12,10 +12,8 @@ import type { LaunchInputs, InputSnapshot } from './launch-input';
 import { PluginNetwork } from './plugin-network';
 import { PluginSecrets } from './plugin-secrets';
 
-const PERMISSION_LABELS: Record<PluginPermission, string> = { 'clipboard.read':'读取当前系统剪贴板文本', 'clipboard.write':'写入系统剪贴板文本', 'shell.openExternal':'使用系统浏览器打开 HTTP / HTTPS 链接', 'network.request':'向你允许的服务地址发送网络请求（首次连接单独确认）', 'secrets':'保存和读取此插件的加密密钥' };
 export class PluginManager {
   private installing=false;
-  private authorizing=false;
   readonly network=new PluginNetwork((url,init)=>net.fetch(url,init));
   readonly secrets:PluginSecrets;
   readonly runtime:PluginRuntime;
@@ -38,20 +36,7 @@ export class PluginManager {
       switch (method) {
         case 'network.request': {
           requirePermission('network.request');
-          return this.network.request(event.sender.id,args,async origin=>{
-            const current=()=>this.runtime.callers.get(event.sender.id)===caller&&!caller.closing&&!caller.disposed;
-            if(!current())throw new Error('插件会话已结束');
-            const grants=this.store.get<string[]>('plugin-network:'+record.manifest.id,[]);
-            if(grants.includes(origin))return;
-            if(this.authorizing)throw new Error('请先完成当前联网授权，再重试');
-            this.authorizing=true;const owner=caller.owner;this.runtime.overlay(owner,true);
-            try{
-              const result=await dialog.showMessageBox(owner,{type:'question',title:'允许插件连接服务？',message:`「${record.manifest.name}」请求联网`,detail:`目标地址：${origin}\n\n允许后，此插件可以向该地址发送你输入的内容和配置的 API Key。请确认这是你要使用的服务。`,buttons:['取消','允许此地址'],defaultId:0,cancelId:0});
-              if(!current())throw new Error('插件会话已结束');
-              if(result.response!==1)throw new Error('已取消联网授权');
-              this.store.set('plugin-network:'+record.manifest.id,[...new Set([...grants,origin])]);
-            }finally{this.authorizing=false;this.runtime.overlay(owner,false);}
-          });
+          return this.network.request(event.sender.id,args);
         }
         case 'network.cancel':requirePermission('network.request');return this.network.cancel(event.sender.id,args);
         case 'network.resetPermissions':requirePermission('network.request');this.network.close(event.sender.id);this.store.set('plugin-network:'+record.manifest.id,[]);return true;
@@ -90,17 +75,15 @@ export class PluginManager {
   }
   async installBundle(owner:BrowserWindow,bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
     if(this.installing)throw new Error('请等待当前插件安装完成');this.installing=true;
-    try{return await this.applyBundle(owner,bundle,options);}finally{this.installing=false;}
+    try{return await this.applyBundle(bundle,options);}finally{this.installing=false;}
   }
-  private async applyBundle(owner:BrowserWindow,bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
+  private async applyBundle(bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
     const development=!!options.developmentDirectory;
     const previous = this.records().find(p=>p.manifest.id===bundle.manifest.id);
     if(options.source==='marketplace'&&previous?.development)throw new Error('开发目录插件请通过本地方式更新');
     if(options.source==='marketplace'&&previous&&!gt(bundle.manifest.version,previous.manifest.version))throw new Error('已安装相同或更新版本，请刷新市场');
     let icon:string|undefined;
     if(bundle.manifest.icon){const image=nativeImage.createFromBuffer(bundle.files.get(bundle.manifest.icon)!);if(image.isEmpty())throw new Error('插件 PNG 图标无法解码');icon=image.resize({width:64,height:64}).toDataURL();}
-    const prompt = await dialog.showMessageBox(owner, { type:'question', title:'确认插件权限', message:`${previous ? '更新' : '安装'} ${bundle.manifest.name} ${bundle.manifest.version}`, detail:`${bundle.manifest.description}\n\n${previous ? `已安装版本：${previous.manifest.version}\n` : ''}需要的能力：\n${bundle.manifest.permissions.map(p=>'• '+PERMISSION_LABELS[p]).join('\n') || '仅插件独立存储，无系统权限'}\n\n${development ? '开发目录直接加载，重新打开可读取文件更新。' : '插件将在隔离会话中内嵌运行，可分离为独立窗口。'}`, buttons:['取消','允许并安装'], defaultId:0, cancelId:0 });
-    if (prompt.response !== 1) return false;
     const directory = development ? await realpath(options.developmentDirectory!) : path.join(this.root, bundle.manifest.id, randomUUID());
     if (!development) {
       try { for (const [name,data] of bundle.files) { const file=path.join(directory,name); await mkdir(path.dirname(file),{recursive:true}); await writeFile(file,data,{mode:0o600}); } }

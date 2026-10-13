@@ -155,14 +155,14 @@ test('内置 Everything 自动启动、中文文件索引、受限文件操作�
   await restoreClipboard();await app.close();await expect.poll(()=>{try{process.kill(pid,0);return true;}catch{return false;}}).toBe(false);await start();await saveClipboard();
 });
 
-test('插件市场缓存、安装、取消更新和失败保留旧数据',async()=>{
+test('插件市场缓存、直接安装更新和失败保留旧数据',async()=>{
   await home();
   const zip=new AdmZip();zip.addLocalFolder(path.join(root,'examples','hello-nexlet'));const bundle=zip.toBuffer().toString('base64');
   await app.evaluate(({dialog},bundle)=>{
     const n=(globalThis as any).__nexlet;(globalThis as any).__marketOriginal=n.marketplace.download;(globalThis as any).__messageOriginal=dialog.showMessageBox;
     (globalThis as any).__marketEntry={id:'org.nexlet.hello',name:'市场便笺',description:'通过市场安装的便笺插件',author:'Nexlet',category:'效率',version:'1.0.0',platforms:['win32','darwin'],download:'https://github.com/Cansiny0320/Nexlet-plugins/releases/download/v1.0.0/hello-nexlet.nexlet'};
     n.marketplace.download=async(url:string)=>{if((globalThis as any).__marketOffline)throw new Error('测试离线');return url.endsWith('index.json')?Buffer.from(JSON.stringify({schemaVersion:1,plugins:[(globalThis as any).__marketEntry]})):Buffer.from(bundle,'base64');};
-    dialog.showMessageBox=(async()=>({response:1,checkboxChecked:false})) as any;
+    dialog.showMessageBox=(async()=>{throw new Error('不应弹出安装或更新确认');}) as any;
   },bundle);
   try{
     const online:any=await call('marketplace',true);expect(online.entries).toHaveLength(1);expect(online.cached).toBe(false);
@@ -171,9 +171,8 @@ test('插件市场缓存、安装、取消更新和失败保留旧数据',async(
     await app.evaluate(()=>{const n=(globalThis as any).__nexlet;n.store.set('plugin-data:org.nexlet.hello',{note:'更新必须保留'});(globalThis as any).__marketEntry.version='1.0.1';});await call('marketplace',true);
     await expect(call('marketInstall','org.nexlet.hello')).rejects.toThrow('ID 或版本');expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.0');
     const manifest=JSON.parse(zip.readAsText('plugin.json'));manifest.version='1.0.1';zip.updateFile('plugin.json',Buffer.from(JSON.stringify(manifest)));
-    await app.evaluate(({dialog},bundle)=>{const n=(globalThis as any).__nexlet;n.marketplace.download=async()=>Buffer.from(bundle,'base64');dialog.showMessageBox=(async()=>({response:0,checkboxChecked:false})) as any;},zip.toBuffer().toString('base64'));
-    expect(await call('marketInstall','org.nexlet.hello')).toBe(false);expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.0');
-    await app.evaluate(({dialog})=>{dialog.showMessageBox=(async()=>({response:1,checkboxChecked:false})) as any;});expect(await call('marketInstall','org.nexlet.hello')).toBe(true);expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.1');expect(await app.evaluate(()=>(globalThis as any).__nexlet.store.get('plugin-data:org.nexlet.hello',{}))).toEqual({note:'更新必须保留'});
+    await app.evaluate((_,bundle)=>{const n=(globalThis as any).__nexlet;n.marketplace.download=async()=>Buffer.from(bundle,'base64');},zip.toBuffer().toString('base64'));
+    expect(await call('marketInstall','org.nexlet.hello')).toBe(true);expect((await call('pluginInspect') as any[])[0].manifest.version).toBe('1.0.1');expect(await app.evaluate(()=>(globalThis as any).__nexlet.store.get('plugin-data:org.nexlet.hello',{}))).toEqual({note:'更新必须保留'});
     await call('pluginRemove',{id:'org.nexlet.hello',deleteData:true});
   }finally{await app.evaluate(({dialog})=>{(globalThis as any).__nexlet.marketplace.download=(globalThis as any).__marketOriginal;dialog.showMessageBox=(globalThis as any).__messageOriginal;});}
 });
