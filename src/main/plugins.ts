@@ -39,7 +39,8 @@ export class PluginManager {
       const { record } = caller;
       if(method==='ready'){if(event.sender.id===caller.view.webContents.id)this.runtime.ready(event.sender.id);else{event.sender.send('plugin-lifecycle',{event:'ready',sequence:0});event.sender.send('plugin-lifecycle',{event:'enter',value:inputContext(caller.input,caller.code),sequence:0});}return true;}
       if(method==='lifecycleAck'){this.runtime.acknowledge(event.sender.id,args);return true;}
-      if(caller.closing&&(typeof method!=='string'||!['storage.get','storage.set'].includes(method)))throw new Error('插件会话已结束');
+      // onOut may finish local persistence and release the backend; new work stays blocked.
+      if(caller.closing&&(typeof method!=='string'||!['storage.get','storage.set','database.put','database.remove','secrets.set','backend.stop'].includes(method)))throw new Error('插件会话已结束');
       if (!this.records().find(p => p.manifest.id === record.manifest.id)?.enabled) throw new Error('插件已停用');
       const requirePermission = (permission: PluginPermission) => { if (!record.manifest.permissions.includes(permission)) throw new Error(`未授权：${permission}`); };
       const key = () => { if (typeof args !== 'object' || !args) throw new Error('参数无效'); const value = (args as {key?:unknown}).key; if (typeof value !== 'string' || !/^[a-zA-Z0-9_.-]{1,100}$/.test(value) || ['__proto__','constructor','prototype'].includes(value)) throw new Error('存储键无效'); return value; };
