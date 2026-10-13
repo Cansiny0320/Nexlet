@@ -1,4 +1,4 @@
-import {parentPort,workerData} from 'node:worker_threads';
+import {parentPort,receiveMessageOnPort,workerData} from 'node:worker_threads';
 import koffi from 'koffi';
 import {PanelGesture,type GestureEffect,type GestureEvent} from './panel-gesture';
 import {createNativeSelection} from './selection-native';
@@ -6,7 +6,7 @@ interface Config {mouse:'right'|'middle';holdMs:number;excludedApps:string[];bus
 let config=workerData as Config,gesture=new PanelGesture(config.mouse,config.holdMs),stopped=false;
 const native=createNativeSelection();
 const send=(data:unknown)=>parentPort?.postMessage(data);
-let replay:(effect:GestureEffect)=>void=()=>{},shutdown=()=>{},pump=()=>{};
+let replay:(effect:GestureEffect)=>void=()=>{},shutdown=()=>{},pump=()=>{},waitForInput=()=>{};
 let heldTarget:{pid:number;handle?:string}|null=null;
 let panelArea:{x:number;y:number;width:number;height:number}|null=null;
 function apply(effect:GestureEffect){
@@ -31,11 +31,27 @@ function tick(){
  apply(gesture.tick(Date.now()));
 }
 function stop(){if(stopped)return;stopped=true;apply(gesture.cancel());shutdown();parentPort?.close();}
+function receive(message:any){
+ if(message.type==='stop')stop();
+ else if(message.type==='panel')panelArea=message.bounds;
+ else if(message.type==='config'){apply(gesture.cancel());heldTarget=null;config=message.config;gesture=new PanelGesture(config.mouse,config.holdMs);}
+}
 try{
  if(process.platform==='darwin')mac();else if(process.platform==='win32')windows();else throw Error('当前平台不支持鼠标超级面板');
- const timer=setInterval(()=>{try{pump();tick();}catch(error){send({type:'error',error:(error as Error).message});clearInterval(timer);stop();}},8);
- parentPort?.on('message',message=>{if(message.type==='stop'){clearInterval(timer);stop();}else if(message.type==='panel'){panelArea=message.bounds;}else if(message.type==='config'){apply(gesture.cancel());heldTarget=null;config=message.config;gesture=new PanelGesture(config.mouse,config.holdMs);}});
  send({type:'ready'});
+ if(process.platform==='win32'){
+  // WH_MOUSE_LL blocks system input until this installing thread responds.
+  // Wait on the Windows input queue instead of sleeping on a JS timer. Keep
+  // control messages synchronous too: this worker owns a native message loop.
+  while(!stopped){
+   for(let i=0;i<64&&parentPort&&!stopped;i++){const pending=receiveMessageOnPort(parentPort);if(!pending)break;receive(pending.message);}
+   if(stopped)break;
+   pump();tick();waitForInput();
+  }
+ }else{
+  const timer=setInterval(()=>{try{pump();tick();}catch(error){send({type:'error',error:(error as Error).message});clearInterval(timer);stop();}},8);
+  parentPort?.on('message',message=>{if(message.type==='stop')clearInterval(timer);receive(message);});
+ }
 }catch(error){send({type:'error',error:(error as Error).message});stop();}
 function mac(){
  const cg=koffi.load('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics'),cf=koffi.load('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation');
@@ -76,4 +92,9 @@ function windows(){
  replay=effect=>{const size=process.arch==='ia32'?28:40,offset=process.arch==='ia32'?4:8,down=config.mouse==='right'?0x8:0x20,up=config.mouse==='right'?0x10:0x40,flags=effect.replay==='click'?[down,up]:[down],buffer=Buffer.alloc(size*flags.length);flags.forEach((flag,i)=>{buffer.writeUInt32LE(flag,i*size+offset+12);if(size===40)buffer.writeBigUInt64LE(BigInt(marker),i*size+offset+24);else buffer.writeUInt32LE(marker,i*size+offset+20);});sendInput(flags.length,buffer,size);};
  const msg=Buffer.alloc(koffi.sizeof(message));pump=()=>{for(let i=0;i<64&&peek(msg,0,0,0,1);i++){translate(msg);dispatch(msg);}};
  shutdown=()=>{unhook(hook);koffi.unregister(cb);};
+ const wait=user.func('uint32_t __stdcall MsgWaitForMultipleObjectsEx(uint32_t,const void *,uint32_t,uint32_t,uint32_t)');
+ // QS_ALLINPUT | MWMO_INPUTAVAILABLE wakes immediately for mouse hooks, even
+ // after PeekMessage has observed input. The timeout only bounds gesture ticks
+ // and parent-port control latency; it does not delay incoming mouse events.
+ waitForInput=()=>{if(wait(0,null,8,0x04ff,0x0004)===0xffffffff)throw Error('Windows 鼠标消息等待失败');};
 }
