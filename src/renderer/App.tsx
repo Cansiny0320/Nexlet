@@ -78,6 +78,7 @@ export function App(){
        <div className="plugin-pill" title="拖动窗口">{command&&<ToolIcon command={command} size={20}/>}<span>{view==='plugin'?pluginInfo?.name||'正在打开插件…':command?.name||'Nexlet'}</span>{!detached&&<button className="plugin-pill-close" aria-label="关闭当前工具" title="返回首页" onClick={()=>navigate('launcher')}><X size={14}/></button>}</div>}
       <div className="titlebar-spacer"/>
       <div className="window-controls">
+        {view==='launcher'&&['available','downloaded'].includes(state.update.phase)&&<button className="button quiet" title={`版本 ${state.update.version}，打开更新设置`} onClick={()=>navigate('settings')}>{state.update.phase==='downloaded'?'待安装更新':'有新版本'}</button>}
         {!detached&&view!=='launcher'&&<IconButton title="返回首页" onClick={()=>navigate('launcher')}><ChevronLeft size={17}/></IconButton>}
         {view!=='launcher'&&view!=='settings'&&view!=='plugins'&&view!=='web'&&!detached&&<IconButton title="分离为独立窗口" disabled={transferring||(view!=='plugin'&&readySession!==session)} onClick={()=>void detachTool()}><ExternalLink size={16}/></IconButton>}
         {view!=='launcher'&&<IconButton title="固定窗口" active={pinned} onClick={()=>void control('pin')}><Pin size={16}/></IconButton>}

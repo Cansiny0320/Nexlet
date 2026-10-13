@@ -200,12 +200,12 @@ async function bootstrap() {
         const next:Settings={...settings};
         if('shortcut'in update)next.shortcut=text(update.shortcut,80);
         if('theme'in update){if(!['light','dark','system'].includes(update.theme))throw new Error('主题无效');next.theme=update.theme;}
-        for(const key of ['hideOnBlur','clipboardEnabled'] as const)if(key in update){if(typeof update[key]!=='boolean')throw new Error('开关无效');next[key]=update[key];}
+        for(const key of ['hideOnBlur','clipboardEnabled','autoCheckUpdates'] as const)if(key in update){if(typeof update[key]!=='boolean')throw new Error('开关无效');next[key]=update[key];}
         for(const key of ['maxClipboardItems','retentionDays'] as const)if(key in update){const n=update[key];if(!Number.isInteger(n)||n<1||n>(key==='retentionDays'?3650:5000))throw new Error('保留数量或天数无效');next[key]=n;}
         if('searchPaths'in update){if(!Array.isArray(update.searchPaths)||update.searchPaths.length>20||update.searchPaths.some((p:unknown)=>typeof p!=='string'||!path.isAbsolute(p)))throw new Error('搜索路径无效');next.searchPaths=update.searchPaths;}
         if('fileSearchPaths'in update){if(!Array.isArray(update.fileSearchPaths)||update.fileSearchPaths.length>26||update.fileSearchPaths.some((p:unknown)=>typeof p!=='string'||!path.isAbsolute(p)||/[\0\r\n]/.test(p)))throw new Error('索引目录无效');next.fileSearchPaths=[...new Set(update.fileSearchPaths)] as string[];await files.reset();}
         if('webShortcuts'in update){if(!Array.isArray(update.webShortcuts)||update.webShortcuts.length>100)throw new Error('网页快捷方式过多');next.webShortcuts=update.webShortcuts.map((w:any)=>{const id=text(w.id,100),name=text(w.name,60).trim();const url=new URL(text(w.url,2048));if(!name||!['https:','http:'].includes(url.protocol)||url.username||url.password)throw new Error('名称或网页地址无效');return{id,name,url:url.href};});}
-        store.set('settings',next);nativeTheme.themeSource=next.theme;if(next.shortcut!==settings.shortcut)registerShortcut();if(JSON.stringify(next.searchPaths)!==JSON.stringify(settings.searchPaths))void catalog.scan(next.searchPaths);store.prune();notify();notify('clips');return next;
+        store.set('settings',next);updates.setAutomaticChecks(next.autoCheckUpdates);nativeTheme.themeSource=next.theme;if(next.shortcut!==settings.shortcut)registerShortcut();if(JSON.stringify(next.searchPaths)!==JSON.stringify(settings.searchPaths))void catalog.scan(next.searchPaths);store.prune();notify();notify('clips');return next;
       }
       case 'rescan':await catalog.scan(store.settings().searchPaths);return true;
       case 'startup':{if(typeof payload!=='boolean')throw new Error('自启动开关无效');const result=startup.set(payload);notify();return result;}
@@ -269,8 +269,9 @@ async function bootstrap() {
   app.on('second-instance',()=>void show()); app.on('activate',()=>void show());
   app.on('window-all-closed',()=>{});
   let cleanedUp=false;
-  app.on('before-quit',event=>{quitting=true;clips.stop();globalShortcut.unregisterAll();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();app.quit();});}});
+  app.on('before-quit',event=>{quitting=true;updates.setAutomaticChecks(false);clips.stop();globalShortcut.unregisterAll();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();app.quit();});}});
   app.once('will-quit',()=>store.close());
+  updates.setAutomaticChecks(store.settings().autoCheckUpdates);
   if(testMode)(globalThis as any).__nexlet={updates,autoUpdater:updateTransport,store,clips,platform,catalog,systemActions,systemExecutor,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
 }
 

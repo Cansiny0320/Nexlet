@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppUpdates, portableRelease } from '../src/main/updater';
 
 function fixture(mode: 'automatic'|'portable'|'unsupported' = 'automatic') {
@@ -84,6 +84,120 @@ describe('主程序更新', () => {
     expect(portableRelease({ ...release, draft: true }, '0.2.2')).toBeNull();
     expect(portableRelease({ ...release, assets: [] }, '0.2.2')).toBeNull();
     expect(portableRelease(release, '0.2.4')).toBeNull();
+  });
+});
+
+describe('自动检查更新', () => {
+  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
+  const delay = 30_000, interval = 6 * 60 * 60 * 1000;
+
+  it('启动延迟检查，之后每 6 小时检查，重复启用不会产生多个定时器', async () => {
+    vi.useFakeTimers();
+    const { updates, transport } = fixture();
+    transport.checkForUpdates.mockImplementation(async () => { transport.emit('update-not-available'); });
+    updates.setAutomaticChecks(true);
+    updates.setAutomaticChecks(true);
+    await vi.advanceTimersByTimeAsync(delay - 1);
+    expect(transport.checkForUpdates).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(updates.read().phase).toBe('latest');
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(2);
+    expect(transport.downloadUpdate).not.toHaveBeenCalled();
+    expect(transport.quitAndInstall).not.toHaveBeenCalled();
+  });
+
+  it('后台失败静默恢复原状态，下个周期仍能发现更新', async () => {
+    vi.useFakeTimers();
+    const { updates, transport, changed } = fixture();
+    const phases: string[] = [];
+    changed.mockImplementation(() => { phases.push(updates.read().phase); });
+    transport.checkForUpdates.mockImplementationOnce(async () => {
+      const error = Error('net::ERR_INTERNET_DISCONNECTED');
+      transport.emit('error', error);
+      throw error;
+    });
+    updates.setAutomaticChecks(true);
+    await vi.advanceTimersByTimeAsync(delay);
+    expect(updates.read()).toMatchObject({ phase: 'idle', error: null });
+    expect(phases).not.toContain('error');
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(updates.read()).toMatchObject({ phase: 'available', version: '0.2.3' });
+    expect(transport.downloadUpdate).not.toHaveBeenCalled();
+  });
+
+  it('已有新版本、下载中、待安装与安装中不会被定时检查覆盖', async () => {
+    vi.useFakeTimers();
+    const { updates, transport } = fixture();
+    updates.setAutomaticChecks(true);
+    await vi.advanceTimersByTimeAsync(delay);
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(updates.read().phase).toBe('available');
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(1);
+    let finish!: () => void;
+    transport.downloadUpdate.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+    const pending = updates.download();
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(updates.read().phase).toBe('downloading');
+    transport.emit('update-downloaded', { version: '0.2.3' });
+    finish(); await pending;
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(updates.read().phase).toBe('downloaded');
+    await updates.install();
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(updates.read().phase).toBe('installing');
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(1);
+  });
+
+  it('关闭或退出取消后续检查，手动检查仍可使用，重新启用可恢复', async () => {
+    vi.useFakeTimers();
+    const { updates, transport } = fixture();
+    transport.checkForUpdates.mockImplementation(async () => { transport.emit('update-not-available'); });
+    updates.setAutomaticChecks(true);
+    updates.setAutomaticChecks(false);
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(transport.checkForUpdates).not.toHaveBeenCalled();
+    await updates.check();
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(1);
+    updates.setAutomaticChecks(true);
+    await vi.advanceTimersByTimeAsync(delay);
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(2);
+    updates.setAutomaticChecks(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('检查请求仍在进行时，手动检查不会重入，关闭后不会重新安排检查', async () => {
+    vi.useFakeTimers();
+    const { updates, transport } = fixture();
+    let finish!: () => void;
+    transport.checkForUpdates.mockImplementation(() => new Promise<void>(resolve => {
+      finish = resolve;
+      transport.emit('update-not-available');
+    }));
+    updates.setAutomaticChecks(true);
+    await vi.advanceTimersByTimeAsync(delay);
+    await updates.check();
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(1);
+    updates.setAutomaticChecks(false);
+    finish();
+    await vi.advanceTimersByTimeAsync(interval);
+    expect(transport.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('开发模式不启动检查，Windows 便携版通过现有来源检查', async () => {
+    vi.useFakeTimers();
+    const dev = fixture('unsupported');
+    dev.updates.setAutomaticChecks(true);
+    expect(vi.getTimerCount()).toBe(0);
+    const checkPortable = vi.fn(async () => ({ version: '0.2.3', notes: '更新说明', url: 'https://github.com/Cansiny0320/Nexlet/releases' }));
+    const portable = new AppUpdates('0.2.2', 'portable', null, () => {}, async () => {}, checkPortable);
+    portable.setAutomaticChecks(true);
+    await vi.advanceTimersByTimeAsync(delay);
+    expect(checkPortable).toHaveBeenCalledOnce();
+    expect(portable.read()).toMatchObject({ phase: 'available', version: '0.2.3', mode: 'portable' });
+    expect(dev.transport.checkForUpdates).not.toHaveBeenCalled();
   });
 });
 

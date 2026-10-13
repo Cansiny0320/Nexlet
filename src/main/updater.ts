@@ -3,6 +3,8 @@ import semver from 'semver';
 import type { UpdateStatus } from '../shared/types';
 
 const repository = 'https://github.com/Cansiny0320/Nexlet';
+const automaticCheckDelay = 30_000;
+const automaticCheckInterval = 6 * 60 * 60 * 1000;
 interface ReleaseInfo { version: string; releaseNotes?: string | { note: string }[] | null; }
 export interface UpdateTransport {
   on(event: string, listener: (...args: any[]) => void): unknown;
@@ -42,6 +44,10 @@ function updateError(error: unknown): string {
 export class AppUpdates {
   private status: UpdateStatus;
   private portableUrl: string | null = null;
+  private automaticChecksEnabled = false;
+  private automaticCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  private checking = false;
+  private automaticCheckSnapshot: UpdateStatus | null = null;
   constructor(
     private readonly current: string,
     mode: UpdateStatus['mode'],
@@ -74,9 +80,32 @@ export class AppUpdates {
   }
   read(): UpdateStatus { return { ...this.status }; }
   private set(patch: Partial<UpdateStatus>) { this.status = { ...this.status, ...patch }; this.changed(); }
-  private fail(error: unknown) { this.set({ phase: 'error', error: updateError(error), percent: null }); }
-  async check(): Promise<void> {
-    if (this.status.mode === 'unsupported' || ['checking', 'downloading', 'downloaded', 'installing'].includes(this.status.phase)) return;
+  private fail(error: unknown) {
+    if (this.automaticCheckSnapshot) { this.set(this.automaticCheckSnapshot); return; }
+    this.set({ phase: 'error', error: updateError(error), percent: null });
+  }
+  setAutomaticChecks(enabled: boolean): void {
+    enabled = enabled && this.status.mode !== 'unsupported';
+    if (this.automaticChecksEnabled === enabled) return;
+    this.automaticChecksEnabled = enabled;
+    if (this.automaticCheckTimer) clearTimeout(this.automaticCheckTimer);
+    this.automaticCheckTimer = null;
+    if (enabled) this.scheduleAutomaticCheck(automaticCheckDelay);
+  }
+  private scheduleAutomaticCheck(delay: number): void {
+    this.automaticCheckTimer = setTimeout(() => {
+      this.automaticCheckTimer = null;
+      void this.check('automatic').finally(() => {
+        if (this.automaticChecksEnabled && !this.automaticCheckTimer) this.scheduleAutomaticCheck(automaticCheckInterval);
+      });
+    }, delay);
+    this.automaticCheckTimer.unref();
+  }
+  async check(source: 'manual' | 'automatic' = 'manual'): Promise<void> {
+    if (this.checking || this.status.mode === 'unsupported' || ['checking', 'downloading', 'downloaded', 'installing'].includes(this.status.phase)) return;
+    if (source === 'automatic' && this.status.phase === 'available') return;
+    this.checking = true;
+    this.automaticCheckSnapshot = source === 'automatic' ? this.read() : null;
     this.portableUrl = null;
     this.set({ phase: 'checking', version: null, notes: '', percent: null, transferred: null, total: null, bytesPerSecond: null, error: null });
     try {
@@ -89,6 +118,7 @@ export class AppUpdates {
         if (this.status.phase === 'checking') this.set({ phase: 'latest' });
       }
     } catch (error) { this.fail(error); }
+    finally { this.checking = false; this.automaticCheckSnapshot = null; }
   }
   async download(): Promise<void> {
     if (this.status.mode !== 'automatic' || this.status.phase !== 'available') throw Error('请先检查可用更新');
