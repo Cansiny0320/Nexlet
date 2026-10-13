@@ -1,4 +1,4 @@
-Nexlet 0.2.14 新增可配置启动器、超级面板、离线 OCR 和 Linux 安装包，并扩展插件能力。
+Nexlet 0.2.15 新增可配置启动器、超级面板、离线 OCR 和 Linux 安装包，并扩展插件能力。
 
 ## 启动器与桌面工具
 
@@ -6,6 +6,7 @@ Nexlet 0.2.14 新增可配置启动器、超级面板、离线 OCR 和 Linux 安
 - 新增划词取词与超级面板，可配置常用功能、分组和触发方式。
 - 新增窗口布局、截图和图片工具；内置 PaddleOCR.js 与 PP-OCRv6 模型，图片文字识别离线运行。
 - 首页整条搜索栏支持拖动窗口，保留点击和输入；macOS 使用原生窗口拖动。
+- 修复普通搜索打开计算稿纸时把搜索词误作公式的问题，恢复已有稿纸；划词内容仍可正常传入工具。
 
 ## 插件与稳定性
 
@@ -15,11 +16,11 @@ Nexlet 0.2.14 新增可配置启动器、超级面板、离线 OCR 和 Linux 安
 
 ## 平台与下载
 
-- Windows x64：安装版 `Nexlet-0.2.14-Windows-x64-Setup.exe`，便携版 `Nexlet-0.2.14-Windows-x64.exe`。
-- Apple Silicon Mac：`Nexlet-0.2.14-macOS-arm64.dmg`。
-- Intel Mac：`Nexlet-0.2.14-macOS-x64.dmg`。
-- Linux x64：`Nexlet-0.2.14-Linux-x86_64.AppImage`、`Nexlet-0.2.14-Linux-amd64.deb`。
-- Linux arm64：`Nexlet-0.2.14-Linux-arm64.AppImage`、`Nexlet-0.2.14-Linux-arm64.deb`。
+- Windows x64：安装版 `Nexlet-0.2.15-Windows-x64-Setup.exe`，便携版 `Nexlet-0.2.15-Windows-x64.exe`。
+- Apple Silicon Mac：`Nexlet-0.2.15-macOS-arm64.dmg`。
+- Intel Mac：`Nexlet-0.2.15-macOS-x64.dmg`。
+- Linux x64：`Nexlet-0.2.15-Linux-x86_64.AppImage`、`Nexlet-0.2.15-Linux-amd64.deb`。
+- Linux arm64：`Nexlet-0.2.15-Linux-arm64.AppImage`、`Nexlet-0.2.15-Linux-arm64.deb`。
 - macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新；`SHA256SUMS.txt` 提供下载校验值。
 
 Linux 的桌面能力以 X11 为主要验证环境，GNOME/KDE Wayland 的能力限制见仓库 `docs/linux.md`。
