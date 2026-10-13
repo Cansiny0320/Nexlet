@@ -11,13 +11,20 @@ export class ClipboardService {
   private timer: NodeJS.Timeout | null = null;
   private busy = false;
   private pending:Promise<void>=Promise.resolve();
+  private paused = 0;
   private lastSequence: number | null = null;
   private lastHash = '';
   error: string | null = null;
   constructor(private store: Store, private platform: Platform, private changed: () => void) {}
   start(): void { this.timer = setInterval(() => void this.capture(), 700); }
   stop(): void { if (this.timer) clearInterval(this.timer); }
+  async withoutCapture<T>(work:()=>Promise<T>):Promise<T>{
+    this.paused++;
+    await this.pending;
+    try{return await work();}finally{this.paused--;}
+  }
   async capture(force = false): Promise<void> {
+    if(this.paused)return;
     if(this.busy){if(force){await this.pending;return this.capture(true);}return;}
     if(!force && !this.store.settings().clipboardEnabled)return;
     const sequence = this.platform.sequence();

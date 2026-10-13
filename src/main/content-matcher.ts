@@ -64,6 +64,7 @@ function builtinMatches(input:LaunchInput):Command[]{
   if(q.length<=512){const calc=calculate(q);if(calc.result&&/[0-9]/.test(q))output.push(command('match:calc',calc.result,`${q} = ${calc.result} · 打开计算稿纸`,'#ff9c00',input.text));}
   if(q.length<=2048&&/^https?:\/\//i.test(q))output.push(command('input:url','打开链接',q,'#3387f7',q));
   if(/^[{[]/.test(q))output.push(command('match:json','JSON 格式化','将输入内容带入 JSON 工具','#42a869',input.text));
+  if(/^\d{10}(?:\d{3})?$/.test(q)){const date=new Date(Number(q)*(q.length===10?1000:1));if(!Number.isNaN(date.getTime()))output.push(command('match:timestamp',date.toLocaleString('zh-CN',{hour12:false}),`${q} · 打开时间戳工具`,'#ef6863',q));}
   output.push(command('match:clipboard','剪贴板搜索','在剪贴板历史中搜索当前内容','#6962ff',input.text));
   return output;
 }

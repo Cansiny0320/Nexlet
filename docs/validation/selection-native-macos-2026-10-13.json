@@ -1,0 +1,96 @@
+{
+  "platform": "macOS",
+  "fixture": "isolated Electron application, synthetic input only",
+  "gestureValidation": {
+    "trigger": {
+      "supported": true,
+      "mouseActive": true,
+      "accessibility": true,
+      "error": null
+    },
+    "shortClick": {
+      "contextMenus": 1,
+      "panelVisible": false
+    },
+    "longClick": {
+      "contextMenus": 1,
+      "panelVisible": true,
+      "state": {
+        "loading": false
+      }
+    },
+    "repeats": [
+      {
+        "contextMenus": 1,
+        "panelVisible": true
+      },
+      {
+        "contextMenus": 1,
+        "panelVisible": true
+      },
+      {
+        "contextMenus": 1,
+        "panelVisible": true
+      }
+    ],
+    "hoverRelease": {
+      "text": "{\"nativeRelease\":42}",
+      "panelVisible": false
+    },
+    "outsideRelease": {
+      "panelVisible": false
+    },
+    "middle": {
+      "panelVisible": true
+    },
+    "excluded": {
+      "contextMenuPreserved": true,
+      "panelVisible": false
+    },
+    "assertionsPassed": true
+  },
+  "captureAfterNativeRestoreFix": {
+    "trusted": true,
+    "direct": {
+      "type": "text",
+      "text": "native selection 中文 42",
+      "clipboardUnchanged": true
+    },
+    "copy": {
+      "type": "text",
+      "text": "copied native text 中文",
+      "restored": "nexlet original fixture",
+      "formats": [
+        "text/plain",
+        "text/html",
+        "electron application/osclipboard;format=\"Apple HTML pasteboard type\"",
+        "electron application/osclipboard;format=\"NSStringPboardType\""
+      ]
+    },
+    "image": {
+      "type": "image",
+      "png": true,
+      "restored": "nexlet original fixture"
+    },
+    "files": {
+      "type": "files",
+      "names": [
+        {
+          "name": "selected.txt",
+          "directory": false
+        },
+        {
+          "name": "selected-directory",
+          "directory": true
+        }
+      ],
+      "restored": "nexlet original fixture"
+    },
+    "empty": {
+      "restored": "nexlet original fixture"
+    },
+    "captureAssertionsPassed": true,
+    "originalClipboardRestored": true
+  },
+  "restoreVerification": "All original native formats and bytes compared after restoration; named-pasteboard tests additionally cover multiple items, HTML, custom binary data and empty contents."
+}

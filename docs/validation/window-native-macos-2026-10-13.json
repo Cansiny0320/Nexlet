@@ -1,0 +1,52 @@
+{
+  "original": [
+    {
+      "x": 100,
+      "y": 120,
+      "width": 640,
+      "height": 420
+    },
+    {
+      "x": 180,
+      "y": 190,
+      "width": 640,
+      "height": 420
+    }
+  ],
+  "left": {
+    "bounds": {
+      "x": 0,
+      "y": 30,
+      "width": 960,
+      "height": 1050
+    }
+  },
+  "afterLeft": [
+    {
+      "x": 0,
+      "y": 30,
+      "width": 960,
+      "height": 1050
+    },
+    {
+      "x": 180,
+      "y": 190,
+      "width": 640,
+      "height": 420
+    }
+  ],
+  "right": {
+    "x": 960,
+    "y": 30,
+    "width": 960,
+    "height": 1050
+  },
+  "restored": {
+    "x": 100,
+    "y": 120,
+    "width": 640,
+    "height": 420
+  },
+  "closed": "目标窗口已关闭，请重新唤起 Nexlet",
+  "passed": true
+}

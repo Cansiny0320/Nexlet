@@ -1,6 +1,8 @@
+import type {WebShortcut} from '../shared/types';
+import {validateWebShortcut} from '../shared/web-shortcuts';
 import { useToolState } from './tool-session';
 import { useState,useEffect } from 'react';
-import { Copy, WandSparkles, Minimize2, RefreshCw, ArrowRight, Plus, Trash2, Globe } from 'lucide-react';
+import { Copy, WandSparkles, Minimize2, RefreshCw, ArrowRight, Plus, Trash2, Globe, Pencil } from 'lucide-react';
 import { api,useApp,errorText,PanelHeader,Empty,IconButton } from './common';
 
 function encode64(value:string){const bytes=new TextEncoder().encode(value);let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);}
@@ -8,7 +10,7 @@ function decode64(value:string){const binary=atob(value.replace(/\s/g,''));retur
 export function ToolsPanel({tool,initial}:{tool:string;initial:string}){
   const {toast}=useApp();
   const [input,setInput]=useToolState('input',initial),[output,setOutput]=useToolState('output',''),[error,setError]=useToolState('error',''),[mode,setMode]=useToolState('mode','base64'),[count,setCount]=useToolState('count',1);
-  const [timestamp,setTimestamp]=useToolState('timestamp',String(Math.floor(Date.now()/1000))),[unit,setUnit]=useToolState('unit','seconds'),[date,setDate]=useToolState('date',localDateInput(new Date()));
+  const [timestamp,setTimestamp]=useToolState('timestamp',/^\d{10}(?:\d{3})?$/.test(initial.trim())?initial.trim():String(Math.floor(Date.now()/1000))),[unit,setUnit]=useToolState('unit',/^\d{13}$/.test(initial.trim())?'milliseconds':'seconds'),[date,setDate]=useToolState('date',localDateInput(new Date()));
   const copy=async(text=output)=>{try{await api('clipAction',{action:'writeText',text});toast('已复制');}catch(e){toast(errorText(e),true);}};
   function process(action:string){try{setError('');if(input.length>500000)throw new Error('文本过长，最多处理 50 万字符');
     if(tool==='encoding')setOutput(mode==='base64'?(action==='encode'?encode64(input):decode64(input)):(action==='encode'?encodeURIComponent(input):decodeURIComponent(input)));
@@ -35,9 +37,26 @@ export function ToolsPanel({tool,initial}:{tool:string;initial:string}){
 }
 function localDateInput(date:Date){const p=(n:number)=>String(n).padStart(2,'0');return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;}
 export function WebPanel(){
-  const {state,toast,dialog}=useApp();const [name,setName]=useState(''),[url,setUrl]=useState('');
-  const save=async()=>{try{if(!name.trim())throw new Error('请输入名称');const target=/^https?:\/\//i.test(url.trim())?url.trim():'https://'+url.trim();const parsed=new URL(target);if(!parsed.hostname.includes('.')&&parsed.hostname!=='localhost')throw new Error('请输入完整网站地址');await api('settings',{webShortcuts:[...state.settings.webShortcuts,{id:crypto.randomUUID(),name:name.trim(),url:parsed.href}]});setName('');setUrl('');toast('已添加，可在主搜索框中搜索名称');}catch(e){toast(errorText(e),true);}};
-  return <div className="standard-panel scroll-panel"><PanelHeader title="网页快开" description="添加常用网站，在主搜索框输入名称即可打开。"/><form className="web-form" onSubmit={e=>{e.preventDefault();void save();}}><input aria-label="网站名称" value={name} placeholder="名称，例如 GitHub" maxLength={60} onChange={e=>setName(e.target.value)}/><input aria-label="网站地址" value={url} placeholder="https://example.com" onChange={e=>setUrl(e.target.value)}/><button className="button primary" type="submit"><Plus size={16}/>添加</button></form>
-    {!state.settings.webShortcuts.length?<Empty icon={<Globe size={30}/>}>还没有网页快捷方式</Empty>:<div className="simple-list">{state.settings.webShortcuts.map(item=><div key={item.id} className="web-item"><Globe size={24}/><button className="web-link" onClick={()=>void api('launch',{id:'web:'+item.id}).catch(e=>toast(errorText(e),true))}><strong>{item.name}</strong><span>{item.url}</span></button><IconButton title={'删除 '+item.name} onClick={async()=>{if(await dialog({title:'删除网页快捷方式？',message:item.name,confirm:'删除',danger:true}))void api('settings',{webShortcuts:state.settings.webShortcuts.filter(w=>w.id!==item.id)}).catch(e=>toast(errorText(e),true));}}><Trash2 size={16}/></IconButton></div>)}</div>}
+  const {state,toast,dialog}=useApp();
+  const [name,setName]=useState(''),[url,setUrl]=useState(''),[type,setType]=useState<'fixed'|'search'>('fixed'),[editing,setEditing]=useState<string|null>(null);
+  const clear=()=>{setName('');setUrl('');setType('fixed');setEditing(null);};
+  const save=async()=>{try{
+    const target=/^https?:\/\//i.test(url.trim())?url.trim():'https://'+url.trim();
+    const entry=validateWebShortcut({id:editing||crypto.randomUUID(),name:name.trim(),url:target,type});
+    await api('webShortcut',{action:'save',entry});clear();toast('已保存，可在主搜索框中搜索名称');
+  }catch(e){toast(errorText(e),true);}};
+  const open=async(entry:WebShortcut)=>{try{
+    if(entry.type==='search'){const query=await dialog({title:'搜索 '+entry.name,input:'',placeholder:'输入搜索内容',confirm:'搜索'});if(typeof query!=='string'||!query.trim())return;await api('launch',{id:'web:'+entry.id,query});}
+    else await api('launch',{id:'web:'+entry.id});
+  }catch(e){toast(errorText(e),true);}};
+  return <div className="standard-panel scroll-panel"><PanelHeader title="网页快开" description="添加常用网站或搜索模板，在主搜索框输入名称即可使用。"/>
+    <form className="web-form" onSubmit={e=>{e.preventDefault();void save();}}>
+      <select aria-label="网页类型" value={type} onChange={e=>setType(e.target.value as 'fixed'|'search')}><option value="fixed">固定网址</option><option value="search">搜索模板</option></select>
+      <input aria-label="网站名称" value={name} placeholder="名称，例如 GitHub" maxLength={60} onChange={e=>setName(e.target.value)}/>
+      <input aria-label="网站地址" value={url} placeholder={type==='search'?'https://example.com/search?q={query}':'https://example.com'} onChange={e=>setUrl(e.target.value)}/>
+      <button className="button primary" type="submit"><Plus size={16}/>{editing?'保存':'添加'}</button>{editing&&<button className="button quiet" type="button" onClick={clear}>取消</button>}
+    </form>
+    {type==='search'&&<p className="web-template-hint">在网址路径或查询中使用 {'{query}'}。主搜索框可输入“名称 搜索内容”，也可打开后输入。</p>}
+    {!state.settings.webShortcuts.length?<Empty icon={<Globe size={30}/>}>还没有网页快捷方式</Empty>:<div className="simple-list">{state.settings.webShortcuts.map(item=><div key={item.id} className="web-item"><Globe size={24}/><button className="web-link" onClick={()=>void open(item)}><strong>{item.name}{item.type==='search'?' · 搜索':''}</strong><span>{item.url}</span></button><div className="web-edit-actions"><IconButton title={'编辑 '+item.name} onClick={()=>{setEditing(item.id);setName(item.name);setUrl(item.url);setType(item.type||'fixed');}}><Pencil size={16}/></IconButton><IconButton title={'删除 '+item.name} onClick={async()=>{if(await dialog({title:'删除网页快捷方式？',message:item.name,confirm:'删除',danger:true}))void api('webShortcut',{action:'remove',id:item.id}).then(()=>{if(editing===item.id)clear();}).catch(e=>toast(errorText(e),true));}}><Trash2 size={16}/></IconButton></div></div>)}</div>}
   </div>;
 }

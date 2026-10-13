@@ -1,0 +1,19 @@
+{
+  "engine": "@paddleocr/paddleocr-js@0.4.2",
+  "source": "PaddlePaddle/PaddleOCR",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "file": "PP-OCRv6_small_det_onnx_infer.tar",
+      "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv6_small_det_onnx_infer.tar",
+      "bytes": 9891840,
+      "sha256": "d218f6fbf0f1c23d2161bd6ac7f5eaa6104fa89955c09290497e31008e2618e4"
+    },
+    {
+      "file": "PP-OCRv6_small_rec_onnx_infer.tar",
+      "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv6_small_rec_onnx_infer.tar",
+      "bytes": 21319680,
+      "sha256": "d267ab077a44a0eedb1ea8f8c542d263f211de8e9d7a029bf9fcfff7e5a88fb1"
+    }
+  ]
+}

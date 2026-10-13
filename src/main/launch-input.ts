@@ -2,6 +2,7 @@ import { open, realpath, stat } from 'node:fs/promises';
 import { constants, type Stats } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import type {SelectionContent} from './selection';
 import { INPUT_FILE_LIMIT, INPUT_RESOURCE_LIMIT, INPUT_TOTAL_LIMIT, INPUT_TEXT_LIMIT, type InputSource, type LaunchInput, type InputResource } from '../shared/launch';
 
 interface Resource { descriptor:InputResource; file?:{path:string;identity:Stats}; bytes?:Buffer; }
@@ -10,6 +11,20 @@ export class LaunchInputs {
   private owners=new Map<number,{generation:number;snapshot?:InputSnapshot}>();
   private grants=new Map<number,InputSnapshot>();
   constructor(private imageSize?:(bytes:Buffer)=>{width:number;height:number}){}
+  async captureImage(owner:number,bytes:Buffer):Promise<LaunchInput>{
+    const input=await this.capture(owner,{type:'image',data:'data:image/png;base64,'+bytes.toString('base64'),from:'paste'});
+    input.from='capture';return input;
+  }
+  async captureSelection(owner:number,value:SelectionContent):Promise<LaunchInput>{
+    if(value.type==='text')return this.setText(owner,value.text,'selection');
+    const input=await this.capture(owner,{...value,from:'paste'});
+    input.from='selection';return input;
+  }
+  transfer(source:number,target:number,id:string):LaunchInput{
+    const snapshot=this.get(source,id);
+    this.owners.set(target,{generation:(this.owners.get(target)?.generation||0)+1,snapshot});
+    return snapshot.input;
+  }
   setText(owner:number,text:string,from:InputSource):LaunchInput {
     if(typeof text!=='string'||text.length>INPUT_TEXT_LIMIT)throw new Error('输入最多 50 万字符');
     const previous=this.owners.get(owner);

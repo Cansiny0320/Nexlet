@@ -46,3 +46,10 @@ it('目录仅传元信息，不允许作为文件读取；宿主之间输入隔�
   expect(granted.files[0].isDirectory).toBe(true);
   await expect(inputs.read(10,granted.files[0].id)).rejects.toThrow('目录');
 });
+it('选区资源转入主窗口后，关闭面板不撤销已授予插件的资源',async()=>{
+ const {file}=await fixture(),inputs=new LaunchInputs();
+ const input=await inputs.captureSelection(1,{type:'files',paths:[file]});expect(input.from).toBe('selection');
+ inputs.transfer(1,2,input.id);const granted=inputs.grant(30,inputs.get(2,input.id));if(granted.type!=='files')throw Error('expected files');inputs.clear(1);inputs.clear(2);
+ expect(Buffer.from(await inputs.read(30,granted.files[0].id)).toString()).toBe('{"value":1}');inputs.revoke(30);await expect(inputs.read(30,granted.files[0].id)).rejects.toThrow('失效');
+ await expect(inputs.capture(1,{type:'files',paths:[file],from:'selection'})).rejects.toThrow('来源');
+});

@@ -3,6 +3,7 @@ import {validateToolSnapshot,type ToolSessionSnapshot} from '../shared/tool-sess
 interface Transfer {source:number;target:number;snapshot:ToolSessionSnapshot;resolve:()=>void;reject:(e:Error)=>void;}
 export class ToolHandoffs {
   private transfers=new Map<string,Transfer>();
+  get busy(){return this.transfers.size>0;}
   async transfer(source:number,value:unknown,create:(token:string)=>{id:number;show:()=>void;destroy:()=>void},timeout=8000){
     if([...this.transfers.values()].some(t=>t.source===source))throw Error('正在分离此工具');
     const snapshot=validateToolSnapshot(value),token=randomUUID();

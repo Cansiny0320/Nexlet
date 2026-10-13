@@ -10,3 +10,7 @@ it.each(['darwin','win32'] as const)('%s 明确收录等待正在执行的后台
  const background=service.capture();let settled=false;const manual=service.capture(true).then(()=>{settled=true;});await Promise.resolve();expect(settled).toBe(false);
  release([]);await Promise.all([background,manual]);expect(addClip.mock.calls.map(([item])=>item.text)).toEqual(['earlier','selected input']);
 });
+it('临时选区事务暂停捕获，恢复后仍记录外部新复制',async()=>{
+ let sequence=1,finish!:()=>void;read.mockResolvedValue([]);readText.mockResolvedValue('external copy');const addClip=vi.fn(),store={settings:()=>({clipboardEnabled:true}),addClip,prune:()=>{},hasClipHash:()=>false};const service=new ClipboardService(store as any,{sequence:()=>sequence,readFiles:async()=>[]} as any,()=>{});
+ const transaction=service.withoutCapture(()=>new Promise<void>(resolve=>{finish=resolve;}));await Promise.resolve();await service.capture();expect(read).not.toHaveBeenCalled();sequence=2;finish();await transaction;await service.capture();expect(addClip.mock.calls[0][0].text).toBe('external copy');
+});

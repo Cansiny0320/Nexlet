@@ -1,0 +1,14 @@
+{
+  "permission": "granted",
+  "capture": {
+    "from": "capture",
+    "size": {
+      "width": 1248,
+      "height": 744
+    }
+  },
+  "ocr": "Nexlet native OCR 98765\n\n离线文字识别 测试成功",
+  "captureAndOcrMs": 568,
+  "errors": [],
+  "passed": true
+}

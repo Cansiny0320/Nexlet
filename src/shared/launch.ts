@@ -1,6 +1,6 @@
 import type { Command } from './types';
 
-export type InputSource = 'input' | 'paste' | 'drop';
+export type InputSource = 'input' | 'paste' | 'drop' | 'selection' | 'capture';
 export interface InputResource { id:string; name:string; size:number; isDirectory:boolean; path?:string; mime?:string; }
 export type LaunchInput = { id:string; from:InputSource } & (
   { type:'text'; text:string } |

@@ -37,6 +37,7 @@ export class PluginRuntime {
     return current?{id:current.record.manifest.id,name:current.record.manifest.name,code:current.code,detached:current.detached,loading:!current.activated}:null;
   }
   private forWindow(owner:BrowserWindow){return [...this.sessions.values()].find(s=>s.owner===owner&&!s.closing);}
+  get busy(){return this.preparing.size>0||this.detaching.size>0||[...this.sessions.values()].some(active=>!active.activated&&!active.closing);}
   focus(id:string,code:string):boolean {
     const active=this.sessions.get(id);
     if(!active||active.code!==code||!active.activated||active.closing||active.disposed)return false;
