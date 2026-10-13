@@ -122,7 +122,7 @@ async function bootstrap() {
       case 'catalogIcons':{
         if(!Array.isArray(payload)||payload.length>64||payload.some(id=>typeof id!=='string'||id.length>250))throw new Error('应用列表无效');
         const requested=new Set(payload);
-        return (await catalog.withIcons(catalog.items.filter(item=>requested.has(item.id)))).map(({id,icon})=>({id,icon}));
+        return (await catalog.withIcons([...catalog.items,...systemActions.commands()].filter(item=>requested.has(item.id)))).map(({id,icon})=>({id,icon}));
       }
       case 'pluginSession':return plugins.runtime.state(window);
       case 'updateReady':{const args=inputObject(payload);updateSaves.ready(event.sender.id,args.token,args.error);return true;}

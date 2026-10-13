@@ -7,6 +7,7 @@ import type { Command } from '../shared/types';
 import { loadCatalogIcon } from './catalog-icons';
 import { loadMacCatalogIcons, loadMacCatalogNames } from './catalog-mac';
 import { readWindowsApplications } from './catalog-windows';
+import { loadMacSystemIcons } from './system-icons-mac';
 
 function shortcutIdentity(file: string): string | undefined {
   if (process.platform !== 'win32' || !/\.lnk$/i.test(file)) return;
@@ -28,6 +29,7 @@ export class Catalog {
   private icons = new Map<string, string>();
   private iconSources = new Map<string, string>();
   private aliases = new Map<string, string>();
+  private systemIcons?: Promise<Map<string, string>>;
   constructor(private changed: () => void) {}
   resolveIds(ids: string[]): string[] {
     return [...new Set(ids.map(id => this.aliases.get(id) || id))];
@@ -101,7 +103,11 @@ export class Catalog {
     } finally { this.loading = false; this.changed(); }
   }
   async withIcons(items: Command[]): Promise<Command[]> {
+    let systemIcons: Map<string, string> | undefined;
     if (process.platform === 'darwin') {
+      if (items.some(item => item.kind === 'system' && item.id.startsWith('system:settings:'))) {
+        systemIcons = await (this.systemIcons ??= loadMacSystemIcons());
+      }
       const missing = items.filter(item => !this.icons.has(item.id) && item.path?.endsWith('.app'));
       const loaded = await loadMacCatalogIcons(missing.map(item => item.path!));
       for (const item of missing) {
@@ -110,6 +116,7 @@ export class Catalog {
       }
     }
     return Promise.all(items.map(async item => {
+      if (systemIcons?.has(item.id)) return { ...item, icon: systemIcons.get(item.id) };
       const source = this.iconSources.get(item.id) || item.path;
       if (!source) return item;
       if (!this.icons.has(item.id)) {

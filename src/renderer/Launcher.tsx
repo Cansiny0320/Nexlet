@@ -29,7 +29,7 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   const pinned=state.pinned.map(id=>indexed.get(id)).filter((c):c is Command=>!!c);
   const homeCommands=[...recent.slice(0,expanded?60:9),...(all?state.commands:pinned)];
   const visible=searching?[...results,...matching]:homeCommands;
-  const iconRequest=JSON.stringify([...new Set(visible.filter(c=>!c.icon&&(c.kind==='app'||c.kind==='shortcut')).map(c=>c.id))]);
+  const iconRequest=JSON.stringify([...new Set(visible.filter(c=>!c.icon&&(c.kind==='app'||c.kind==='shortcut'||c.kind==='system')).map(c=>c.id))]);
   useEffect(()=>{
     let valid=true;
     const ids=JSON.parse(iconRequest) as string[];
