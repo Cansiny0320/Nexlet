@@ -275,7 +275,8 @@ async function bootstrap() {
   app.on('second-instance',()=>void show()); app.on('activate',()=>void show());
   app.on('window-all-closed',()=>{});
   let cleanedUp=false;
-  app.on('before-quit',event=>{quitting=true;updates.setAutomaticChecks(false);clips.stop();globalShortcut.unregisterAll();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();app.quit();});}});
+  // Let AppKit finish canceling Cmd+Q before requesting the final quit on a new turn.
+  app.on('before-quit',event=>{quitting=true;updates.setAutomaticChecks(false);clips.stop();globalShortcut.unregisterAll();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();setImmediate(()=>app.quit());});}});
   app.once('will-quit',()=>store.close());
   updates.setAutomaticChecks(store.settings().autoCheckUpdates);
   if(testMode)(globalThis as any).__nexlet={updates,autoUpdater:updateTransport,store,clips,platform,catalog,systemActions,systemExecutor,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
