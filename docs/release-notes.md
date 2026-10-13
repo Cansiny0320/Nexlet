@@ -1,20 +1,28 @@
-Nexlet 0.2.13 支持已安装的市场插件在重新打开时自动更新。
+Nexlet 0.2.14 新增可配置启动器、超级面板、离线 OCR 和 Linux 安装包，并扩展插件能力。
 
-## 插件自动更新
+## 启动器与桌面工具
 
-- 打开市场安装的插件时，先检查并安装兼容新版，再进入插件，无需手动打开市场或确认。
-- 更新保留插件配置、持久密钥和本次启动输入。
-- 检查最多 2 秒，下载最多 10 秒；断网、超时、坏包或不兼容时继续打开旧版。
-- 已运行的插件（含分离窗口）保持当前会话，关闭后下次打开再更新；重复打开合并更新。
-- 本地导入和开发目录不自动覆盖；检查期间退出、停用或卸载会取消待启动操作。
+- 支持指令别名、独立快捷键、本地应用入口和网页搜索模板。
+- 新增划词取词与超级面板，可配置常用功能、分组和触发方式。
+- 新增窗口布局、截图和图片工具；内置 PaddleOCR.js 与 PP-OCRv6 模型，图片文字识别离线运行。
+- 首页整条搜索栏支持拖动窗口，保留点击和输入；macOS 使用原生窗口拖动。
 
-## 下载与更新
+## 插件与稳定性
 
-- Windows x64 安装版：`Nexlet-0.2.13-Windows-x64-Setup.exe`。
-- Windows x64 便携版：`Nexlet-0.2.13-Windows-x64.exe`。
-- Intel Mac：`Nexlet-0.2.13-macOS-x64.dmg`。
-- Apple Silicon Mac：`Nexlet-0.2.13-macOS-arm64.dmg`。
+- 扩展插件 SDK，支持隔离后端及宿主能力服务。
+- 退出时完成插件持久化，并等待原生操作取消后再结束进程。
+- 沿用市场插件打开时自动更新的机制，保留本地配置和本次输入。
+
+## 平台与下载
+
+- Windows x64：安装版 `Nexlet-0.2.14-Windows-x64-Setup.exe`，便携版 `Nexlet-0.2.14-Windows-x64.exe`。
+- Apple Silicon Mac：`Nexlet-0.2.14-macOS-arm64.dmg`。
+- Intel Mac：`Nexlet-0.2.14-macOS-x64.dmg`。
+- Linux x64：`Nexlet-0.2.14-Linux-x86_64.AppImage`、`Nexlet-0.2.14-Linux-amd64.deb`。
+- Linux arm64：`Nexlet-0.2.14-Linux-arm64.AppImage`、`Nexlet-0.2.14-Linux-arm64.deb`。
 - macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新；`SHA256SUMS.txt` 提供下载校验值。
+
+Linux 的桌面能力以 X11 为主要验证环境，GNOME/KDE Wayland 的能力限制见仓库 `docs/linux.md`。
 
 手动安装前请从托盘退出旧版，已有本地数据沿用原数据目录。Windows 便携 EXE 请放在固定位置。
 
