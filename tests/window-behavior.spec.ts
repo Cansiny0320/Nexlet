@@ -62,11 +62,13 @@ test('首页整条搜索栏可拖动，点击和搜索输入保持可用', async
       const target = page.locator(selector);
       const bounds = (await target.boundingBox())!;
       const [x, y] = await position();
+      // Keep CDP mouse coordinates inside the viewport for the right-edge button.
+      const dx = selector === '.brand-button' ? -30 : 30;
       await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
       await page.mouse.down();
-      await page.mouse.move(bounds.x + bounds.width / 2 + 30, bounds.y + bounds.height / 2 + 15);
+      await page.mouse.move(bounds.x + bounds.width / 2 + dx, bounds.y + bounds.height / 2 + 15);
       await page.mouse.up();
-      await expect.poll(position).toEqual([x + 30, y + 15]);
+      await expect.poll(position).toEqual([x + dx, y + 15]);
       await expect(search).toHaveValue('拖动后保留搜索');
     }
     await search.fill('');

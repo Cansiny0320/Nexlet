@@ -244,7 +244,7 @@ async function bootstrap() {
         const target=[...hosts.values()].find(w=>w!==main&&!boards.has(w.webContents.id)&&views.get(w.id)===view)||([...hosts.values()].find(w=>w===main&&views.get(w.id)===view));
         if(target){revealWindow(target);recordRecent(id);return {opened:true};}
       }
-      await plugins.runtime.exitWindow(window);recordRecent(id);return {view,...(snapshot?.input.type==='text'?{payload:content}:{})};
+      await plugins.runtime.exitWindow(window);recordRecent(id);return {view,...(snapshot?.input.type==='text'&&snapshot.input.from!=='input'?{payload:content}:{})};
     }
     if(command.kind==='plugin'){if(args.mode==='open'&&plugins.runtime.focus(command.pluginId!,command.feature!)){recordRecent(id);return {opened:true};}await plugins.launch(command.pluginId!,command.feature!,content,snapshot);recordRecent(id);return {opened:true};}
     if(command.kind==='web'){const entry=current.settings.webShortcuts.find(w=>'web:'+w.id===id);if(!entry)throw new Error('网页不存在');if(entry.type==='search'&&typeof args.query!=='string'&&typeof args.payload!=='string'&&snapshot?.input.type!=='text')return {needsQuery:entry.name};await shell.openExternal(resolveWebShortcut(entry,typeof args.query==='string'?text(args.query,10000):typeof args.payload==='string'?text(args.payload,10000):snapshot?.input.type==='text'?text(content,10000):''));}
