@@ -1,4 +1,4 @@
-Nexlet 0.2.12 支持已安装的市场插件在重新打开时自动更新。
+Nexlet 0.2.13 支持已安装的市场插件在重新打开时自动更新。
 
 ## 插件自动更新
 
@@ -10,10 +10,10 @@ Nexlet 0.2.12 支持已安装的市场插件在重新打开时自动更新。
 
 ## 下载与更新
 
-- Windows x64 安装版：`Nexlet-0.2.12-Windows-x64-Setup.exe`。
-- Windows x64 便携版：`Nexlet-0.2.12-Windows-x64.exe`。
-- Intel Mac：`Nexlet-0.2.12-macOS-x64.dmg`。
-- Apple Silicon Mac：`Nexlet-0.2.12-macOS-arm64.dmg`。
+- Windows x64 安装版：`Nexlet-0.2.13-Windows-x64-Setup.exe`。
+- Windows x64 便携版：`Nexlet-0.2.13-Windows-x64.exe`。
+- Intel Mac：`Nexlet-0.2.13-macOS-x64.dmg`。
+- Apple Silicon Mac：`Nexlet-0.2.13-macOS-arm64.dmg`。
 - macOS ZIP、blockmap 和 `latest*.yml` 用于应用内更新；`SHA256SUMS.txt` 提供下载校验值。
 
 手动安装前请从托盘退出旧版，已有本地数据沿用原数据目录。Windows 便携 EXE 请放在固定位置。

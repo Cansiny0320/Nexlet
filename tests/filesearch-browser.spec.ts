@@ -63,7 +63,11 @@ test('detached window restores a folder reached after paging and its selected me
   const late=path.join(root,'zz-late-child');await mkdir(late);await writeFile(path.join(late,'restored.txt'),'restore');
   await page.getByLabel('Everything 文件搜索').fill('folder: exact:browser-fixture');await expect(page.getByRole('option')).toHaveCount(1);
   await row('browser-fixture').dblclick();await expect(page.getByRole('option')).toHaveCount(100);
-  while(!await row('zz-late-child').count())await page.getByRole('button',{name:'加载更多',exact:true}).click();
+  while(!await row('zz-late-child').count()){
+    const count=await page.getByRole('option').count();
+    await page.getByRole('button',{name:'加载更多',exact:true}).click();
+    await expect.poll(()=>page.getByRole('option').count()).toBeGreaterThan(count);
+  }
   await row('zz-late-child').dblclick();await row('restored.txt').click();await expect(page.getByLabel('文件信息')).toContainText(path.join(late,'restored.txt'));
   const opening=app.waitForEvent('window');await page.getByRole('button',{name:'分离为独立窗口',exact:true}).click();const popup=await opening;popup.on('pageerror',e=>errors.push(e.message));
   await expect(page.getByLabel('搜索功能、应用或快捷方式')).toBeVisible();
