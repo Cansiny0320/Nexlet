@@ -83,5 +83,7 @@ export class ClipboardService {
       await clipboard.write([new ElectronClipboardItem({ 'image/png': new Blob([new Uint8Array(image.toPNG())], { type:'image/png' }) })]); this.lastHash = selected[0].hash;
     } else throw new Error('合并复制支持多条文本或多个文件；图片请单独选择');
     this.lastSequence = this.platform.sequence();
+    this.store.touchClips(ids);
+    this.changed();
   }
 }

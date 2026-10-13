@@ -5,12 +5,14 @@ import type { ClipItem } from '../shared/types';
 import { api,useApp,errorText,IconButton,Empty,relativeTime } from './common';
 
 const filters=[['all','全部',ClipboardList],['text','文本',Type],['image','图像',ImageIcon],['files','文件',Files],['favorite','收藏',Star]] as const;
+const clipDateTime=new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
 export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(value:string)=>void;board:boolean}){
   const {state,toast,dialog,navigate,detach,canDetach}=useApp();
   const [kind,setKind]=useToolState('kind','all'),[items,setItems]=useState<ClipItem[]>([]),[selected,setSelected]=useToolState<string[]>('selected',[]),[cursor,setCursor]=useToolState('cursor',0),[expanded,setExpanded]=useToolState<string|null>('expanded',null);
   const [context,setContext]=useState<{x:number;y:number;ids:string[]}|null>(null);
   const rows=useRef(new Map<string,HTMLDivElement>()),loadId=useRef(0);
-  const reload=useCallback(async()=>{const id=++loadId.current;try{const list=await api<ClipItem[]>('clips',{query,kind});if(id!==loadId.current)return;setItems(list);setSelected(old=>{const kept=old.filter(v=>list.some(i=>i.id===v));return kept.length?kept:list[0]?[list[0].id]:[];});setCursor(v=>Math.max(0,Math.min(v,list.length-1)));}catch(e){toast(errorText(e),true);}},[query,kind,toast]);
+  const cursorId=useRef<string|undefined>(undefined);cursorId.current=items[cursor]?.id;
+  const reload=useCallback(async()=>{const id=++loadId.current;try{const list=await api<ClipItem[]>('clips',{query,kind});if(id!==loadId.current)return;const nextCursor=list.findIndex(item=>item.id===cursorId.current);setItems(list);setSelected(old=>{const kept=old.filter(v=>list.some(i=>i.id===v));return kept.length?kept:list[0]?[list[0].id]:[];});setCursor(v=>nextCursor>=0?nextCursor:Math.max(0,Math.min(v,list.length-1)));}catch(e){toast(errorText(e),true);}},[query,kind,toast]);
   useEffect(()=>{void reload();return window.nexlet.onChange(event=>{if(event==='clips')void reload();});},[reload]);
   const firstFilter=useRef(true);useEffect(()=>{if(firstFilter.current){firstFilter.current=false;return;}setCursor(0);setSelected([]);},[query,kind]);
   useEffect(()=>{const hide=()=>setContext(null);window.addEventListener('click',hide);return()=>window.removeEventListener('click',hide);},[]);
@@ -49,7 +51,7 @@ export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(va
         {item.kind==='image'?<div className="clip-picture"><img src={expanded===item.id?`nexlet-image://local/${item.imagePath?.split(/[\\/]/).pop()}`:item.thumbnail} alt="剪贴板图片" draggable={false} className={expanded===item.id?'expanded':''}/><button onClick={e=>{e.stopPropagation();setExpanded(expanded===item.id?null:item.id);}}>{expanded===item.id?'收起':'展开'}</button></div>:
          item.kind==='files'?<div className="clip-files"><Files size={25}/><div>{item.files?.map(file=><div key={file} title={file}>{file.split(/[\\/]/).pop()}</div>)}</div></div>:
          <div className={`clip-text ${expanded===item.id?'expanded':''}`}>{item.text.slice(0,expanded===item.id?200000:600)}{item.text.length>150&&<button className="inline-expand" onClick={e=>{e.stopPropagation();setExpanded(expanded===item.id?null:item.id);}}>{expanded===item.id?'收起':'展开'}</button>}</div>}
-        <div className="clip-meta"><span>{relativeTime(item.createdAt)}</span><span>{item.favorite&&<Star size={12} fill="currentColor"/>}{item.kind==='text'?`${Array.from(item.text).length} 字符`:item.kind==='image'?`${item.width} × ${item.height}`:`${item.files?.length} 个文件`}<em>{index+1}</em></span></div>
+        <div className="clip-meta"><span><time dateTime={new Date(item.createdAt).toISOString()} title="最近复制或使用时间">{clipDateTime.format(item.createdAt)}</time> · {relativeTime(item.createdAt)}</span><span>{item.favorite&&<Star size={12} fill="currentColor"/>}{item.kind==='text'?`${Array.from(item.text).length} 字符`:item.kind==='image'?`${item.width} × ${item.height}`:`${item.files?.length} 个文件`}<em>{index+1}</em></span></div>
       </div>)}
     </div><aside className="clipboard-actions">
       <IconButton className="round primary" title="复制" disabled={!selected.length} onClick={()=>void action('copy')}><ClipboardCopy size={22}/></IconButton>

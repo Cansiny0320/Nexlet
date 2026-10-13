@@ -28,6 +28,7 @@ export class Store {
   addClip(item: ClipItem): ClipItem {
     const old = this.db.prepare('SELECT data FROM clips WHERE hash=?').get(item.hash) as { data: string } | undefined;
     if (old) { const previous = JSON.parse(old.data) as ClipItem; item = { ...previous, createdAt: item.createdAt }; }
+    item = { ...item, createdAt: this.nextClipTime(item.createdAt) };
     this.db.prepare('INSERT INTO clips(id,hash,created,favorite,data) VALUES(?,?,?,?,?) ON CONFLICT(hash) DO UPDATE SET created=excluded.created,data=excluded.data').run(item.id, item.hash, item.createdAt, Number(item.favorite), JSON.stringify(item));
     return item;
   }
@@ -37,6 +38,20 @@ export class Store {
     return rows.map(r => JSON.parse(r.data) as ClipItem).filter(i => (kind === 'all' || (kind === 'favorite' ? i.favorite : i.kind === kind)) && (!q || i.text.toLowerCase().includes(q)));
   }
   clip(id: string): ClipItem | undefined { const row = this.db.prepare('SELECT data FROM clips WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
+  private nextClipTime(time = Date.now()): number {
+    const latest = this.db.prepare('SELECT MAX(created) AS created FROM clips').get() as { created: number | null };
+    return Math.max(time, (latest.created ?? 0) + 1);
+  }
+  touchClips(ids: string[]): void {
+    let time = this.nextClipTime();
+    const update = this.db.prepare('UPDATE clips SET created=?,data=? WHERE id=?');
+    // Reverse iteration keeps a merged selection in its original paste order.
+    for (const id of [...new Set(ids)].reverse()) {
+      const item = this.clip(id); if (!item) continue;
+      item.createdAt = time++;
+      update.run(item.createdAt, JSON.stringify(item), id);
+    }
+  }
   hasClipHash(hash: string): boolean { return !!this.db.prepare('SELECT 1 FROM clips WHERE hash=?').get(hash); }
   favorite(id: string, value: boolean): void {
     const item = this.clip(id); if (!item) throw new Error('记录已不存在');
