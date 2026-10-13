@@ -67,7 +67,7 @@ export async function refreshRelease(root = document) {
     applyRelease(root, await fetchLatestRelease());
   } catch {
     for (const label of root.querySelectorAll('[data-release-status]')) {
-      label.textContent = '暂未获取到最新版本，以下为已知可用版本';
+      label.textContent = '版本检查失败 · 可下载';
     }
   }
 }

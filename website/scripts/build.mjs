@@ -7,7 +7,7 @@ import { brand, icon } from '../src/components.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = JSON.parse(await readFile(path.join(root, 'site.json'), 'utf8'));
 const esc = (s) => String(s).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
-const navigation = [['/', '概览'], ['/download/', '下载'], ['/privacy/', '隐私'], ['/plugins/', '插件开发']];
+const navigation = [['/', '概览'], ['/download/', '下载'], ['/plugins/', '插件开发']];
 for (const page of pages) {
   const url = site.origin + page.path;
   const graph = [
@@ -22,7 +22,7 @@ for (const page of pages) {
 <link rel="icon" href="/assets/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/assets/icon.png"><link rel="preload" href="/assets/noto-sans-sc.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/assets/site.css"><script src="/assets/site.js" type="module"></script>
 <script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@graph':graph}).replaceAll('<','\\u003c')}</script></head>
 <body class="${page.className}"><a class="skip-link" href="#main">跳至主要内容</a><header class="site-header"><div class="shell header-inner"><a class="brand" href="/" aria-label="Nexlet 首页">${brand}</a><nav id="navigation" aria-label="主导航">${navigation.map(([href,label])=>`<a href="${href}"${page.path===href?' aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="header-actions"><a class="github-icon" href="${site.repository}" aria-label="GitHub 源代码">${icon('github')}</a><a class="button primary" href="/download/">下载 Nexlet</a></div><button class="menu-toggle" type="button" aria-expanded="false" aria-controls="navigation" hidden>菜单 ${icon('menu')}</button></div></header>
-<main id="main">${page.body}</main><footer class="site-footer"><div class="shell footer-inner"><a class="brand" href="/">${brand}</a><span>让桌面，更专注。</span><div class="footer-links"><a href="${site.repository}">${icon('github')} GitHub</a><a href="/privacy/">隐私</a><a href="/plugins/">插件文档</a></div></div></footer><div class="toast" role="status" hidden></div></body></html>\n`;
+<main id="main">${page.body}</main><footer class="site-footer"><div class="shell footer-inner"><a class="brand" href="/">${brand}</a><div class="footer-links"><a href="${site.repository}">${icon('github')} GitHub</a><a href="/plugins/">插件文档</a></div></div></footer><div class="toast" role="status" hidden></div></body></html>\n`;
   const directory = path.join(root, 'dist', page.path);
   await mkdir(directory, { recursive:true });
   await writeFile(path.join(directory,'index.html'), html, 'utf8');
@@ -30,5 +30,5 @@ for (const page of pages) {
 await cp(path.join(root,'assets'), path.join(root,'dist/assets'), {recursive:true});
 await writeFile(path.join(root,'dist/robots.txt'),`User-agent: *\nAllow: /\n\nSitemap: ${site.origin}/sitemap.xml\n`);
 await writeFile(path.join(root,'dist/sitemap.xml'),`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.map(p=>`  <url><loc>${site.origin+p.path}</loc><lastmod>${site.reviewedAt}</lastmod></url>`).join('\n')}\n</urlset>\n`);
-await writeFile(path.join(root,'dist/404.html'),`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>页面不存在 — Nexlet</title><link rel="stylesheet" href="/assets/site.css"></head><body><main class="shell document"><p class="eyebrow">404</p><h1>这个页面不在这里。</h1><p>可以回到官网，继续了解 Nexlet。</p><a class="button primary" href="/">返回首页</a></main></body></html>`);
+await writeFile(path.join(root,'dist/404.html'),`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>页面不存在 — Nexlet</title><link rel="stylesheet" href="/assets/site.css"></head><body><main class="shell document"><p class="eyebrow">404</p><h1>页面不存在</h1><a class="button primary" href="/">返回首页</a></main></body></html>`);
 console.log(`Generated ${pages.length} static pages, metadata, robots, sitemap and 404.`);

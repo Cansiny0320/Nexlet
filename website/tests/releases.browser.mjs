@@ -24,6 +24,36 @@ before(async () => {
 });
 after(async () => { await browser?.close(); server?.kill(); });
 
+test('shortcut labels follow the browser OS on both pages without architecture detection', async () => {
+  for (const device of [
+    { platform: 'MacIntel', userAgent: 'Macintosh; Intel Mac OS X', modifier: 'Option' },
+    { platform: 'MacIntel', userAgent: 'Macintosh; Intel Mac OS X', uaPlatform: 'macOS', modifier: 'Option' },
+    { platform: 'Win32', userAgent: 'Windows NT 10.0; Win64; x64', uaPlatform: 'Windows', modifier: 'Alt' },
+    { platform: 'MacIntel', userAgent: 'Macintosh; Intel Mac OS X', maxTouchPoints: 5, modifier: 'Alt' }
+  ]) {
+    const page = await browser.newPage();
+    await page.addInitScript(device => {
+      Object.defineProperty(navigator, 'platform', { value: device.platform });
+      Object.defineProperty(navigator, 'userAgent', { value: device.userAgent });
+      Object.defineProperty(navigator, 'maxTouchPoints', { value: device.maxTouchPoints || 0 });
+      Object.defineProperty(navigator, 'userAgentData', { value: device.uaPlatform ? { platform: device.uaPlatform, mobile: false } : undefined });
+    }, device);
+    await page.route(RELEASE_API, route => route.fulfill({ json: releaseFixture() }));
+    await page.goto(base + '/');
+    assert.equal(await page.locator('.mock-search kbd').textContent(), `${device.modifier} + Space`);
+    if (device.modifier === 'Option') {
+      await page.locator('.download-toggle').first().click();
+      await page.locator('#hero-downloads [data-platform="windows-x64"]').click();
+      assert.equal(await page.locator('.mock-search kbd').textContent(), 'Option + Space');
+    }
+    await page.goto(base + '/download/');
+    assert.deepEqual(await page.locator('.step-visual.keys kbd').allTextContents(), [device.modifier, 'Space']);
+    assert.equal(await page.locator('.onboarding-steps li').nth(1).locator('p').textContent(), `默认 ${device.modifier} + Space，可在设置中修改。`);
+    assert((await page.locator('.faq-list').textContent()).includes(`Ctrl + ${device.modifier} + Space`));
+    await page.close();
+  }
+});
+
 test('download page updates all links and version together without downloading files', async () => {
   const page = await browser.newPage();
   const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -87,7 +117,7 @@ test('rate limits, network errors, invalid JSON and incomplete releases retain t
     const page = await browser.newPage();
     await page.route(RELEASE_API, reply);
     await page.goto(base + '/download/');
-    await page.getByText('暂未获取到最新版本，以下为已知可用版本', { exact: true }).waitFor();
+    await page.getByText('版本检查失败 · 可下载', { exact: true }).waitFor();
     assert.equal(await page.locator('[data-release-version]').textContent(), fallback.version);
     for (const [key, platform] of Object.entries(fallback.platforms)) {
       assert.equal(await page.locator(`[data-direct-download="${key}"]`).getAttribute('href'), platform.url);
@@ -116,7 +146,7 @@ test('version and failure text fit desktop and mobile layouts', async () => {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ['/', '/download/']) {
       await page.goto(base + route);
-      await page.getByText('暂未获取到最新版本，以下为已知可用版本', { exact: true }).first().waitFor();
+      await page.getByText('版本检查失败 · 可下载', { exact: true }).first().waitFor();
       await page.evaluate(() => document.fonts.ready);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       if (route === '/') {

@@ -1,3 +1,10 @@
+/** Shortcut labels depend on the OS, even when its CPU architecture is unknown. */
+export function getShortcutModifier({platform='',userAgent='',mobile=false,maxTouchPoints=0}={}){
+  const mac=/^mac(os|intel|arm)$/i.test(platform)||/macintosh/i.test(userAgent);
+  if(mobile||/android|iphone|ipad|ipod/i.test(userAgent)||maxTouchPoints>1)return 'Alt';
+  return mac?'Option':'Alt';
+}
+
 /** Select only an artifact supported by reliable platform/architecture evidence. */
 export function selectPlatform({platform='',architecture='',bitness='',userAgent='',mobile=false,maxTouchPoints=0}={}){
   const p=platform.toLowerCase(),a=architecture.toLowerCase();

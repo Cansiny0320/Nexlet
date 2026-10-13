@@ -4,7 +4,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
 const base=process.env.SITE_URL||'http://127.0.0.1:4173';
-const routes=['/','/download/','/privacy/','/plugins/'];
+const routes=['/','/download/','/plugins/'];
 const downloads=require('../downloads.json');
 (async()=>{
  const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',headless:true});
@@ -42,9 +42,8 @@ const downloads=require('../downloads.json');
   await menu.click();await page.locator('#navigation').getByRole('link',{name:'下载',exact:true}).click();assert.equal(new URL(page.url()).pathname,'/download/');
   const question=page.locator('details').nth(1);await question.locator('summary').focus();await page.keyboard.press('Enter');assert.equal(await question.getAttribute('open'),'');
   // Clipboard actions report their outcome; verify the exact value without changing the host clipboard.
-  await page.goto(base+'/privacy/');await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copied=text;}}}));
-  await page.getByRole('button',{name:'复制 Windows 数据目录'}).click();assert.equal(await page.evaluate(()=>window.copied),'%APPDATA%/Nexlet');
-  await page.locator('.privacy-sidebar a[href="#website"]').click();assert.equal(await page.locator('#website').getAttribute('open'),'');
+  await page.goto(base+'/plugins/');await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copied=text;}}}));
+  await page.getByRole('button',{name:'复制存储 API'}).click();assert.equal(await page.evaluate(()=>window.copied),'nexlet.storage');
   const nojs=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const plain=await nojs.newPage();
   for(const route of routes){await plain.goto(base+route);assert.equal(await plain.locator('#navigation').isVisible(),true);assert.equal(await plain.locator('h1').isVisible(),true);}
   await plain.goto(base+'/download/');assert.equal(await plain.locator('[data-direct-download]').count(),3);for(const a of await plain.locator('[data-direct-download]').all())assert.equal(await a.getAttribute('href'),downloads.platforms[await a.getAttribute('data-direct-download')].url);
@@ -60,7 +59,7 @@ const downloads=require('../downloads.json');
   const denied=await browser.newContext();await denied.addInitScript(()=>{Object.defineProperty(navigator,'userAgentData',{value:{platform:'macOS',mobile:false,getHighEntropyValues:async()=>{throw new Error('Unavailable');}}});Object.defineProperty(navigator,'userAgent',{value:'Macintosh; Intel Mac OS X'});});
   const deniedPage=await denied.newPage();await deniedPage.goto(base+'/');assert.equal(await deniedPage.locator('[data-primary-download]').first().getAttribute('href'),'/download/');await denied.close();
   assert.deepEqual(errors,[]);
-  const report={date:new Date().toISOString(),base,dimensions,checks:['HTTP 200','no viewport overflow','keyboard skip link','mobile menu and Escape focus','split download selection and keyboard navigation','outside click close','manual choice wins late detection','copied data path','keyboard FAQ','no-JavaScript direct downloads','no page errors'],status:'passed'};
+  const report={date:new Date().toISOString(),base,dimensions,checks:['HTTP 200','no viewport overflow','keyboard skip link','mobile menu and Escape focus','split download selection and keyboard navigation','outside click close','manual choice wins late detection','copied plugin API','keyboard FAQ','no-JavaScript direct downloads','no page errors'],status:'passed'};
   await fs.writeFile(path.join(root,'.qa','browser-results.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
