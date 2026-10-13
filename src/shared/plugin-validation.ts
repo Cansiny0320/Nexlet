@@ -1,7 +1,8 @@
 import type { PluginManifest, PluginPermission } from './types';
 import { validateMatches } from './launch';
+import { SDK_PERMISSIONS } from './plugin-api';
 
-export const KNOWN_PERMISSIONS: PluginPermission[] = ['clipboard.read', 'clipboard.write', 'shell.openExternal', 'network.request', 'secrets'];
+export const KNOWN_PERMISSIONS: PluginPermission[] = ['clipboard.read', 'clipboard.write', 'shell.openExternal', 'network.request', 'secrets', ...SDK_PERMISSIONS];
 export function safeEntryPath(path: string): string {
   const normalized = path.replaceAll('\\', '/');
   if (!normalized || normalized.length > 240 || /[:\0%]/.test(normalized) || normalized.startsWith('/') || normalized.split('/').some(s => !s || s === '..' || s === '.' || /[. ]$/.test(s) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(s))) throw new Error('插件资源路径不安全');
@@ -34,6 +35,8 @@ export function validateManifest(value: unknown): PluginManifest {
     return { code, name: string(item.name, 50, '功能名称'), keywords: item.keywords.map((k: unknown) => string(k, 50, '关键词')), ...(item.matches===undefined?{}:{matches:validateMatches(item.matches)}) };
   });
   const icon=v.icon===undefined?undefined:safeEntryPath(string(v.icon,240,'插件图标'));
+  const backend=v.backend===undefined?undefined:safeEntryPath(string(v.backend,240,'后台入口'));
+  if(backend&&(!/\.(cjs|mjs|js)$/i.test(backend)||!v.permissions.includes('backend')))throw new Error('后台入口需要 JavaScript 文件和 backend 权限');
   if(icon&&!/\.png$/i.test(icon))throw new Error('插件图标需要 PNG 文件');
-  return { id, name, version, apiVersion: 1, main, ...(icon?{icon}:{}), permissions: [...new Set(v.permissions)] as PluginPermission[], description: typeof v.description === 'string' ? v.description.slice(0, 500) : '', features };
+  return { id, name, version, apiVersion: 1, main, ...(backend?{backend}:{}), ...(icon?{icon}:{}), permissions: [...new Set(v.permissions)] as PluginPermission[], description: typeof v.description === 'string' ? v.description.slice(0, 500) : '', features };
 }

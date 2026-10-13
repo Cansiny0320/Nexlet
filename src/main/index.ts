@@ -54,7 +54,7 @@ async function bootstrap() {
   const systemActions=new SystemActions(process.platform,release(),systemExecutor);
   const inputs=new LaunchInputs(bytes=>{const image=nativeImage.createFromBuffer(bytes);return image.isEmpty()?{width:0,height:0}:image.getSize();});
   const matcher=new ContentMatcher();
-  const plugins=new PluginManager(store,notify,inputs);
+  const plugins=new PluginManager(store,notify,inputs,platform);
   const marketplace=new Marketplace(store,plugins);
   plugins.updateOnLaunch=(record,code,signal)=>marketplace.prepareUpdate(record,code,signal);
   const files=new EverythingSearch(()=>store.settings().fileSearchPaths);
@@ -184,6 +184,7 @@ async function bootstrap() {
       case 'toolSession':{const args=inputObject(payload),token=text(args.token,100);if(args.action==='read')return toolHandoffs.read(event.sender.id,token);if(args.action==='ready'){toolHandoffs.acknowledge(event.sender.id,token,args.error?text(args.error,1000):undefined);return true;}throw Error('交接操作无效');}
       case 'window':{
         const args=inputObject(payload);
+        if(args.action==='pluginSearch'){if(args.operation==='read')return plugins.sdk.commands?.read(window)??null;return plugins.sdk.commands?.input(window,args.text,args.operation==='select'?args.id:undefined);}
         if(args.action==='exitPlugin')await plugins.runtime.exitWindow(window);
         else if(args.action==='overlay')plugins.runtime.overlay(window,args.visible===true);
         else if(args.action==='hide')window.hide();

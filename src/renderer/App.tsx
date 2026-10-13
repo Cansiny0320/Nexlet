@@ -9,6 +9,7 @@ import { AppContext, api, errorText, IconButton, Modal, ToolIcon, type DialogSpe
 import { Launcher } from './Launcher';
 import { brandIcon } from './tool-artwork';
 import { LaunchInputChip } from './LaunchInputChip';
+import { usePluginSearch, PluginSearchResults } from './PluginSearch';
 import { saveBeforeUpdate } from './update-save';
 import { ToolBoundary } from './ToolBoundary';
 
@@ -26,6 +27,7 @@ const detached=params.get('detached')==='1';
 const board=params.get('board')==='1';
 const transfer=params.get('transfer')||'';
 export function App(){
+  const pluginSearch=usePluginSearch();
   const [session,setSession]=useState(()=>createToolSession()),[restoring,setRestoring]=useState(!!transfer),[transferring,setTransferring]=useState(false);
   const [readySession,setReadySession]=useState<typeof session|null>(null);
   const [openingTool,startNavigation]=useTransition();
@@ -45,7 +47,7 @@ export function App(){
   const dialog=useCallback((spec:DialogSpec)=>new Promise<string|boolean|null>(resolve=>{resolver.current?.(null);resolver.current=resolve;setDialogSpec(spec);}),[]);
   useEffect(()=>{void refresh();void syncPlugin();return window.nexlet?.onChange(event=>{if(event==='state')void refresh();if(event==='plugin-changed')void syncPlugin();if(event.startsWith('update:prepare:'))void saveBeforeUpdate().then(()=>api('updateReady',{token:event.slice(15)}),error=>api('updateReady',{token:event.slice(15),error:errorText(error)}));if(event==='focus'){input.current?.focus();input.current?.select();}if(event.startsWith('error:'))toast(event.slice(6),true);if(event.startsWith('navigate:'))navigate(event.slice(9));});},[refresh,navigate,toast,syncPlugin]);
   useEffect(()=>{void api('window',{action:'view',view}).catch(e=>toast(errorText(e),true));setTimeout(()=>input.current?.focus(),50);},[view,toast]);
-  useEffect(()=>{void api('window',{action:'overlay',visible:!!dialogSpec||(view==='plugin'&&!!notification)});},[dialogSpec,notification,view]);
+  useEffect(()=>{void api('window',{action:'overlay',visible:!!dialogSpec||(view==='plugin'&&(!!notification||!!(pluginSearch.state?.visible&&pluginSearch.state.results.length)))});},[dialogSpec,notification,view,pluginSearch.state]);
   useEffect(()=>{if(!state||restoring)return;const media=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=state.settings.theme==='system'?(media.matches?'dark':'light'):state.settings.theme;apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);},[state?.settings.theme,restoring]);
   useEffect(()=>{const handle=(event:KeyboardEvent)=>{
     if(dialogSpec||transferring||document.querySelector('dialog[open]'))return;
@@ -76,6 +78,7 @@ export function App(){
       {view==='launcher'?<>{launchInput&&<LaunchInputChip key={launchInput.id} input={launchInput} preview={launchInput.preview} onClear={clearLaunchInput}/>}<input ref={input} className="launcher-input" aria-label="搜索功能、应用或快捷方式" placeholder={launchInput?'筛选处理功能…':'搜索功能 / 粘贴文件、图片'} maxLength={INPUT_TEXT_LIMIT} value={query} onChange={e=>{captureGeneration.current++;setCapturing(false);setInputSource('input');setQuery(e.target.value);}} autoComplete="off" spellCheck={false}/></>:
        view==='clipboard'?<><ToolIcon command={command!}/><input ref={input} className="clipboard-search" aria-label="搜索剪贴板" placeholder="搜索…" value={query} onChange={e=>setQuery(e.target.value)}/>{board&&<span className="subtle">悬浮中转</span>}</>:
        <div className="plugin-pill" title="拖动窗口">{command&&<ToolIcon command={command} size={20}/>}<span>{view==='plugin'?pluginInfo?.name||'正在打开插件…':command?.name||'Nexlet'}</span>{!detached&&<button className="plugin-pill-close" aria-label="关闭当前工具" title="返回首页" onClick={()=>navigate('launcher')}><X size={14}/></button>}</div>}
+      {view==='plugin'&&pluginSearch.state?.visible&&<input className="clipboard-search" aria-label="插件搜索" placeholder={pluginSearch.state.placeholder} value={pluginSearch.state.text} onChange={e=>void pluginSearch.change(e.target.value).catch(e=>toast(errorText(e),true))}/>}
       <div className="titlebar-spacer"/>
       <div className="window-controls">
         {view==='launcher'&&['available','downloaded'].includes(state.update.phase)&&<button className="button quiet" title={`版本 ${state.update.version}，打开更新设置`} onClick={()=>navigate('settings')}>{state.update.phase==='downloaded'?'待安装更新':'有新版本'}</button>}
@@ -87,6 +90,7 @@ export function App(){
     </header>
     <main className="main-content" inert={transferring}>
       <ToolBoundary session={session} onReady={toolReady} onError={toolError} onBack={()=>navigate('launcher')}>
+      {view==='plugin'&&pluginSearch.state?.visible&&<PluginSearchResults results={pluginSearch.state.results} error={message=>toast(message,true)}/>}
       {view==='launcher'&&<Launcher query={query} setQuery={setQuery} input={input} launchInput={launchInput} source={inputSource} capturing={capturing}/>}
       {view==='clipboard'&&<ClipboardPanel query={query} setQuery={setQuery} board={board}/>}
       {view==='scratchpad'&&<ScratchpadPanel initialExpression={payload}/>}

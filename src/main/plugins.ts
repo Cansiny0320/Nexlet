@@ -11,6 +11,8 @@ import { inputContext, textInput } from '../shared/launch';
 import type { LaunchInputs, InputSnapshot } from './launch-input';
 import { PluginNetwork } from './plugin-network';
 import { PluginSecrets } from './plugin-secrets';
+import { PluginSdk } from './plugin-sdk';
+import type { Platform } from './platform';
 interface InstallOptions { source:'marketplace'|'local'; developmentDirectory?:string; canReplace?:()=>boolean; }
 
 export class PluginManager {
@@ -18,18 +20,24 @@ export class PluginManager {
   readonly network=new PluginNetwork((url,init)=>net.fetch(url,init));
   readonly secrets:PluginSecrets;
   readonly runtime:PluginRuntime;
+  readonly sdk:PluginSdk;
   updateOnLaunch:((record:PluginRecord,code:string,signal:AbortSignal)=>Promise<PluginBundle|null>)|null=null;
   private root: string;
-  constructor(private store: Store, private changed: (event?: string) => void,private inputs:LaunchInputs) {
+  constructor(private store: Store, private changed: (event?: string) => void,private inputs:LaunchInputs,platform?:Platform) {
     this.root = path.join(store.directory, 'plugins');
     this.secrets=new PluginSecrets(store,safeStorage);
-    this.runtime=new PluginRuntime(inputs,id=>{this.network.close(id);this.secrets.close(id);});
+    this.sdk=new PluginSdk(store,()=>this.records(),platform,this.secrets);
+    this.runtime=new PluginRuntime(inputs,id=>{this.network.close(id);this.secrets.close(id);this.sdk.closeSession(id);},(from,to)=>this.sdk.commands?.move(from,to));
+    this.sdk.configureUi({
+      register:(parent,window)=>{const caller=this.runtime.callers.get(parent);if(!caller)throw new Error('父插件会话已结束');this.runtime.callers.set(window.webContents.id,caller);const id=window.webContents.id;return()=>{this.runtime.callers.delete(id);this.inputs.revoke(id);this.network.close(id);this.secrets.close(id);this.sdk.closeSession(id);};},
+      detach:owner=>this.runtime.detach(owner),exit:plugin=>this.runtime.stop(plugin)
+    },()=>this.changed(),(plugin,code,payload)=>this.launch(plugin,code,payload));
     ipcMain.handle('plugin-api', async (event, method: unknown, args: unknown) => {
       const caller = this.runtime.callers.get(event.sender.id);
       const frame = event.senderFrame;
       if (!caller || frame !== event.sender.mainFrame || !frame?.url.startsWith(`nexlet-plugin://${caller.record.manifest.id}/`)) throw new Error('插件调用来源无效');
       const { record } = caller;
-      if(method==='ready'){this.runtime.ready(event.sender.id);return true;}
+      if(method==='ready'){if(event.sender.id===caller.view.webContents.id)this.runtime.ready(event.sender.id);else{event.sender.send('plugin-lifecycle',{event:'ready',sequence:0});event.sender.send('plugin-lifecycle',{event:'enter',value:inputContext(caller.input,caller.code),sequence:0});}return true;}
       if(method==='lifecycleAck'){this.runtime.acknowledge(event.sender.id,args);return true;}
       if(caller.closing&&(typeof method!=='string'||!['storage.get','storage.set'].includes(method)))throw new Error('插件会话已结束');
       if (!this.records().find(p => p.manifest.id === record.manifest.id)?.enabled) throw new Error('插件已停用');
@@ -46,7 +54,7 @@ export class PluginManager {
         case 'secrets.set':requirePermission('secrets');return this.secrets.set(record.manifest.id,event.sender.id,key(),(args as {value:unknown}).value);
         case 'info': return { name:record.manifest.name, version:record.manifest.version, code:caller.code, payload:caller.payload };
         case 'context':return inputContext(caller.input,caller.code);
-        case 'input.read':return this.inputs.read(event.sender.id,args);
+        case 'input.read':return this.inputs.read(caller.view.webContents.id,args);
         case 'storage.get': { const data = this.store.get<Record<string,unknown>>('plugin-data:' + record.manifest.id, {}); const name=key(); return Object.hasOwn(data,name) ? data[name] : null; }
         case 'storage.set': {
           const name=key(); const data = this.store.get<Record<string,unknown>>('plugin-data:' + record.manifest.id, {});
@@ -62,12 +70,12 @@ export class PluginManager {
           requirePermission('shell.openExternal'); if (typeof args !== 'string' || args.length > 2048) throw new Error('链接无效');
           const url=new URL(args); if (!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new Error('只允许 HTTP / HTTPS 链接'); await shell.openExternal(url.href); return true;
         }
-        default: throw new Error('不支持的插件 API');
+        default: return this.sdk.invoke({record,contents:event.sender,owner:BrowserWindow.fromWebContents(event.sender)||caller.owner,hostOwner:caller.owner,isolated:caller.isolated},method,args);
       }
     });
   }
   records(): PluginRecord[] { return this.store.get<PluginRecord[]>('plugins', []); }
-  commands(): Command[] { return this.records().filter(p=>p.enabled).flatMap(p => p.manifest.features.map(f => ({ id:`plugin:${p.manifest.id}:${f.code}`, name:f.name, subtitle:p.manifest.name, kind:'plugin' as const, keywords:f.keywords, pluginId:p.manifest.id, feature:f.code, color:'#8b80d9',icon:p.icon,matches:f.matches }))); }
+  commands(): Command[] { return this.records().filter(p=>p.enabled).flatMap(p => (this.sdk.commands?.features(p)||p.manifest.features).map(f => ({ id:`plugin:${p.manifest.id}:${f.code}`, name:f.name, subtitle:p.manifest.name, kind:'plugin' as const, keywords:f.keywords, pluginId:p.manifest.id, feature:f.code, color:'#8b80d9',icon:p.icon,matches:f.matches }))); }
   async install(owner: BrowserWindow, development: boolean): Promise<boolean> {
     const picked = await dialog.showOpenDialog(owner, { title:development ? '选择插件开发目录' : '导入 Nexlet 插件包', properties:development ? ['openDirectory'] : ['openFile'], ...(development ? {} : {filters:[{name:'Nexlet 插件',extensions:['zip','nexlet']}]}) });
     if (picked.canceled || !picked.filePaths[0]) return false;
@@ -99,17 +107,18 @@ export class PluginManager {
       // A launch update must never stop a live session or revive a removed/disabled plugin.
       if(!options.canReplace()){if(!development)await this.removeManaged(directory);return false;}
     }else await this.runtime.stop(bundle.manifest.id);
+    this.sdk.stop(bundle.manifest.id);
     const record: PluginRecord={manifest:bundle.manifest,directory,enabled:true,development,installedAt:Date.now(),source:options.source,icon};
     try{this.store.set('plugins',[...this.records().filter(p=>p.manifest.id!==record.manifest.id),record]);}catch(e){if(!development)await this.removeManaged(directory);throw e;}
     if (previous && !previous.development) await this.removeManaged(previous.directory).catch(()=>{});
     this.changed(); return true;
   }
-  async toggle(id: string, enabled: boolean): Promise<void> { const records=this.records(); const record=records.find(p=>p.manifest.id===id); if(!record)throw new Error('插件不存在'); record.enabled=enabled; if(!enabled)await this.runtime.stop(id); this.store.set('plugins',records); this.changed(); }
-  async remove(id: string, deleteData: boolean): Promise<void> { const record=this.records().find(p=>p.manifest.id===id); if(!record)throw new Error('插件不存在'); await this.runtime.stop(id); this.store.set('plugins',this.records().filter(p=>p.manifest.id!==id)); if(!record.development)await this.removeManaged(record.directory); if(deleteData){this.store.set('plugin-data:'+id,{});this.secrets.remove(id);this.store.set('plugin-network:'+id,[]);} this.changed(); }
+  async toggle(id: string, enabled: boolean): Promise<void> { const records=this.records(); const record=records.find(p=>p.manifest.id===id); if(!record)throw new Error('插件不存在'); record.enabled=enabled; if(!enabled){await this.runtime.stop(id);this.sdk.stop(id);} this.store.set('plugins',records); this.changed(); }
+  async remove(id: string, deleteData: boolean): Promise<void> { const record=this.records().find(p=>p.manifest.id===id); if(!record)throw new Error('插件不存在'); await this.runtime.stop(id); this.store.set('plugins',this.records().filter(p=>p.manifest.id!==id)); if(!record.development)await this.removeManaged(record.directory); this.sdk.stop(id); if(deleteData){await this.sdk.clear(id);await rm(path.join(this.store.directory,'plugin-backends',id),{recursive:true,force:true});this.store.set('plugin-data:'+id,{});this.secrets.remove(id);this.store.set('plugin-network:'+id,[]);} this.changed(); }
   async launch(id:string,code:string,payload='',snapshot?:InputSnapshot):Promise<void>{
     const record=this.records().find(p=>p.manifest.id===id&&p.enabled);
     if(!record)throw new Error('插件未安装或已停用');
-    if(!record.manifest.features.some(f=>f.code===code))throw new Error('功能不存在');
+    if(!(this.sdk.commands?.features(record)||record.manifest.features).some(f=>f.code===code))throw new Error('功能不存在');
     await this.runtime.launch(record,code,snapshot||{input:{...textInput(payload),id:randomUUID()},resources:new Map()},async(isCurrent,signal)=>{
       const canReplace=()=>isCurrent()&&!this.runtime.sessions.has(id)&&this.records().some(p=>p.manifest.id===id&&p.directory===record.directory&&p.enabled&&p.source==='marketplace'&&!p.development);
       if(this.updateOnLaunch&&canReplace()){
@@ -118,6 +127,6 @@ export class PluginManager {
       return this.records().find(p=>p.manifest.id===id&&p.enabled)||record;
     });
   }
-  close():Promise<void>{return this.runtime.close();}
+  close():Promise<void>{this.sdk.close();return this.runtime.close();}
   private async removeManaged(directory: string): Promise<void> { const relative=path.relative(path.resolve(this.root),path.resolve(directory)); if(!relative || relative.startsWith('..') || path.isAbsolute(relative))throw new Error('拒绝清理非托管插件目录'); await rm(directory,{recursive:true,force:true}); }
 }

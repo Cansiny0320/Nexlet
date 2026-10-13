@@ -2,6 +2,25 @@
 
 插件由 `plugin.json` 和本地 HTML / CSS / JavaScript 组成。使用 Web 标准编写界面，通过沙箱 preload 提供的 `window.nexlet` 请求宿主能力。内置工具与外部插件使用不同的 IPC 接口。
 
+## 扩展能力
+
+新增独立 Node.js backend、文档数据库、窗口与搜索 UI、文件/进程、屏幕与输入、浏览器自动化、Sharp/FFmpeg、AI/MCP、账号与同步适配。具体方法、权限、运行边界与样例见 [SDK 扩展文档](plugin-sdk-extensions.md)，实测范围见 [验证记录](validation/plugin-sdk-2026-10-13.md)。扩展沿用 API v1，但尚未发布，不代表旧版宿主已经支持。
+
+## TypeScript 开发
+
+插件可以使用 TypeScript 编写，交付前需要编译为 JavaScript。插件仓库提供 [TS 模板](https://github.com/Cansiny0320/Nexlet-plugins/tree/main/templates/typescript) 和 [独立 API 类型包](https://github.com/Cansiny0320/Nexlet-plugins/tree/main/sdk)。在 `Nexlet-plugins` 根目录执行：
+
+```sh
+npm ci
+npm run package:example
+```
+
+导入 `dist/typescript-example.nexlet`，或加载 `.build/templates/typescript` 开发目录。`npm run dev -- templates/typescript` 监听 TS 和静态资源修改；退出插件再打开读取新文件，manifest 或权限改变后需重新导入。`npm run build` 先运行 `tsc --noEmit`，再通过 esbuild 将 `src/main.ts` 打包成 `main.js`，并复制 HTML/CSS 等静态资源。`npm run package` 打包 `.build/plugins`，不会将 TS 源码或开发依赖装进插件包。
+
+本地类型包名为 `@nexlet/plugin-api`，提供 `nexlet`、`window.nexlet` 的全局声明，以及 `PluginApi`、`PluginManifest`、`PluginContext` 等导出类型。目前未发布到 npm；独立工程可以从插件仓库的 `sdk` 目录作为本地开发依赖安装。不要使用本仓库 `src/shared/types.ts` 中的 `HostApi` 作为插件类型，该接口仅面向主程序页面。
+
+类型声明覆盖下文已实现的 Nexlet API；TypeScript 不改变插件的权限、沙箱或运行能力。
+
 ## Manifest
 
 ```json
@@ -96,7 +115,7 @@ feature 可选添加 `matches`，多条规则取「或」，单条文件规则�
 
 ```js
 const context = await nexlet.context();
-// { id, code, type: 'text' | 'files' | 'image', payload, from: 'input' | 'paste' | 'drop' }
+// { id, code, type: 'text' | 'files' | 'image', payload, from: 'input' | 'paste' | 'drop' | 'selection' | 'capture' }
 // text.payload: 完整文本；files.payload: Resource[]；image.payload: Resource
 // Resource: { id, name, size, isDirectory, path?, mime? }
 if (context.type === 'files' && !context.payload[0].isDirectory) {
@@ -105,7 +124,7 @@ if (context.type === 'files' && !context.payload[0].isDirectory) {
 }
 ```
 
-输入由用户粘贴或拖入，仅在选择功能后给选中的插件会话授予只读 token。最多 100 个文件，单文件/图片 20 MB、文件合计 64 MB、图片 3600 万像素；文本最多 50 万字符。目录只提供元信息。宿主检测文件替换和修改，不提供任意路径读取。再次进入、退出、禁用、更新、卸载或崩溃后，旧 token 失效。分离保留原 token。输入卡片本身不写系统剪贴板，只有用户明确选择「收进剪贴板」才写入。
+输入由用户键入、粘贴、拖入，或通过超级面板 / 已开启「带入当前选区」的功能快捷键获取，仅在选择功能后给选中的插件会话授予只读 token。最多 100 个文件，单文件/图片 20 MB、文件合计 64 MB、图片 3600 万像素；文本最多 50 万字符。目录只提供元信息。宿主检测文件替换和修改，不提供任意路径读取。再次进入、退出、禁用、更新、卸载或崩溃后，旧 token 失效。分离保留原 token。输入卡片本身不写系统剪贴板。`from: "selection"` 和宿主截图的 `from: "capture"` 是 SDK v1 的新增来源值，payload 与资源 token 合同不变；面板关闭不撤销已经交给插件的 token。选区获取优先使用系统原生文本读取，复制兜底会短暂写入系统剪贴板并在版本未变化时尝试恢复；选区内容只保留在内存，默认不进入 Nexlet 历史。用户明确选择「收进剪贴板」后才主动收录。
 
 ## 会话生命周期
 

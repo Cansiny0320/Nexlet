@@ -30,7 +30,7 @@ export class PluginRuntime {
   private preparing=new Map<string,AbortController>();
   private suspended=false;
   private overlays=new Set<number>();
-  constructor(private inputs:LaunchInputs,private releaseSession:(id:number)=>void=()=>{}){}
+  constructor(private inputs:LaunchInputs,private releaseSession:(id:number)=>void=()=>{},private reparent:(from:BrowserWindow,to:BrowserWindow)=>void=()=>{}){}
   configure(host:PluginHost){this.host=host;}
   state(owner:BrowserWindow):PluginSessionState|null {
     const current=this.forWindow(owner);
@@ -158,7 +158,7 @@ export class PluginRuntime {
       });
       if(active.closing||owner.isDestroyed()||target.isDestroyed())throw new Error('插件分离已取消');
       active.removeOwnerListeners();owner.contentView.removeChildView(active.view);
-      this.attach(active,target,true);this.host!.changed(owner);
+      this.attach(active,target,true);this.reparent(owner,target);this.host!.changed(owner);
       await this.emit(active,'detach',undefined);if(active.closing)return;
       revealWindow(target);active.view.webContents.focus();
     }catch(error){if(!target.isDestroyed())target.destroy();throw error;}finally{this.detaching.delete(active.record.manifest.id);}
