@@ -3,6 +3,11 @@ import { createHash } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ readdir: vi.fn(), stat: vi.fn(), names: vi.fn() }));
+// This suite simulates macOS, including its path semantics on Windows runners.
+vi.mock('node:path', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:path')>();
+  return { ...actual, default: actual.posix };
+});
 vi.mock('node:fs/promises', () => ({ readdir: mocks.readdir, stat: mocks.stat }));
 vi.mock('electron', () => ({ app: { getPath: () => '/Desktop' }, shell: {} }));
 vi.mock('../src/main/catalog-icons', () => ({ loadCatalogIcon: vi.fn() }));
