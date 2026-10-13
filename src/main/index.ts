@@ -53,6 +53,7 @@ async function bootstrap() {
   const matcher=new ContentMatcher();
   const plugins=new PluginManager(store,notify,inputs);
   const marketplace=new Marketplace(store,plugins);
+  plugins.updateOnLaunch=(record,code,signal)=>marketplace.prepareUpdate(record,code,signal);
   const files=new EverythingSearch(()=>store.settings().fileSearchPaths);
   const startup=new StartupManager(app,process.platform,process.execPath,process.env.PORTABLE_EXECUTABLE_FILE);
   const loginLaunch=startup.wasOpenedAtLogin(process.argv);
@@ -169,7 +170,7 @@ async function bootstrap() {
           } catch(error){revealWindow(window);throw error;}
         }
         if(command.kind==='tool'){await plugins.runtime.exitWindow(window);recordRecent(id);return {view:id.slice(5)};}
-        if(command.kind==='plugin'){await plugins.launch(command.pluginId!,command.feature!,content,snapshot);recordRecent(id);return {opened:true};}
+        if(command.kind==='plugin'){if(args.mode==='open'&&plugins.runtime.focus(command.pluginId!,command.feature!)){recordRecent(id);return {opened:true};}await plugins.launch(command.pluginId!,command.feature!,content,snapshot);recordRecent(id);return {opened:true};}
         if(command.kind==='web'){const entry=current.settings.webShortcuts.find(w=>'web:'+w.id===id);if(!entry)throw new Error('网页不存在');await shell.openExternal(entry.url);}
         else if(id.startsWith('uwp:')){launchWindowsApplication(id.slice(4));}
         else if(command.path){const error=await shell.openPath(command.path);if(error)throw new Error(error);}

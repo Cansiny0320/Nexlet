@@ -92,7 +92,7 @@ macOS 版使用系统 Spotlight 索引，支持中文文件名、多关键词（
 
 ## 插件市场与开发
 
-公开市场由 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) 托管，目录来自版本化 JSON，安装包来自 GitHub Releases。可用插件包括便笺、字数统计和翻译，具体版本以市场列表为准。点击安装后直接安装，不再弹出权限确认；更新保留独立数据，下载失败不会替换旧版本。市场列表有本地缓存，不会自动更新已安装插件。
+公开市场由 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) 托管，目录来自版本化 JSON，安装包来自 GitHub Releases。可用插件包括便笺、字数统计和翻译，具体版本以市场列表为准。点击安装后直接安装，不再弹出权限确认。市场安装的插件重新打开时自动检查并安装兼容新版；检查最多 2 秒，下载最多 10 秒，失败继续使用旧版，保留独立数据和本次输入。正在运行的插件不重启，关闭后下次打开再更新；本地导入和开发目录不自动覆盖。市场页面仍支持手动刷新和更新。
 
 外部插件使用 Nexlet 自有 API，由 HTML、CSS、JavaScript 和 `plugin.json` 组成。支持开发目录与 `.zip` / `.nexlet` 包导入。插件在独立沙箱中运行，默认内嵌主窗口，也可分离为独立窗口；没有 Node.js、任意宿主 IPC 或直接 `fetch` 能力。需要联网的插件必须声明 `network.request` 并通过宿主 API 请求；已安装插件按声明使用该能力，不再逐地址弹窗确认。
 

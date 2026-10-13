@@ -27,6 +27,7 @@ export class PluginRuntime {
   private epochs=new Map<string,number>();
   private detaching=new Set<string>();
   private entryQueue:Promise<unknown>=Promise.resolve();
+  private preparing=new Map<string,AbortController>();
   private suspended=false;
   private overlays=new Set<number>();
   constructor(private inputs:LaunchInputs,private releaseSession:(id:number)=>void=()=>{}){}
@@ -36,13 +37,24 @@ export class PluginRuntime {
     return current?{id:current.record.manifest.id,name:current.record.manifest.name,code:current.code,detached:current.detached,loading:!current.activated}:null;
   }
   private forWindow(owner:BrowserWindow){return [...this.sessions.values()].find(s=>s.owner===owner&&!s.closing);}
-  launch(record:PluginRecord,code:string,snapshot:InputSnapshot):Promise<void>{
+  focus(id:string,code:string):boolean {
+    const active=this.sessions.get(id);
+    if(!active||active.code!==code||!active.activated||active.closing||active.disposed)return false;
+    revealWindow(active.owner);active.view.webContents.focus();return true;
+  }
+  launch(record:PluginRecord,code:string,snapshot:InputSnapshot,prepare?:(isCurrent:()=>boolean,signal:AbortSignal)=>Promise<PluginRecord>):Promise<void>{
     const generation=this.navigation,epoch=this.epochs.get(record.manifest.id)||0;
+    const isCurrent=()=>!!this.host&&generation===this.navigation&&epoch===(this.epochs.get(record.manifest.id)||0);
     const run=async()=>{
-      if(!this.host||generation!==this.navigation||epoch!==(this.epochs.get(record.manifest.id)||0))throw new Error('插件启动已取消');
+      if(!isCurrent())throw new Error('插件启动已取消');
       let current=this.sessions.get(record.manifest.id);
       if(!current){
-        const previous=this.forWindow(this.host.main());
+        if(prepare){
+          const controller=new AbortController();this.preparing.set(record.manifest.id,controller);
+          try{record=await prepare(isCurrent,controller.signal);}finally{this.preparing.delete(record.manifest.id);}
+          if(!isCurrent())throw new Error('插件启动已取消');
+        }
+        const previous=this.forWindow(this.host!.main());
         if(previous)await this.stop(previous.record.manifest.id,false);
         if(generation!==this.navigation)throw new Error('插件启动已取消');
         current=this.create(record,code,snapshot);
@@ -151,9 +163,10 @@ export class PluginRuntime {
       revealWindow(target);active.view.webContents.focus();
     }catch(error){if(!target.isDestroyed())target.destroy();throw error;}finally{this.detaching.delete(active.record.manifest.id);}
   }
-  async exitWindow(owner:BrowserWindow){if(owner===this.host?.main())this.navigation++;const active=this.forWindow(owner);if(active)await this.stop(active.record.manifest.id);}
+  async exitWindow(owner:BrowserWindow){if(owner===this.host?.main()){this.navigation++;for(const controller of this.preparing.values())controller.abort();}const active=this.forWindow(owner);if(active)await this.stop(active.record.manifest.id);}
   async stop(id:string,notify=true):Promise<void>{
     this.epochs.set(id,(this.epochs.get(id)||0)+1);
+    this.preparing.get(id)?.abort();
     const active=this.sessions.get(id);if(!active||active.closing)return;
     active.closing=true;this.sessions.delete(id);
     this.releaseSession(active.view.webContents.id);
@@ -176,5 +189,5 @@ export class PluginRuntime {
     if(active.detached&&!active.owner.isDestroyed())active.owner.destroy();
     else if(notify&&!active.owner.isDestroyed())this.host?.changed(active.owner);
   }
-  async close(){this.navigation++;await Promise.all([...this.sessions.keys()].map(id=>this.stop(id)));}
+  async close(){this.navigation++;for(const controller of this.preparing.values())controller.abort();await Promise.all([...this.sessions.keys()].map(id=>this.stop(id)));}
 }

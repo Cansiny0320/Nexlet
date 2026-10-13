@@ -11,12 +11,14 @@ import { inputContext, textInput } from '../shared/launch';
 import type { LaunchInputs, InputSnapshot } from './launch-input';
 import { PluginNetwork } from './plugin-network';
 import { PluginSecrets } from './plugin-secrets';
+interface InstallOptions { source:'marketplace'|'local'; developmentDirectory?:string; canReplace?:()=>boolean; }
 
 export class PluginManager {
   private installing=false;
   readonly network=new PluginNetwork((url,init)=>net.fetch(url,init));
   readonly secrets:PluginSecrets;
   readonly runtime:PluginRuntime;
+  updateOnLaunch:((record:PluginRecord,code:string,signal:AbortSignal)=>Promise<PluginBundle|null>)|null=null;
   private root: string;
   constructor(private store: Store, private changed: (event?: string) => void,private inputs:LaunchInputs) {
     this.root = path.join(store.directory, 'plugins');
@@ -74,10 +76,14 @@ export class PluginManager {
     return this.installBundle(owner,bundle,{source:'local',developmentDirectory:development?source:undefined});
   }
   async installBundle(owner:BrowserWindow,bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
+    return this.replaceBundle(bundle,options);
+  }
+  private async replaceBundle(bundle:PluginBundle,options:InstallOptions):Promise<boolean>{
     if(this.installing)throw new Error('请等待当前插件安装完成');this.installing=true;
     try{return await this.applyBundle(bundle,options);}finally{this.installing=false;}
   }
-  private async applyBundle(bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
+  private async applyBundle(bundle:PluginBundle,options:InstallOptions):Promise<boolean>{
+    if(options.canReplace&&!options.canReplace())return false;
     const development=!!options.developmentDirectory;
     const previous = this.records().find(p=>p.manifest.id===bundle.manifest.id);
     if(options.source==='marketplace'&&previous?.development)throw new Error('开发目录插件请通过本地方式更新');
@@ -89,7 +95,10 @@ export class PluginManager {
       try { for (const [name,data] of bundle.files) { const file=path.join(directory,name); await mkdir(path.dirname(file),{recursive:true}); await writeFile(file,data,{mode:0o600}); } }
       catch (error) { await this.removeManaged(directory); throw error; }
     }
-    await this.runtime.stop(bundle.manifest.id);
+    if(options.canReplace){
+      // A launch update must never stop a live session or revive a removed/disabled plugin.
+      if(!options.canReplace()){if(!development)await this.removeManaged(directory);return false;}
+    }else await this.runtime.stop(bundle.manifest.id);
     const record: PluginRecord={manifest:bundle.manifest,directory,enabled:true,development,installedAt:Date.now(),source:options.source,icon};
     try{this.store.set('plugins',[...this.records().filter(p=>p.manifest.id!==record.manifest.id),record]);}catch(e){if(!development)await this.removeManaged(directory);throw e;}
     if (previous && !previous.development) await this.removeManaged(previous.directory).catch(()=>{});
@@ -101,7 +110,13 @@ export class PluginManager {
     const record=this.records().find(p=>p.manifest.id===id&&p.enabled);
     if(!record)throw new Error('插件未安装或已停用');
     if(!record.manifest.features.some(f=>f.code===code))throw new Error('功能不存在');
-    await this.runtime.launch(record,code,snapshot||{input:{...textInput(payload),id:randomUUID()},resources:new Map()});
+    await this.runtime.launch(record,code,snapshot||{input:{...textInput(payload),id:randomUUID()},resources:new Map()},async(isCurrent,signal)=>{
+      const canReplace=()=>isCurrent()&&!this.runtime.sessions.has(id)&&this.records().some(p=>p.manifest.id===id&&p.directory===record.directory&&p.enabled&&p.source==='marketplace'&&!p.development);
+      if(this.updateOnLaunch&&canReplace()){
+        try{const bundle=await this.updateOnLaunch(record,code,signal);if(bundle&&canReplace())await this.replaceBundle(bundle,{source:'marketplace',canReplace});}catch{/* Keep the installed version if an update cannot be applied. */}
+      }
+      return this.records().find(p=>p.manifest.id===id&&p.enabled)||record;
+    });
   }
   close():Promise<void>{return this.runtime.close();}
   private async removeManaged(directory: string): Promise<void> { const relative=path.relative(path.resolve(this.root),path.resolve(directory)); if(!relative || relative.startsWith('..') || path.isAbsolute(relative))throw new Error('拒绝清理非托管插件目录'); await rm(directory,{recursive:true,force:true}); }
