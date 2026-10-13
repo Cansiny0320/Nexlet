@@ -2,6 +2,30 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
+
+// Finder's display name includes the user's current localization. Keep paths
+// separate from code so quotes/non-ASCII names remain ordinary input data.
+export async function loadMacCatalogNames(files: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = [...new Set(files)];
+  const code = `ObjC.import('Foundation');
+function run(argv) {
+  return JSON.stringify(JSON.parse(argv[0]).map(function(file) {
+    try { return [file, ObjC.unwrap($.NSFileManager.defaultManager.displayNameAtPath(file))]; }
+    catch (_) { return [file, '']; }
+  }));
+}`;
+  for (let offset = 0; offset < unique.length; offset += 128) {
+    try {
+      const { stdout } = await exec('/usr/bin/osascript', ['-l', 'JavaScript', '-e', code, JSON.stringify(unique.slice(offset, offset + 128))], { timeout: 10000, maxBuffer: 1024 * 1024 });
+      for (const [file, value] of JSON.parse(stdout) as [string, string][]) {
+        const name = value.trim().replace(/\.app$/i, '');
+        if (name) names.set(file, name);
+      }
+    } catch { /* Preserve the filename for unavailable metadata/batches. */ }
+  }
+  return names;
+}
 // Electron may return the generic .app type icon on macOS. Ask NSWorkspace
 // for each bundle's icon, rendering a small PNG before crossing the bridge.
 const script = `ObjC.import('AppKit');

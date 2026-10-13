@@ -57,8 +57,9 @@ test('macOS 全部工具显示真实应用图标', async () => {
     await expect(page.locator('.launcher-input')).toBeVisible();
     await expect.poll(() => app.evaluate(() => (globalThis as any).__nexlet.catalog.loading)).toBe(false);
     await page.getByRole('button', { name: '全部 >', exact: true }).click();
-    const calculator = page.getByRole('button', { name: 'Calculator', exact: true }).locator('img');
-    const calendar = page.getByRole('button', { name: 'Calendar', exact: true }).locator('img');
+    const names = await app.evaluate(() => ['Calculator', 'Calendar'].map(name => (globalThis as any).__nexlet.catalog.items.find((c: any) => c.path === `/System/Applications/${name}.app`).name));
+    const calculator = page.getByRole('button', { name: names[0], exact: true }).locator('img');
+    const calendar = page.getByRole('button', { name: names[1], exact: true }).locator('img');
     await expect(calculator).toHaveAttribute('src', /^data:image\/png;base64,/);
     await expect(calendar).toHaveAttribute('src', /^data:image\/png;base64,/);
     expect(await calculator.getAttribute('src')).not.toBe(await calendar.getAttribute('src'));

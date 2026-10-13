@@ -6,7 +6,7 @@ export interface CalcLine { id: string; expression: string; note: string; }
 export interface Scratchpad { id: string; name: string; createdAt: number; updatedAt: number; locked: boolean; color: string; lines: CalcLine[]; }
 export interface WebShortcut { id: string; name: string; url: string; }
 export interface Settings { shortcut: string; theme: Theme; hideOnBlur: boolean; clipboardEnabled: boolean; maxClipboardItems: number; retentionDays: number; searchPaths: string[]; fileSearchPaths: string[]; webShortcuts: WebShortcut[]; }
-export interface Command { id: string; name: string; subtitle: string; kind: 'tool' | 'app' | 'shortcut' | 'plugin' | 'web' | 'match'; keywords: string[]; icon?: string; color?: string; path?: string; pluginId?: string; feature?: string; payload?: string; inputId?:string; matches?:ContentMatch[]; }
+export interface Command { id: string; name: string; subtitle: string; kind: 'tool' | 'app' | 'shortcut' | 'plugin' | 'web' | 'match' | 'system'; keywords: string[]; icon?: string; color?: string; path?: string; pluginId?: string; feature?: string; payload?: string; inputId?:string; matches?:ContentMatch[]; }
 export type PluginPermission = 'clipboard.read' | 'clipboard.write' | 'shell.openExternal' | 'network.request' | 'secrets';
 export interface PluginManifest { id: string; name: string; version: string; description: string; apiVersion: 1; main: string; icon?: string; permissions: PluginPermission[]; features: { code: string; name: string; keywords: string[]; matches?:ContentMatch[] }[]; }
 export interface PluginRecord { manifest: PluginManifest; directory: string; enabled: boolean; development: boolean; installedAt: number; source?: 'marketplace' | 'local'; icon?: string; }

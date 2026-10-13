@@ -5,10 +5,15 @@ const cache = new Map<string, string[]>();
 function terms(command: Command): string[] {
   const key = command.name + '\0' + command.keywords.join('\0');
   const found = cache.get(key); if (found) return found;
-  const name = command.name.toLowerCase().replace(/\s/g, '');
-  const full = pinyin(command.name, { toneType: 'none', type: 'array' }).join('').toLowerCase();
-  const initials = pinyin(command.name, { pattern: 'first', toneType: 'none', type: 'array' }).join('').toLowerCase();
-  const result = [name, full, initials, ...command.keywords.map(v => v.toLowerCase())];
+  const result = [...new Set([command.name, ...command.keywords].flatMap(value => {
+    const normalized = value.toLowerCase();
+    const variants = [normalized, normalized.replace(/\s/g, '')];
+    if (/\p{Script=Han}/u.test(value)) {
+      variants.push(pinyin(value, { toneType: 'none', type: 'array' }).join('').toLowerCase().replace(/\s/g, ''));
+      variants.push(pinyin(value, { pattern: 'first', type: 'array' }).join('').toLowerCase().replace(/\s/g, ''));
+    }
+    return variants;
+  }))];
   if (cache.size > 10_000) cache.clear();
   cache.set(key, result); return result;
 }
@@ -19,7 +24,7 @@ export function searchCommands(commands: Command[], query: string, recent: strin
     const variants = terms(command);
     let score = 0;
     for (const word of words) {
-      const current = Math.max(...variants.map((value, i) => value === word ? 1000 - i * 40 : value.startsWith(word) ? 800 - i * 40 : value.includes(word) ? 400 - i * 20 : 0));
+      const current = Math.max(...variants.map((value, i) => value === word ? 1000 - Math.min(i, 8) * 20 : value.startsWith(word) ? 800 - Math.min(i, 8) * 20 : value.includes(word) ? 400 - Math.min(i, 8) * 10 : 0));
       if (current <= 0) return { command, score: 0 };
       score += current;
     }

@@ -1,11 +1,11 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { app, shell } from 'electron';
 import type { Command } from '../shared/types';
 import { loadCatalogIcon } from './catalog-icons';
-import { loadMacCatalogIcons } from './catalog-mac';
+import { loadMacCatalogIcons, loadMacCatalogNames } from './catalog-mac';
 import { readWindowsApplications } from './catalog-windows';
 
 function shortcutIdentity(file: string): string | undefined {
@@ -42,7 +42,7 @@ export class Catalog {
         path.join(process.env.APPDATA || homedir(), 'Microsoft/Windows/Start Menu/Programs'),
         path.join(process.env.PROGRAMDATA || 'C:/ProgramData', 'Microsoft/Windows/Start Menu/Programs'),
         app.getPath('desktop'), path.join(process.env.PUBLIC || 'C:/Users/Public', 'Desktop')
-      ] : process.platform === 'darwin' ? ['/Applications', '/System/Applications', path.join(homedir(), 'Applications'), app.getPath('desktop')] : ['/usr/share/applications', path.join(homedir(), '.local/share/applications')];
+      ] : process.platform === 'darwin' ? ['/Applications', '/System/Applications', '/System/Library/CoreServices/Applications', path.join(homedir(), 'Applications'), app.getPath('desktop')] : ['/usr/share/applications', path.join(homedir(), '.local/share/applications')];
       const found = new Map<string, Command>();
       const identities = new Map<string, string>();
       const aliases = new Map<string, string>();
@@ -71,6 +71,20 @@ export class Catalog {
         }
       };
       for (const root of new Set([...roots, ...extra])) await visit(root, 0);
+      if (process.platform === 'darwin') {
+        // CoreServices also contains background agents: index only these launchable bundles.
+        for (const name of ['Finder', 'Paired Devices', 'Ticket Viewer']) {
+          const full = `/System/Library/CoreServices/${name}.app`;
+          if (!(await stat(full).catch(() => null))?.isDirectory()) continue;
+          const id = 'app:' + createHash('sha256').update(full).digest('hex').slice(0, 20);
+          found.set(id, { id, name, subtitle: path.dirname(full), kind: 'app', keywords: [], path: full });
+        }
+        const names = await loadMacCatalogNames([...found.values()].map(item => item.path!));
+        for (const item of found.values()) {
+          const localized = names.get(item.path!);
+          if (localized && localized !== item.name) { item.keywords.push(item.name); item.name = localized; }
+        }
+      }
       // UWP applications do not necessarily have .lnk files. Read their registered AppUserModelIDs.
       if (process.platform === 'win32') {
         try {

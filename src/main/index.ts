@@ -9,6 +9,9 @@ import path from 'node:path';
 import { isHostDocument } from './host-origin';
 import { Store } from './store';
 import { Catalog } from './catalog';
+import { release } from 'node:os';
+import { SystemActions } from './system-actions';
+import { createSystemExecutor } from './system-executor';
 import { Platform } from './platform';
 import { ClipboardService } from './clipboard';
 import { PluginManager } from './plugins';
@@ -43,6 +46,9 @@ async function bootstrap() {
   const platform=new Platform(()=>main?.getNativeWindowHandle());
   const clips=new ClipboardService(store,platform,()=>notify('clips'));
   const catalog=new Catalog(()=>notify());
+  const systemExecutor=createSystemExecutor();
+  if(testMode)systemExecutor.execute=async()=>{throw Error('测试模式禁止真实系统操作');};
+  const systemActions=new SystemActions(process.platform,release(),systemExecutor);
   const inputs=new LaunchInputs(bytes=>{const image=nativeImage.createFromBuffer(bytes);return image.isEmpty()?{width:0,height:0}:image.getSize();});
   const matcher=new ContentMatcher();
   const plugins=new PluginManager(store,notify,inputs);
@@ -93,7 +99,7 @@ async function bootstrap() {
   }
   async function state():Promise<AppState> {
     const settings=store.settings();
-    const commands:Command[]=[...BUILTIN_COMMANDS,...catalog.items,...plugins.commands(),...settings.webShortcuts.map(w=>({id:'web:'+w.id,name:w.name,subtitle:w.url,kind:'web' as const,keywords:[],color:'#3188ef'}))];
+    const commands:Command[]=[...BUILTIN_COMMANDS,...catalog.items,...systemActions.commands(),...plugins.commands(),...settings.webShortcuts.map(w=>({id:'web:'+w.id,name:w.name,subtitle:w.url,kind:'web' as const,keywords:[],color:'#3188ef'}))];
     const pinned=catalog.resolveIds(store.get('pinned',['tool:plugins','tool:clipboard','tool:scratchpad','tool:web','tool:json','tool:timestamp','tool:filesearch']));
     const recent=catalog.resolveIds(store.get<string[]>('recent',[]));
     const visibleIds=new Set([...pinned,...recent.slice(0,18)]);
@@ -152,6 +158,16 @@ async function bootstrap() {
           recordRecent('tool:'+view);return {view,payload:content};
         }
         const command=current.commands.find(c=>c.id===id);if(!command)throw new Error('工具或快捷方式已不存在，请刷新索引');
+        if(command.kind==='system'){
+          try {
+            const opened=await systemActions.launch(id,c=>withDialog(async()=>{
+              const {response}=await dialog.showMessageBox(window,{type:'question',buttons:['取消',c.name],defaultId:0,cancelId:0,noLink:true,title:'系统操作',message:`确定要执行「${c.name}」吗？`,detail:c.id==='system:action:sleep'?'电脑将进入睡眠状态。':'请先保存正在编辑的内容。'});
+              return response===1;
+            }));
+            if(opened){recordRecent(id);window.hide();}
+            return {opened};
+          } catch(error){revealWindow(window);throw error;}
+        }
         if(command.kind==='tool'){await plugins.runtime.exitWindow(window);recordRecent(id);return {view:id.slice(5)};}
         if(command.kind==='plugin'){await plugins.launch(command.pluginId!,command.feature!,content,snapshot);recordRecent(id);return {opened:true};}
         if(command.kind==='web'){const entry=current.settings.webShortcuts.find(w=>'web:'+w.id===id);if(!entry)throw new Error('网页不存在');await shell.openExternal(entry.url);}
@@ -255,7 +271,7 @@ async function bootstrap() {
   let cleanedUp=false;
   app.on('before-quit',event=>{quitting=true;clips.stop();globalShortcut.unregisterAll();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();app.quit();});}});
   app.once('will-quit',()=>store.close());
-  if(testMode)(globalThis as any).__nexlet={updates,autoUpdater:updateTransport,store,clips,platform,catalog,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
+  if(testMode)(globalThis as any).__nexlet={updates,autoUpdater:updateTransport,store,clips,platform,catalog,systemActions,systemExecutor,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
 }
 
 function createIcon(){const size=32,data=Buffer.alloc(size*size*4);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const offset=(y*size+x)*4;const letter=(x>=8&&x<=11&&y>=7&&y<=24)||(x>=21&&x<=24&&y>=7&&y<=24)||(y>=7&&y<=24&&Math.abs(x-(9+(y-7)*14/17))<=2);data[offset]=letter?255:245;data[offset+1]=letter?255:94;data[offset+2]=letter?255:101;data[offset+3]=255;}return nativeImage.createFromBitmap(data,{width:size,height:size});}

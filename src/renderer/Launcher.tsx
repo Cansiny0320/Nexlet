@@ -43,8 +43,8 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   },[iconRequest,state.catalogLoading,toast]);
   async function launch(command:Command){
     try{
-      const result=await api<{view?:string;payload?:string}>('launch',{id:command.id,inputId:command.inputId,payload:command.payload});
-      if(result.view)navigate(result.view,result.payload);else setQuery('');
+      const result=await api<{view?:string;payload?:string;opened?:boolean}>('launch',{id:command.id,inputId:command.inputId,payload:command.payload});
+      if(result.view)navigate(result.view,result.payload);else if(result.opened!==false)setQuery('');
     }catch(e){toast(errorText(e),true);}
   }
   useEffect(()=>{const handle=(e:KeyboardEvent)=>{
