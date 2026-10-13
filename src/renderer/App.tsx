@@ -12,6 +12,7 @@ import { LaunchInputChip } from './LaunchInputChip';
 import { usePluginSearch, PluginSearchResults } from './PluginSearch';
 import { saveBeforeUpdate } from './update-save';
 import { ToolBoundary } from './ToolBoundary';
+import { useTitlebarDrag } from './use-titlebar-drag';
 
 const ClipboardPanel = lazy(() => import('./Clipboard').then(module => ({ default: module.ClipboardPanel })));
 const ScratchpadPanel = lazy(() => import('./Scratchpad').then(module => ({ default: module.ScratchpadPanel })));
@@ -41,6 +42,7 @@ export function App(){
   const [dialogSpec,setDialogSpec]=useState<DialogSpec|null>(null);
   const resolver=useRef<((r:string|boolean|null)=>void)|null>(null),input=useRef<HTMLInputElement>(null),toastTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const toast=useCallback((text:string,error=false)=>{setNotification({text,error});if(toastTimer.current)clearTimeout(toastTimer.current);toastTimer.current=setTimeout(()=>setNotification(null),error?6500:2500);},[]);
+  const titlebarDrag=useTitlebarDrag(view==='launcher',toast);
   const refresh=useCallback(async()=>{try{setState(await api<AppState>('state'));}catch(e){setLoadError(errorText(e));}},[]);
   const navigate=useCallback((next:string,initial='')=>{captureGeneration.current++;setCapturing(false);if(next!=='plugin')void api('window',{action:'exitPlugin'});startNavigation(()=>{setLaunchInput(null);setSession(createToolSession());setView(next);setPayload(initial);setQuery(next==='clipboard'?initial:'');});void api('clearInput');},[startNavigation]);
   const clearLaunchInput=useCallback(()=>{captureGeneration.current++;setCapturing(false);setLaunchInput(null);setQuery('');setInputSource('input');void api('clearInput');input.current?.focus();},[]);
@@ -75,7 +77,7 @@ export function App(){
   if(!state||restoring)return <div className="loading-screen"><img className="brand-mark" src={brandIcon} width={48} height={48} alt="" draggable={false}/><p>{loadError||'正在打开 Nexlet…'}</p>{loadError&&<button className="button" onClick={()=>void refresh()}>重试</button>}</div>;
   const command=view==='plugin'?state.commands.find(c=>c.pluginId===pluginInfo?.id&&c.feature===pluginInfo?.code):BUILTIN_COMMANDS.find(c=>c.id==='tool:'+view);
   return <ToolSessionContext.Provider value={session}><AppContext.Provider value={{state,refresh,toast,dialog,navigate,detach:detachTool,canDetach:!detached&&readySession===session}}><div inert={state.update.phase==='installing'} className={`app-shell view-${view} ${detached?'detached':''}`} onDragOver={e=>{if(view==='launcher'&&e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>{if(view==='launcher'){e.preventDefault();void acceptFiles(Array.from(e.dataTransfer.files),'drop');}}} onPaste={e=>{if(view!=='launcher')return;if(e.clipboardData.files.length){e.preventDefault();void acceptFiles(Array.from(e.clipboardData.files),'paste');}else if(e.target===input.current){e.preventDefault();const next=query.slice(0,input.current?.selectionStart??0)+e.clipboardData.getData('text/plain')+query.slice(input.current?.selectionEnd??query.length);if(next.length>INPUT_TEXT_LIMIT){toast('输入最多 50 万字符',true);return;}captureGeneration.current++;setCapturing(false);setInputSource('paste');setQuery(next);}}}>
-    <header className="titlebar">
+    <header className="titlebar" {...titlebarDrag}>
       <div className="window-drag-handle" aria-label="拖动窗口" title="拖动窗口"><GripVertical size={17}/></div>
       {view==='launcher'?<>{launchInput&&<LaunchInputChip key={launchInput.id} input={launchInput} preview={launchInput.preview} onClear={clearLaunchInput}/>}<input ref={input} className="launcher-input" aria-label="搜索功能、应用或快捷方式" placeholder={launchInput?'筛选处理功能…':'搜索功能 / 粘贴文件、图片'} maxLength={INPUT_TEXT_LIMIT} value={query} onChange={e=>{captureGeneration.current++;setCapturing(false);setInputSource('input');setQuery(e.target.value);}} autoComplete="off" spellCheck={false}/></>:
        view==='clipboard'?<><ToolIcon command={command!}/><input ref={input} className="clipboard-search" aria-label="搜索剪贴板" placeholder="搜索…" value={query} onChange={e=>setQuery(e.target.value)}/>{board&&<span className="subtle">悬浮中转</span>}</>:

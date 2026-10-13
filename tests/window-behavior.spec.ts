@@ -17,13 +17,63 @@ test('工具标题和独立拖动区可拖动，交互控件仍可点击', async
     const page = await app.firstWindow();
     await expect(page.getByRole('textbox', { name: '搜索功能、应用或快捷方式' })).toBeVisible();
     await expect(page.getByLabel('拖动窗口')).toBeVisible();
-    await expect(page.getByLabel('拖动窗口')).toHaveCSS('-webkit-app-region', 'drag');
+    await expect(page.getByLabel('拖动窗口')).toHaveCSS('-webkit-app-region', 'no-drag');
     await expect(page.locator('.launcher-input')).toHaveCSS('-webkit-app-region', 'no-drag');
     await app.evaluate(() => (globalThis as any).__nexlet.main.webContents.send('host-change', 'navigate:json'));
     await expect(page.locator('.plugin-pill')).toHaveCSS('-webkit-app-region', 'drag');
     await expect(page.getByRole('button', { name: '关闭当前工具' })).toHaveCSS('-webkit-app-region', 'no-drag');
     await page.getByRole('button', { name: '关闭当前工具' }).click();
     await expect(page.locator('.launcher-input')).toBeVisible();
+  } finally { await app.close(); }
+});
+
+test('首页整条搜索栏可拖动，点击和搜索输入保持可用', async () => {
+  await mkdir('.tmp', { recursive: true });
+  const data = await mkdtemp(path.resolve('.tmp/window-titlebar-'));
+  const app = await electron.launch({ args: [process.cwd()], env: environment(data) });
+  try {
+    const page = await app.firstWindow();
+    const search = page.locator('.launcher-input');
+    await expect(search).toBeVisible();
+    const position = () => app.evaluate(() => (globalThis as any).__nexlet.main.getPosition());
+    // Use screen coordinates so moving the window cannot feed back into the drag delta.
+    const gesture = async (selector: string, dx: number, dy: number) => {
+      await page.locator(selector).evaluate((element, { dx, dy }) => {
+        const emit = (type: string, x: number, y: number, buttons: number) => element.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons, screenX: x, screenY: y }));
+        emit('pointerdown', 400, 200, 1);
+        emit('pointermove', 400 + dx, 200 + dy, 1);
+        emit('pointerup', 400 + dx, 200 + dy, 0);
+        element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      }, { dx, dy });
+    };
+    await search.click();
+    await expect(search).toBeFocused();
+    await search.fill('拖动后保留搜索');
+    for (const selector of ['.window-drag-handle', '.launcher-input', '.titlebar-spacer', '.brand-button img', '.titlebar']) {
+      const [x, y] = await position();
+      await gesture(selector, 24, 12);
+      await expect.poll(position).toEqual([x + 24, y + 12]);
+      await expect(search).toHaveValue('拖动后保留搜索');
+    }
+    const before = await position();
+    await gesture('.launcher-input', 2, 1);
+    expect(await position()).toEqual(before);
+    for (const selector of ['.launcher-input', '.brand-button']) {
+      const target = page.locator(selector);
+      const bounds = (await target.boundingBox())!;
+      const [x, y] = await position();
+      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(bounds.x + bounds.width / 2 + 30, bounds.y + bounds.height / 2 + 15);
+      await page.mouse.up();
+      await expect.poll(position).toEqual([x + 30, y + 15]);
+      await expect(search).toHaveValue('拖动后保留搜索');
+    }
+    await search.fill('');
+    await search.pressSequentially('json');
+    await expect(search).toHaveValue('json');
+    await page.getByRole('button', { name: '打开设置' }).click();
+    await expect(page.locator('.app-shell')).toHaveClass(/view-settings/);
   } finally { await app.close(); }
 });
 

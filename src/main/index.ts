@@ -36,6 +36,7 @@ import { Marketplace } from './marketplace';
 import { EverythingSearch } from './everything';
 import { StartupManager } from './startup';
 import { revealWindow, focusOnRestore } from './window-visibility';
+import { nativeWindowDrag } from './window-drag';
 import { BUILTIN_COMMANDS, HOST_ACTIONS, type AppState, type Settings, type Command, type Scratchpad } from '../shared/types';
 import { searchCommands } from '../shared/search';
 import { calculate } from '../shared/calculator';
@@ -59,6 +60,7 @@ async function bootstrap() {
   let panel:SuperPanelController, panelTrigger:PanelTrigger;
   let quitting=false, shortcutError:string|null=null, tray:Tray|null=null, modalCount=0;
   const hosts=new Map<number,BrowserWindow>(), views=new Map<number,string>(), boards=new Map<number,string[]>();
+  const nativeDrags=new WeakMap<BrowserWindow,()=>boolean>();
   const html=path.join(__dirname,'../renderer/index.html');
   const notify=(event='state')=>{for(const window of hosts.values())if(!window.isDestroyed())window.webContents.send('host-change',event);if(event==='state')panel?.refresh();};
   const platform=new Platform(()=>main?.getNativeWindowHandle());
@@ -133,6 +135,7 @@ async function bootstrap() {
   function createWindow(view='launcher', detached=false, ids:string[]=[], initiallyHidden=false, transfer='') {
     const window=new BrowserWindow({width:800,height:view==='launcher'?310:600,minWidth:640,minHeight:260,show:false,frame:false,roundedCorners:true,resizable:true,backgroundColor:'#f4f4f4',title:detached?`Nexlet · ${view==='clipboard'?'剪贴板':view==='scratchpad'?'计算稿纸':'工具'}`:'Nexlet',icon:appIcon,autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'../preload/host.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,spellcheck:false}});
     hosts.set(window.webContents.id,window); views.set(window.id,view);
+    nativeDrags.set(window,nativeWindowDrag(window));
     if(ids.length)boards.set(window.webContents.id,ids);
     window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
     window.webContents.on('will-navigate',event=>event.preventDefault());
@@ -326,6 +329,15 @@ async function bootstrap() {
         else if(args.action==='minimize')window.minimize();
         else if(args.action==='maximize'){window.isMaximized()?window.unmaximize():window.maximize();}
         else if(args.action==='pin'){window.setAlwaysOnTop(!window.isAlwaysOnTop());return window.isAlwaysOnTop();}
+        else if(args.action==='dragStart')return views.get(window.id)==='launcher'&&!window.isMaximized()?window.getPosition():null;
+        else if(args.action==='dragMove'){
+          if(typeof args.x!=='number'||typeof args.y!=='number'||!Number.isFinite(args.x)||!Number.isFinite(args.y))throw new Error('窗口位置无效');
+          if(views.get(window.id)==='launcher'&&!window.isMaximized()){
+            if(nativeDrags.get(window)?.())return true;
+            window.setPosition(Math.round(args.x),Math.round(args.y));
+          }
+          return false;
+        }
         else if(args.action==='view'){
           const view=text(args.view,50);if(!['launcher','plugin','clipboard','scratchpad','plugins','settings','web','json','timestamp','encoding','uuid','filesearch'].includes(view))throw new Error('视图无效');
           views.set(window.id,view);
