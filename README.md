@@ -4,7 +4,7 @@
 <p align="center">
   <a href="https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml"><img src="https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml/badge.svg" alt="Build and Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-6875e9" alt="Windows and macOS">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6875e9" alt="Windows, macOS and Linux">
 </p>
 <p align="center">
   <a href="https://github.com/Cansiny0320/Nexlet/releases">下载与发行记录</a> ·
@@ -48,9 +48,11 @@ Nexlet 是一个开源桌面工具箱，提供应用与快捷方式搜索、剪�
 | Windows x64 | 安装版和单文件便携 `.exe` | 本机集成测试、真实外部回贴、便携包启动检查 |
 | macOS Apple Silicon | arm64 `.dmg` | 原生 CI 构建与打包后启动检查 |
 | macOS Intel | x64 `.dmg` | 原生 CI 构建与打包后启动检查 |
-| Linux | 暂无发行包 | 基础界面；文件剪贴板和自动回贴尚未实现 |
+| Linux x64 / arm64 | AppImage 和 `.deb` | 新增本地构建与 X11 smoke；真实 GNOME/KDE Wayland 待验收，见 [Linux 说明](docs/linux.md) |
 
 Windows 可使用安装版，或直接运行便携 EXE。首次解压会稍慢，关闭主窗口后程序保留在托盘，右键托盘可退出。Windows 包未做数字签名。macOS 正式包使用固定签名身份以支持后续更新，尚未完成 Developer ID 签名和 Apple 公证。macOS arm64 已有本机回贴与同证书升级保留辅助功能授权的验证记录；这不代表所有 Mac 环境均已验收，详见 [验证记录](docs/validation.md#macos-本机固定签名验证2026-10-12)。
+
+Linux 安装、依赖和桌面环境限制见 [Linux 使用说明](docs/linux.md)。本次新增 Linux 支持尚未发布。
 
 默认使用 `Alt+Space` 唤起（macOS 为 `Option+Space`）。点击启动器右上角 Nexlet 图标打开设置；若快捷键被占用，可在「全局唤起」中更换，或使用推荐的共存快捷键 `Ctrl+Alt+Space`（macOS 为 `Control+Option+Space`）；Nexlet 会提示冲突，不会修改其他程序的配置。独立工具窗口支持置顶，主启动器不显示置顶按钮。
 
@@ -64,7 +66,7 @@ Windows 可使用安装版，或直接运行便携 EXE。首次解压会稍慢�
 
 默认开启自动检查更新：启动 30 秒后检查 GitHub 上已公开的正式 Release，此后每 6 小时检查一次。发现新版本后，首页显示「有新版本」，点击进入设置查看说明并选择下载；已有待处理更新时保留该版本，不重复检查。网络失败不会弹窗打断使用，下个周期自动重试。可在设置中关闭「自动检查更新」，关闭后仍可手动「检查更新」。
 
-下载和重启安装由用户选择；不会自动下载、降级或安装预发布版本。Mac 和 Windows 安装版支持直接更新，Windows 便携版提供新版 EXE 下载入口，下载后手动替换。首次使用需手动安装带此功能的版本。
+下载和重启安装由用户选择；不会自动下载、降级或安装预发布版本。Mac 和 Windows 安装版支持直接更新，Windows 便携版提供新版 EXE 下载入口，下载后手动替换。Linux AppImage 支持应用内更新；`.deb` 提供相同架构的新包下载入口，由用户手动安装。首次使用需手动安装带此功能的版本。
 
 安装前会等待所有稿纸窗口保存，保存失败时中止安装。已保存的剪贴板、稿纸、设置和插件数据会保留；JSON 等临时输入请在重启前复制保留。开发模式不检查更新。
 
@@ -75,6 +77,8 @@ Windows 版随包提供官方稳定版 Everything 便携引擎。打开「文件
 首次扫描可能需要几分钟或更久，界面会显示建立索引状态。这种无需安装服务的文件夹索引，比 Everything 原生 NTFS 索引的首次扫描慢。Nexlet 不安装 Windows 服务、不添加系统启动项，也不控制用户另外安装的 Everything。退出 Nexlet 时一并关闭自己的索引进程。
 
 macOS 版使用系统 Spotlight 索引，支持中文文件名、多关键词（同时匹配）、双引号短语、`*.pdf` 通配符和 `ext:pdf` 扩展名筛选，最多展示 200 条结果。在设置中可添加文件搜索目录；这些目录只限制查询，不会改变系统索引。未索引、尚未更新或被 Spotlight 排除的文件可能无法找到。macOS 不支持完整 Everything 语法和全文检索。两端均支持打开文件、定位所在文件夹和复制路径。双击文件夹可在 Nexlet 内浏览，支持面包屑导航、返回上一级和按名称筛选；选中条目后，右侧展示完整路径、类型、大小及创建和修改时间。
+
+Linux 使用指定目录内的即时文件名搜索，支持多关键词、双引号短语、`*.pdf` 和 `ext:pdf`，最多返回 200 条。先在设置中添加目录；不扫描全盘，跳过隐藏项和符号链接。修改查询或关闭窗口会取消旧搜索，达到时间或遍历上限时会提示缩小范围。
 
 ### 几个实用快捷操作
 
@@ -106,6 +110,7 @@ macOS 版使用系统 Spotlight 索引，支持中文文件名、多关键词（
 | --- | --- |
 | Windows | `%APPDATA%/Nexlet` |
 | macOS | `~/Library/Application Support/Nexlet` |
+| Linux | `${XDG_CONFIG_HOME:-~/.config}/Nexlet` |
 
 设置中的「打开数据目录」可直接定位。备份前退出 Nexlet，再复制整个目录。普通剪贴板、稿纸和插件存储没有额外加密。插件通过 `secrets` API 保存的密钥使用系统 `safeStorage` 加密；系统加密不可用时仅在当前插件会话中保留。剪贴板默认保留 500 条非收藏记录、30 天，收藏不会自动清理。文件历史只保存路径，不复制原文件。
 
@@ -122,6 +127,7 @@ npm start
 npm run typecheck       # 类型检查
 npm test                # 逻辑、数据和边界测试
 npm run test:e2e         # Windows 桌面集成测试，会构建应用
+npm run package:linux   # Linux x64 + arm64 AppImage / deb（在 Linux 上运行）
 npm run package:win     # Windows x64 安装包和便携包
 npm run package:mac     # 固定签名的通用 DMG + 更新 ZIP
 npm run package:mac:local # 固定签名的本机架构 DMG + 更新 ZIP
@@ -150,9 +156,9 @@ npm run package:mac:local -- --version 0.2.2-local.1 --arch arm64
 
 ## CI 与发版
 
-[Build and Release](.github/workflows/release.yml) 覆盖 Windows x64、macOS Intel 和 Apple Silicon：类型检查、单元测试、原生打包、实际启动；Windows 额外运行桌面集成与便携 EXE 验证。普通提交和手动运行上传保留 14 天的 artifacts。
+[Build and Release](.github/workflows/release.yml) 配置覆盖 Windows x64、macOS Intel / Apple Silicon、Linux x64 / arm64：类型检查、单元测试、原生打包、实际启动；Windows 额外运行桌面集成与便携 EXE 验证；Linux 使用 Xvfb/Openbox 验证打包启动、XDG 应用启动、文件剪贴板、自启动和跨进程回贴。新增 Linux 任务的远端运行状态需在推送后确认。普通提交和手动运行上传保留 14 天的 artifacts。
 
-发版时更新 `package.json` 和 `package-lock.json` 的版本，提交后推送匹配的 `v*` 标签。CI 验证标签一致性，生成 Windows 安装版和便携版、两种 Mac 架构的 DMG/ZIP、blockmap、更新清单、示例插件与 `SHA256SUMS.txt`，创建 **Release 草稿**，审核后手动公开发布。重跑可更新草稿，不覆盖已发布版本。双架构 Mac 清单会合并，并校验版本、文件大小和 SHA-512。
+发版时更新 `package.json` 和 `package-lock.json` 的版本，提交后推送匹配的 `v*` 标签。CI 验证标签一致性，生成 Windows 安装版和便携版、两种 Mac 架构的 DMG/ZIP、blockmap、两种 Linux 架构的 AppImage/deb、更新清单、示例插件与 `SHA256SUMS.txt`，创建 **Release 草稿**，审核后手动公开发布。重跑可更新草稿，不覆盖已发布版本。双架构 Mac 清单会合并，并校验版本、文件大小和 SHA-512。
 
 Mac 的 main / 版本标签构建使用 `NEXLET_MAC_CERTIFICATE_P12`（加密 P12 的 Base64）和 `NEXLET_MAC_CERTIFICATE_PASSWORD` 两项 Actions Secrets，证书指纹固定为 `69397314808BC8B95C8B4AF0FBDFA53C0184FC2C`。脚本仅允许在一次性 GitHub 托管 runner 中执行：导入临时钥匙串、校验固定指纹，并用管理员 Code Signing 策略信任该证书，避免用户级信任弹窗阻塞；结束时移除信任和钥匙串。凭据缺失即失败。PR 构建仅使用 ad-hoc 签名，不接触凭据。签名仍未经过 Apple 公证。
 

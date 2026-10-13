@@ -7,13 +7,15 @@ import yaml from 'js-yaml';
 
 export async function prepareUpdateMetadata(folder, version) {
   const read = async name => yaml.load(await readFile(path.join(folder, name), 'utf8'));
-  const intel = await read('latest-mac-x64.yml'), arm = await read('latest-mac-arm64.yml'), windows = await read('latest.yml');
+  const intel = await read('latest-mac-x64.yml'), arm = await read('latest-mac-arm64.yml'), windows = await read('latest.yml'), linux = await read('latest-linux.yml'), linuxArm = await read('latest-linux-arm64.yml');
   const expected = {
     intel: [`Nexlet-${version}-macOS-x64.zip`, `Nexlet-${version}-macOS-x64.dmg`],
     arm: [`Nexlet-${version}-macOS-arm64.zip`, `Nexlet-${version}-macOS-arm64.dmg`],
-    windows: [`Nexlet-${version}-Windows-x64-Setup.exe`]
+    windows: [`Nexlet-${version}-Windows-x64-Setup.exe`],
+    linux: [`Nexlet-${version}-Linux-x86_64.AppImage`, `Nexlet-${version}-Linux-amd64.deb`],
+    linuxArm: [`Nexlet-${version}-Linux-arm64.AppImage`, `Nexlet-${version}-Linux-arm64.deb`]
   };
-  for (const [label, info] of Object.entries({ intel, arm, windows })) {
+  for (const [label, info] of Object.entries({ intel, arm, windows, linux, linuxArm })) {
     if (info.version !== version || !Array.isArray(info.files)) throw Error(`Invalid ${label} update version/files`);
     if (JSON.stringify(info.files.map(file => file.url).sort()) !== JSON.stringify(expected[label].sort())) throw Error(`Unexpected ${label} update assets`);
     for (const file of info.files) {

@@ -16,9 +16,9 @@ export function FileSearch(){
   const [info,setInfo]=useState<FileInfo|null>(null),[infoError,setInfoError]=useState(''),[infoBusy,setInfoBusy]=useState(false);
   const [index,setIndex]=useState<FileSearchIndexStatus|null>(null),[preparationRequest,setPreparationRequest]=useState(0),[grantEpoch,setGrantEpoch]=useState(0);
   const sequence=useRef(0),directorySequence=useRef(0),input=useRef<HTMLInputElement>(null),authorized=useRef(false),loadingMore=useRef(false);
-  const mac=state.platform==='darwin',scopesKey=JSON.stringify(state.settings.fileSearchPaths),previousScopes=useRef(scopesKey);
-  const browsing=trail.length>0,canSearch=mac||index?.status==='ready';
-  const preparing=!mac&&(!index||index.status==='preparing');
+  const mac=state.platform==='darwin',linux=state.platform==='linux',scopesKey=JSON.stringify(state.settings.fileSearchPaths),previousScopes=useRef(scopesKey);
+  const browsing=trail.length>0,canSearch=mac||linux||index?.status==='ready';
+  const preparing=!mac&&!linux&&(!index||index.status==='preparing');
   const restoration=useRestoreBarrier();
   const [restoreWait]=useState(()=>{
     if(!restoration?.initial.directoryTrail||(restoration.initial.directoryTrail as string[]).length===0)return null;
@@ -42,7 +42,7 @@ export function FileSearch(){
   };
   useEffect(()=>{input.current?.focus();},[]);
   useEffect(()=>{
-    if(mac)return;
+    if(mac||linux)return;
     let disposed=false,timer:ReturnType<typeof setTimeout>;
     setIndex({status:'preparing',message:'正在准备文件索引…',startedAt:Date.now(),scopes:state.settings.fileSearchPaths});
     const check=async()=>{
@@ -131,7 +131,7 @@ export function FileSearch(){
   const problem=browsing?directoryError||error||unavailable:unavailable||error;
   const waiting=browsing?directoryBusy&&!directory:busy;
   return <div className="file-search-panel" onKeyDown={keyboard}>
-    <div className="file-search-bar"><Search size={17}/><input ref={input} aria-label={browsing?'筛选当前文件夹':mac?'Spotlight 文件搜索':'Everything 文件搜索'} placeholder={browsing?'按名称筛选当前文件夹':mac?'搜索文件，支持多关键词、*.pdf 和 ext:pdf':'搜索文件名或路径，支持 Everything 语法'} maxLength={1024} value={browsing?filter:query} onChange={e=>browsing?setFilter(e.target.value):setQuery(e.target.value)}/><IconButton title={mac?'搜索范围设置':'索引范围设置'} onClick={()=>navigate('settings')}><Settings size={16}/></IconButton><IconButton title={browsing?'刷新文件夹':'重新搜索'} disabled={busy||directoryBusy||(!browsing&&(!query.trim()||!canSearch))} onClick={()=>browsing?setRefresh(old=>old+1):void search(query)}><RefreshCw size={16}/></IconButton></div>
+    <div className="file-search-bar"><Search size={17}/><input ref={input} aria-label={browsing?'筛选当前文件夹':linux?'Linux 文件搜索':mac?'Spotlight 文件搜索':'Everything 文件搜索'} placeholder={browsing?'按名称筛选当前文件夹':mac||linux?'搜索文件，支持多关键词、*.pdf 和 ext:pdf':'搜索文件名或路径，支持 Everything 语法'} maxLength={1024} value={browsing?filter:query} onChange={e=>browsing?setFilter(e.target.value):setQuery(e.target.value)}/><IconButton title={mac||linux?'搜索范围设置':'索引范围设置'} onClick={()=>navigate('settings')}><Settings size={16}/></IconButton><IconButton title={browsing?'刷新文件夹':'重新搜索'} disabled={busy||directoryBusy||(!browsing&&(!query.trim()||!canSearch))} onClick={()=>browsing?setRefresh(old=>old+1):void search(query)}><RefreshCw size={16}/></IconButton></div>
     {browsing&&<nav className="file-breadcrumbs" aria-label="文件夹导航"><button onClick={back}><ArrowLeft size={14}/>返回搜索</button><IconButton title="上一级" disabled={!directory?.parent} onClick={()=>directory?.parent&&enter(directory.parent)}><ArrowUp size={16}/></IconButton><div>{directory?.ancestors.map((part,i)=><span key={part.path}>{i>0&&<ChevronRight size={12}/>}<button title={part.path} aria-current={part.path===directory.path?'location':undefined} onClick={()=>enter(part.path)}>{part.name}</button></span>)||<span>{trail.at(-1)}</span>}</div></nav>}
     <div className="file-browser-body">
       <div className="file-results">
@@ -139,7 +139,7 @@ export function FileSearch(){
       </div>
       <aside className="file-info" aria-label="文件信息">{current?<><FileIcon name={current.name} directory={current.directory} size={38}/><h3>{current.name}</h3>{infoBusy?<p role="status">正在读取信息…</p>:infoError?<p role="alert">{infoError}</p>:info&&<dl><dt>类型</dt><dd>{fileKind(info.name,info.directory).label}</dd><dt>完整路径</dt><dd className="file-info-path">{info.path}</dd>{!info.directory&&<><dt>大小</dt><dd>{fileSize(info.size)}{info.size!==null&&info.size>=1024?`（${info.size.toLocaleString()} 字节）`:''}</dd></>}<dt>创建时间</dt><dd>{fileDate(info.created)}</dd><dt>修改时间</dt><dd>{fileDate(info.modified)}</dd></dl>}<div className="file-info-actions"><button className="button" onClick={()=>activate(current)}>{current.directory?'浏览文件夹':'打开文件'}</button><button className="button" onClick={()=>void action(current.directory?'open':'reveal',current.path)}>在{mac?'Finder':'资源管理器'}中打开</button></div></>:<div className="file-info-placeholder"><Search size={26}/><p>单击文件或文件夹<br/>查看详细信息</p></div>}</aside>
     </div>
-    <footer className="file-search-footer"><span title={browsing?directory?.path:scopes?.join('、')}>{browsing?`已显示 ${items.length} 项${directory?.cursor?' · 可继续加载':''}`:result?.items.length?`${result.items.length} 个结果${result.limited?' · 前 200 项':''}`:mac?'Spotlight · 系统索引':version?`Everything ${version}`:'内置 Everything · 本地索引'}{!browsing&&scopes?.length?` · ${scopes.length} 个${mac?'搜索':'索引'}目录`:''}{!browsing&&!mac&&index?.status==='ready'?' · 索引已就绪':''}</span><span className="flex-spacer"/>{current&&<><IconButton title={current.directory?'浏览文件夹':'打开文件'} onClick={()=>activate(current)}><ExternalLink size={16}/></IconButton><IconButton title="打开所在文件夹" onClick={()=>void action('reveal',current.path)}><FolderOpen size={16}/></IconButton><IconButton title="复制文件路径" onClick={()=>void action('copy',current.path)}><Copy size={16}/></IconButton></>}</footer>
+    <footer className="file-search-footer"><span title={browsing?directory?.path:scopes?.join('、')}>{browsing?`已显示 ${items.length} 项${directory?.cursor?' · 可继续加载':''}`:result?.items.length?`${result.items.length} 个结果${result.limited?(linux?' · 部分结果':' · 前 200 项'):''}`:linux?'Linux · 指定目录搜索':mac?'Spotlight · 系统索引':version?`Everything ${version}`:'内置 Everything · 本地索引'}{!browsing&&scopes?.length?` · ${scopes.length} 个${mac||linux?'搜索':'索引'}目录`:''}{!browsing&&!mac&&index?.status==='ready'?' · 索引已就绪':''}</span><span className="flex-spacer"/>{current&&<><IconButton title={current.directory?'浏览文件夹':'打开文件'} onClick={()=>activate(current)}><ExternalLink size={16}/></IconButton><IconButton title="打开所在文件夹" onClick={()=>void action('reveal',current.path)}><FolderOpen size={16}/></IconButton><IconButton title="复制文件路径" onClick={()=>void action('copy',current.path)}><Copy size={16}/></IconButton></>}</footer>
   </div>;
 }
 function fileDate(value:string){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString();}

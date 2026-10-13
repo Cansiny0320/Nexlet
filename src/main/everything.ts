@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { everythingArguments, parseEverythingResults, type FileSearchResult, type FileSearchIndexStatus } from '../shared/everything';
 import { EverythingEngine } from './everything-engine';
 import { SpotlightSearch } from './spotlight';
+import { LinuxFileSearch } from './linux-search';
 import { FileBrowser } from './file-browser';
 
 const exec=promisify(execFile);
@@ -16,10 +17,11 @@ export class EverythingSearch {
   private browser=new FileBrowser(owner=>this.allowed.get(owner));
   private engine:EverythingEngine;
   private spotlight:SpotlightSearch;
+  private linux:LinuxFileSearch;
   private nextGeneration=0;
   private preparation:Promise<FileSearchIndexStatus>|null=null;
   private preparationSince=0;
-  constructor(paths:()=>string[],private platform:NodeJS.Platform=process.platform){this.engine=new EverythingEngine(paths);this.spotlight=new SpotlightSearch(paths);}
+  constructor(paths:()=>string[],private platform:NodeJS.Platform=process.platform){this.engine=new EverythingEngine(paths);this.spotlight=new SpotlightSearch(paths);this.linux=new LinuxFileSearch(paths);}
   async status():Promise<FileSearchIndexStatus>{
     if(this.preparation)return this.preparation;
     this.preparation=this.checkStatus();
@@ -27,6 +29,7 @@ export class EverythingSearch {
   }
   private async checkStatus():Promise<FileSearchIndexStatus>{
     const startedAt=this.preparationSince||=Date.now();
+    if(this.platform==='linux')return {status:'ready',message:'按指定目录即时搜索，无需预建索引',startedAt};
     if(this.platform!=='win32')return {status:'unsupported',message:'当前平台无需启动 Everything。',startedAt};
     let version:string;
     try{version=await this.engine.ensure();}catch(e){return {status:'unavailable',message:e instanceof Error?e.message:'内置引擎暂时不可用',startedAt};}
@@ -48,6 +51,11 @@ export class EverythingSearch {
   async search(owner:number,query:string):Promise<FileSearchResult>{
     this.browser.forget(owner);
     const generation=++this.nextGeneration;this.generations.set(owner,generation);this.allowed.set(owner,new Set());
+    if(this.platform==='linux'){
+      const result=await this.linux.search(owner,query);
+      if(this.generations.get(owner)===generation)this.allowed.set(owner,new Set(result.items.map(item=>item.path)));
+      return result;
+    }
     if(this.platform==='darwin'){
       const result=await this.spotlight.search(owner,query);
       if(this.generations.get(owner)===generation)this.allowed.set(owner,new Set(result.items.map(item=>item.path)));
@@ -90,7 +98,7 @@ export class EverythingSearch {
   }
   browse(owner:number,file:string,filter?:string,cursor?:string){return this.browser.browse(owner,file,filter,cursor);}
   info(owner:number,file:string){return this.browser.info(owner,file);}
-  forget(owner:number){this.browser.forget(owner);this.spotlight.forget(owner);this.allowed.delete(owner);this.generations.delete(owner);}
-  async reset(){this.browser.reset();this.generations.clear();this.allowed.clear();this.spotlight.reset();await this.preparation?.catch(()=>{});this.preparationSince=0;if(this.platform==='win32')await this.engine.stop();}
-  async close(){this.browser.reset();this.generations.clear();this.allowed.clear();this.spotlight.reset();await this.preparation?.catch(()=>{});if(this.platform==='win32')await this.engine.stop(true);}
+  forget(owner:number){this.browser.forget(owner);this.spotlight.forget(owner);this.linux.forget(owner);this.allowed.delete(owner);this.generations.delete(owner);}
+  async reset(){this.browser.reset();this.generations.clear();this.allowed.clear();this.spotlight.reset();this.linux.reset();await this.preparation?.catch(()=>{});this.preparationSince=0;if(this.platform==='win32')await this.engine.stop();}
+  async close(){this.browser.reset();this.generations.clear();this.allowed.clear();this.spotlight.reset();this.linux.reset();await this.preparation?.catch(()=>{});if(this.platform==='win32')await this.engine.stop(true);}
 }

@@ -14,12 +14,13 @@ export interface UpdateTransport {
 }
 const newer = (version: string, current: string) => !!semver.valid(version) && !semver.prerelease(version) && semver.gt(version, current);
 
-export function portableRelease(value: unknown, current: string): { version: string; notes: string; url: string } | null {
+export function portableRelease(value: unknown, current: string, platform: string = 'win32', arch: string = 'x64'): { version: string; notes: string; url: string } | null {
   const data = value as { tag_name?: string; draft?: boolean; prerelease?: boolean; body?: string; assets?: { name: string }[] } | null;
   if (!data || data.draft !== false || data.prerelease !== false || typeof data.tag_name !== 'string') return null;
   const version = data.tag_name.replace(/^v/, '');
   if (!newer(version, current)) return null;
-  const name = `Nexlet-${version}-Windows-x64.exe`;
+  if(!['x64','arm64'].includes(arch)||!['linux','win32'].includes(platform)||platform==='win32'&&arch!=='x64')return null;
+  const name = platform==='linux'?`Nexlet-${version}-Linux-${arch==='x64'?'amd64':arch}.deb`:`Nexlet-${version}-Windows-x64.exe`;
   if (!Array.isArray(data.assets) || !data.assets.some(asset => asset.name === name)) return null;
   return { version, notes: typeof data.body === 'string' ? data.body.slice(0, 8000) : '', url: `${repository}/releases/download/${encodeURIComponent(data.tag_name)}/${name}` };
 }
@@ -30,7 +31,7 @@ async function latestPortable(current: string) {
   });
   if (response.status === 404) return null;
   if (!response.ok) throw Error(`检查更新失败（HTTP ${response.status}），请稍后重试`);
-  return portableRelease(await response.json(), current);
+  return portableRelease(await response.json(), current, process.platform, process.arch);
 }
 
 function updateError(error: unknown): string {
@@ -131,7 +132,7 @@ export class AppUpdates {
     try { await this.prepareInstall(); this.transport!.quitAndInstall(false, true); } catch (error) { this.fail(error); }
   }
   downloadUrl(): string {
-    if (this.status.mode !== 'portable' || this.status.phase !== 'available' || !this.portableUrl) throw Error('请先检查便携版更新');
+    if (this.status.mode !== 'portable' || this.status.phase !== 'available' || !this.portableUrl) throw Error('请先检查可手动下载的更新');
     return this.portableUrl;
   }
 }

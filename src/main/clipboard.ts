@@ -30,7 +30,7 @@ export class ClipboardService {
       // Respect common password-manager and transient clipboard markers.
       if (formats.some(f => /org\.nspasteboard\.(ConcealedType|TransientType)|ExcludeClipboardContentFromMonitorProcessing|application\/x-keepassxc/i.test(f))) { this.lastSequence = sequence; return; }
       let files: string[] = [];
-      if (process.platform === 'win32' || formats.some(f => /file-url|NSFilenamesPboardType/.test(f))) files = await this.platform.readFiles();
+      if (process.platform === 'win32' || formats.some(f => /file-url|NSFilenamesPboardType|text\/uri-list|x-special\/gnome-copied-files/.test(f))) files = await this.platform.readFiles();
       let item: ClipItem | undefined;
       const base = { id: randomUUID(), createdAt: Date.now(), favorite: false };
       if (files.length) item = { ...base, kind: 'files', text: files.join('\n'), hash: hash('files:' + files.join('\0')), files };

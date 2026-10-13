@@ -1,0 +1,43 @@
+{
+  "version": "0.2.13",
+  "platform": "linux",
+  "buildHost": "arm64",
+  "architectures": [
+    {
+      "arch": "x64",
+      "nativeExecutable": "ELF verified",
+      "koffi": "ELF verified",
+      "debArchitecture": "amd64",
+      "metadata": "latest-linux.yml"
+    },
+    {
+      "arch": "arm64",
+      "nativeExecutable": "ELF verified",
+      "koffi": "ELF verified",
+      "debArchitecture": "arm64",
+      "metadata": "latest-linux-arm64.yml"
+    }
+  ],
+  "assets": [
+    {
+      "file": "Nexlet-0.2.13-Linux-x86_64.AppImage",
+      "size": 144986078,
+      "sha256": "2f208283e499313d0a0ff0501f19b3c2444ba02e19ee2c13369d6d9d407fe71b"
+    },
+    {
+      "file": "Nexlet-0.2.13-Linux-amd64.deb",
+      "size": 114023004,
+      "sha256": "b0912501c51819c891047ba87df0e52fb6e96782290e605f60bf1d760b3ba990"
+    },
+    {
+      "file": "Nexlet-0.2.13-Linux-arm64.AppImage",
+      "size": 146245274,
+      "sha256": "7c26d2254cebc9459dcd9054eafd0b6521cab0a5e6a6c095c498c20eb8f3537c"
+    },
+    {
+      "file": "Nexlet-0.2.13-Linux-arm64.deb",
+      "size": 109132928,
+      "sha256": "0f695c7ed0fabaa5434089e5bd009353274a99fb74d9a0535e894b9c900488e9"
+    }
+  ]
+}

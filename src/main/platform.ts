@@ -1,17 +1,19 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { systemPreferences } from 'electron';
+import { systemPreferences, clipboard, ClipboardItem } from 'electron';
+import { LinuxPaste, decodeFileUris, encodeFileUris, LINUX_FILE_FORMATS, osClipboardFormat } from './linux-platform';
 import koffi from 'koffi';
 import { createMacPasteboardReader } from './mac-pasteboard';
 
 const exec = promisify(execFile);
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-interface PasteTarget { handle?: number | bigint; pid: number; }
+interface PasteTarget { handle?: number | bigint | string; pid: number; }
 
 /** System integration is kept in the trusted host, never exposed as arbitrary native calls. */
 export class Platform {
   status: string | null = null;
   target: PasteTarget | null = null;
+  private linux = process.platform === 'linux' ? new LinuxPaste() : null;
   private win: Record<string, (...args: any[]) => any> | null = null;
   private macSequence: (() => number) | null | undefined;
   constructor(private ownerHandle: () => Buffer | undefined) {
@@ -41,7 +43,7 @@ export class Platform {
           copy: crt.func('void *memcpy(void *destination, const void *source, size_t bytes)')
         };
       } catch (error) { this.status = `Windows 系统桥接未就绪：${(error as Error).message}`; }
-    } else if (process.platform !== 'darwin') this.status = 'Linux 当前提供基础界面；文件剪贴板和自动回贴尚未支持';
+    } else if (this.linux?.wayland) this.status = 'Wayland：请复制后手动粘贴；后台剪贴板读取、快捷键与窗口焦点取决于桌面环境及授权';
   }
   sequence(): number | null {
     if (this.win) return this.win.sequence();
@@ -57,6 +59,7 @@ export class Platform {
     return null;
   }
   async rememberTarget(): Promise<void> {
+    if (this.linux) { this.target = await this.linux.remember(); if(!this.linux.wayland)this.status=this.linux.status; return; }
     if (this.win) {
       const handle = this.win.foreground(); const pid = [0]; this.win.getPid(handle, pid);
       if (pid[0] && pid[0] !== process.pid) this.target = { handle, pid: pid[0] };
@@ -69,6 +72,14 @@ export class Platform {
     }
   }
   async readFiles(): Promise<string[]> {
+    if (this.linux) {
+      const items = await clipboard.read();
+      for (const format of LINUX_FILE_FORMATS) for (const item of items) {
+        const type = item.types.find(type => type === format || type === osClipboardFormat(format));
+        if (type) { const blob = await item.getType(type); if (blob instanceof Blob) { const files=decodeFileUris(await blob.text()); if(files.length)return files; } }
+      }
+      return [];
+    }
     if (this.win) {
       if (!this.win.open(0)) return [];
       try {
@@ -92,6 +103,13 @@ export class Platform {
     return [];
   }
   async writeFiles(files: string[]): Promise<void> {
+    if (this.linux) {
+      const uris = encodeFileUris(files);
+      await clipboard.write([new ClipboardItem({
+        [osClipboardFormat('text/uri-list')]: new Blob([uris]),
+        [osClipboardFormat('x-special/gnome-copied-files')]: new Blob(['copy\n'+uris.replace(/\r\n/g,'\n').trimEnd()])
+      })]); return;
+    }
     if (this.win) {
       const list = Buffer.from(files.join('\0') + '\0\0', 'utf16le');
       const data = Buffer.alloc(20 + list.length); data.writeUInt32LE(20, 0); data.writeUInt32LE(1, 16); list.copy(data, 20);
@@ -115,6 +133,7 @@ export class Platform {
   async paste(): Promise<void> {
     const target = this.target;
     if (!target) throw new Error('没有可回贴的目标窗口，请先复制后手动粘贴，或从目标应用使用快捷键唤起 Nexlet');
+    if (this.linux && typeof target.handle === 'string') { await this.linux.paste({handle:target.handle,pid:target.pid}); return; }
     if (this.win && target.handle) {
       if (!this.win.isWindow(target.handle)) throw new Error('原窗口已关闭，请重新从目标应用唤起');
       const pid = [0]; this.win.getPid(target.handle, pid);

@@ -1,4 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
+import { linuxDataRoots, scanLinuxApplications, linuxIconPath } from './linux-desktop';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -40,6 +41,11 @@ export class Catalog {
     try {
       this.icons.clear();
       this.iconSources.clear();
+      if (process.platform === 'linux') {
+        const items=await scanLinuxApplications([...linuxDataRoots().map(root=>path.join(root,'applications')),...extra]);
+        for(const item of items){if(item.icon)this.iconSources.set(item.id,item.icon);delete item.icon;}
+        this.aliases.clear(); this.items=items.sort((a,b)=>a.name.localeCompare(b.name,'zh-CN')); return;
+      }
       const roots = process.platform === 'win32' ? [
         path.join(process.env.APPDATA || homedir(), 'Microsoft/Windows/Start Menu/Programs'),
         path.join(process.env.PROGRAMDATA || 'C:/ProgramData', 'Microsoft/Windows/Start Menu/Programs'),
@@ -117,7 +123,11 @@ export class Catalog {
     }
     return Promise.all(items.map(async item => {
       if (systemIcons?.has(item.id)) return { ...item, icon: systemIcons.get(item.id) };
-      const source = this.iconSources.get(item.id) || item.path;
+      let source = this.iconSources.get(item.id) || item.path;
+      if (process.platform === 'linux' && this.iconSources.has(item.id) && !this.icons.has(item.id)) {
+        source=await linuxIconPath(this.iconSources.get(item.id)!) || item.path;
+        if(source?.endsWith('.svg'))try{const bytes=await readFile(source);if(bytes.length<1024*1024)this.icons.set(item.id,'data:image/svg+xml;base64,'+bytes.toString('base64'));}catch{}
+      }
       if (!source) return item;
       if (!this.icons.has(item.id)) {
         this.icons.set(item.id, await loadCatalogIcon(source));

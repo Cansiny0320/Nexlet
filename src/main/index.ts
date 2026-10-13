@@ -1,3 +1,5 @@
+import { launchLinuxApplication } from './linux-desktop';
+import { LINUX_DESKTOP_NAME } from './linux-startup';
 import { ToolHandoffs } from './tool-handoff';
 import { createUpdateTransport } from './update-transport';
 import { AppUpdates, UpdateSaveBarrier } from './updater';
@@ -31,6 +33,7 @@ if (process.env.NEXLET_USER_DATA) { const directory=path.resolve(process.env.NEX
 protocol.registerSchemesAsPrivileged([{scheme:'nexlet-plugin',privileges:{standard:true,secure:true,supportFetchAPI:true}},{scheme:'nexlet-image',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
 if(testMode)app.commandLine.appendSwitch('force-device-scale-factor','1');
 app.setName('Nexlet');
+if(process.platform==='linux')app.setDesktopName(LINUX_DESKTOP_NAME);
 if (!app.requestSingleInstanceLock()) app.quit();
 else void bootstrap();
 
@@ -57,7 +60,7 @@ async function bootstrap() {
   const files=new EverythingSearch(()=>store.settings().fileSearchPaths);
   const startup=new StartupManager(app,process.platform,process.execPath,process.env.PORTABLE_EXECUTABLE_FILE);
   const loginLaunch=startup.wasOpenedAtLogin(process.argv);
-  const updateMode = !app.isPackaged || testMode || !['darwin','win32'].includes(process.platform) ? 'unsupported' : process.env.PORTABLE_EXECUTABLE_FILE ? 'portable' : 'automatic';
+  const updateMode = !app.isPackaged || testMode || !['darwin','win32','linux'].includes(process.platform) ? 'unsupported' : process.env.PORTABLE_EXECUTABLE_FILE || (process.platform==='linux'&&!process.env.APPIMAGE) ? 'portable' : 'automatic';
   const updateTransport = updateMode === 'automatic' || (testMode && app.isPackaged) ? createUpdateTransport() : null;
   if(updateTransport){updateTransport.autoDownload=false;updateTransport.autoInstallOnAppQuit=false;updateTransport.allowPrerelease=false;updateTransport.allowDowngrade=false;}
   const updateSaves = new UpdateSaveBarrier();
@@ -172,6 +175,7 @@ async function bootstrap() {
         if(command.kind==='tool'){await plugins.runtime.exitWindow(window);recordRecent(id);return {view:id.slice(5)};}
         if(command.kind==='plugin'){if(args.mode==='open'&&plugins.runtime.focus(command.pluginId!,command.feature!)){recordRecent(id);return {opened:true};}await plugins.launch(command.pluginId!,command.feature!,content,snapshot);recordRecent(id);return {opened:true};}
         if(command.kind==='web'){const entry=current.settings.webShortcuts.find(w=>'web:'+w.id===id);if(!entry)throw new Error('网页不存在');await shell.openExternal(entry.url);}
+        else if(process.platform==='linux'&&id.startsWith('linux-app:')&&command.path){await launchLinuxApplication(command.path);}
         else if(id.startsWith('uwp:')){launchWindowsApplication(id.slice(4));}
         else if(command.path){const error=await shell.openPath(command.path);if(error)throw new Error(error);}
         recordRecent(id);window.hide();return {opened:true};

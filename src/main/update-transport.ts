@@ -1,4 +1,4 @@
-import { MacUpdater, NsisUpdater } from 'electron-updater';
+import { MacUpdater, NsisUpdater, AppImageUpdater } from 'electron-updater';
 import type { DownloadExecutorTask } from 'electron-updater/out/AppUpdater';
 import { withDownloadProgress } from './update-progress';
 
@@ -12,6 +12,10 @@ class WindowsUpdates extends NsisUpdater {
     return super.executeDownload(withDownloadProgress(options));
   }
 }
+class LinuxUpdates extends AppImageUpdater {
+  protected override executeDownload(options: DownloadExecutorTask) { return super.executeDownload(withDownloadProgress(options)); }
+}
 export function createUpdateTransport() {
+  if(process.platform==='linux')return new LinuxUpdates();
   return process.platform === 'darwin' ? new MacUpdates() : new WindowsUpdates();
 }

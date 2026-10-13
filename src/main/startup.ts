@@ -1,3 +1,4 @@
+import { LinuxStartup } from './linux-startup';
 import type { App } from 'electron';
 import type { StartupStatus } from '../shared/types';
 
@@ -7,11 +8,14 @@ type LoginHost = Pick<App, 'isPackaged' | 'getLoginItemSettings' | 'setLoginItem
 export class StartupManager {
   constructor(private host: LoginHost, private platform: string, private executable: string, private portable?: string) {}
 
+  private linux() { return new LinuxStartup(process.env.APPIMAGE || this.executable); }
+
   private options() {
     return this.platform === 'win32' ? { path: this.portable || this.executable, args: ['--autostart'] } : {};
   }
 
   read(): StartupStatus {
+    if (this.platform === 'linux' && this.host.isPackaged) return this.linux().read();
     if (!['win32', 'darwin'].includes(this.platform)) return { supported: false, enabled: false, reason: '此平台暂不支持开机自启动' };
     if (!this.host.isPackaged) return { supported: false, enabled: false, reason: '请在打包后的 Nexlet 中设置开机自启动' };
     try {
@@ -31,6 +35,7 @@ export class StartupManager {
   set(enabled: boolean): StartupStatus {
     const before = this.read();
     if (!before.supported) throw new Error(before.reason || '不支持开机自启动');
+    if (this.platform === 'linux') return this.linux().set(enabled);
     this.host.setLoginItemSettings(this.platform === 'win32'
       ? { ...this.options(), openAtLogin: enabled, enabled, name: 'app.nexlet.desktop' }
       : { openAtLogin: enabled });

@@ -17,6 +17,9 @@ const required = [
   `Nexlet-${version}-macOS-x64.zip.blockmap`,
   `Nexlet-${version}-macOS-arm64.zip`,
   `Nexlet-${version}-macOS-arm64.zip.blockmap`,
+  ...['x64','arm64'].flatMap(arch=>[`Nexlet-${version}-Linux-${arch==='x64'?'x86_64':arch}.AppImage`,`Nexlet-${version}-Linux-${arch==='x64'?'amd64':arch}.deb`]),
+  'latest-linux.yml',
+  'latest-linux-arm64.yml',
   'latest.yml',
   'latest-mac.yml',
   'hello-nexlet.nexlet'

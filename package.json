@@ -21,7 +21,8 @@
     "package:mac": "node scripts/package-mac-local.mjs --arch universal",
     "package:mac:local": "node scripts/package-mac-local.mjs",
     "smoke:package": "node scripts/smoke-package.mjs",
-    "smoke:portable": "node scripts/smoke-portable.mjs"
+    "smoke:portable": "node scripts/smoke-portable.mjs",
+    "package:linux": "npm run build && node scripts/package-linux.mjs"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
@@ -101,6 +102,48 @@
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,
       "artifactName": "Nexlet-${version}-Windows-${arch}-Setup.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility",
+      "executableName": "nexlet",
+      "syncDesktopName": true,
+      "maintainer": "Nexlet <noreply@users.noreply.github.com>",
+      "artifactName": "Nexlet-${version}-Linux-${arch}.${ext}",
+      "files": [
+        "!assets/vendor/everything/**/*"
+      ],
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "app.nexlet.desktop"
+        }
+      }
+    },
+    "deb": {
+      "recommends": [
+        "xdotool",
+        "fonts-noto-cjk"
+      ],
+      "depends": [
+        "libgtk-3-0",
+        "libnss3",
+        "libasound2",
+        "libgbm1",
+        "libnotify4",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libglib2.0-bin",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ]
     }
-  }
+  },
+  "desktopName": "app.nexlet.desktop.desktop",
+  "homepage": "https://github.com/Cansiny0320/Nexlet"
 }

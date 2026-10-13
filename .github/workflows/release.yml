@@ -59,6 +59,18 @@ jobs:
             arch: arm64
             executable: release/mac-arm64/Nexlet.app/Contents/MacOS/Nexlet
             artifact: macOS-arm64
+          - name: Linux x64
+            os: ubuntu-24.04
+            platform: linux
+            arch: x64
+            executable: release/linux-unpacked/nexlet
+            artifact: Linux-x64
+          - name: Linux arm64
+            os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            executable: release/linux-arm64-unpacked/nexlet
+            artifact: Linux-arm64
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
@@ -69,6 +81,12 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+      - name: Linux desktop and packaging dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth dbus-x11 openbox xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1 libfuse2t64 libglib2.0-bin fonts-noto-cjk ruby ruby-dev
+          sudo gem install --no-document fpm
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -91,7 +109,16 @@ jobs:
       - name: Keep architecture-specific update metadata
         if: runner.os == 'macOS'
         run: mv release/latest-mac.yml release/latest-mac-${{ matrix.arch }}.yml
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        env:
+          USE_SYSTEM_FPM: 'true'
+        run: node scripts/package-linux.mjs --arch ${{ matrix.arch }}
+      - name: Linux packaged app smoke test
+        if: runner.os == 'Linux'
+        run: dbus-run-session -- xvfb-run -a sh -c 'openbox & node scripts/smoke-package.mjs "${{ matrix.executable }}"'
       - name: Packaged app smoke test
+        if: runner.os != 'Linux'
         run: node scripts/smoke-package.mjs "${{ matrix.executable }}"
       - name: Portable wrapper smoke test
         if: runner.os == 'Windows'
@@ -107,6 +134,8 @@ jobs:
             release/Nexlet-*.exe
             release/Nexlet-*.dmg
             release/Nexlet-*.zip
+            release/Nexlet-*.AppImage
+            release/Nexlet-*.deb
             release/Nexlet-*.blockmap
             release/latest*.yml
             release/hello-nexlet.nexlet

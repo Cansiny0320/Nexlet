@@ -29,9 +29,9 @@ export function UpdatePanel() {
       <button className={`toggle ${state.settings.autoCheckUpdates ? 'on' : ''}`} role="switch" aria-label="自动检查更新" aria-checked={state.settings.autoCheckUpdates} disabled={update.mode === 'unsupported'} onClick={() => void toggleAutomaticChecks()}><i/></button>
     </div>
     <div className="setting-row"><div><strong>应用更新</strong><p role="status">{update.mode === 'unsupported' ? '开发模式或当前平台暂不支持更新' : label}</p>
-      {update.mode === 'portable' && <p>便携版下载后需手动替换；使用安装版可直接重启更新。</p>}</div>
+      {update.mode === 'portable' && <p>{state.platform==='linux'?'下载 deb 后手动安装升级；AppImage 支持应用内更新。':'便携版下载后需手动替换；使用安装版可直接重启更新。'}</p>}</div>
       <div className="tool-buttons">
-        {update.phase === 'available' ? <button className="button primary" onClick={() => void action(update.mode === 'portable' ? 'updatePortable' : 'updateDownload')}><Download size={16}/>{update.mode === 'portable' ? '下载便携版' : '下载更新'}</button> :
+        {update.phase === 'available' ? <button className="button primary" onClick={() => void action(update.mode === 'portable' ? 'updatePortable' : 'updateDownload')}><Download size={16}/>{update.mode === 'portable' ? (state.platform==='linux'?'下载 deb 安装包':'下载便携版') : '下载更新'}</button> :
           update.phase === 'downloaded' ? <button className="button primary" onClick={() => void action('updateInstall')}>重启安装</button> :
           <button className="button" disabled={busy || update.mode === 'unsupported'} onClick={() => void action('updateCheck')}><RefreshCw size={16}/>{busy ? '更新处理中…' : '检查更新'}</button>}
       </div>
