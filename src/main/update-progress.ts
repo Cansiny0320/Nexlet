@@ -3,18 +3,18 @@ import type { DownloadExecutorTask } from 'electron-updater/out/AppUpdater';
 
 // Some proxies omit Content-Length, so electron-updater emits no progress events.
 // Sample the exact file selected by the updater, without changing its download or verification.
-export function withDownloadProgress(options: DownloadExecutorTask): DownloadExecutorTask {
+export function withDownloadProgress(options: DownloadExecutorTask, canSample: () => boolean = () => true): DownloadExecutorTask {
   return { ...options, task: async (destination, downloadOptions, ...rest) => {
     const total = options.fileInfo.info.size ?? 0;
     const report = downloadOptions.onProgress;
     let active = true, reading = false, receivedProgress = false;
     let previousBytes = 0, previousTime = Date.now();
     const timer = setInterval(async () => {
-      if (reading || receivedProgress || !report) return;
+      if (reading || receivedProgress || !report || !canSample()) return;
       reading = true;
       try {
         const { size } = await stat(destination);
-        if (!active || receivedProgress) return;
+        if (!active || receivedProgress || !canSample()) return;
         const now = Date.now();
         const delta = Math.max(0, size - previousBytes);
         const bytesPerSecond = delta * 1000 / Math.max(1, now - previousTime);
