@@ -1,20 +1,20 @@
-Nexlet 0.2.17 修复 Windows 超级面板鼠标监听延迟，并改进应用更新与剪贴板历史。
+Nexlet 0.2.18 将启动器大文字 UI 纳入正式发布包，更新后保留更清晰的文字和图标。
 
-## 本次修复
+## 界面改进
 
-- Windows 超级面板改为在鼠标事件到达时唤醒监听线程，移除定时轮询带来的输入等待；保留长按右键打开面板、普通短按右键菜单和中键触发。
-- 更新监听线程的控制消息处理，确保忙碌状态、排除应用、面板范围和关闭监听仍然生效。新增模拟原生事件的回归测试，不向真实桌面发送鼠标输入。
-- 修复差分更新时下载进度可能把本地复制的数据计入下载量的问题。
-- Windows 更新安装使用安装文件的实际路径，兼容 AppData 路径重定向。
-- 再次复制已有剪贴板记录时，将记录移到最近位置，并显示精确时间。
+- 启动器搜索框字号增大至 24 px，网格项目名称增大至 14 px，底部提示统一为 12 px。
+- 网格图标增大至 36 px，品牌图标增大至 34 px，并调整卡片高度与间距。
+- 提高浅色和深色主题下辅助文字及搜索占位文字的对比度，增大分组标签和右键菜单文字。
+- 调整标题栏空间分配，并在窄窗口下保持底部提示字号。
+- 保留上一版本的 Windows 鼠标卡顿修复、更新进度和安装路径修复。
 
 ## 下载与安装
 
-- Windows x64：安装版 Nexlet-0.2.17-Windows-x64-Setup.exe，便携版 Nexlet-0.2.17-Windows-x64.exe。
-- Apple Silicon Mac：Nexlet-0.2.17-macOS-arm64.dmg。
-- Intel Mac：Nexlet-0.2.17-macOS-x64.dmg。
-- Linux x64：Nexlet-0.2.17-Linux-x86_64.AppImage、Nexlet-0.2.17-Linux-amd64.deb。
-- Linux arm64：Nexlet-0.2.17-Linux-arm64.AppImage、Nexlet-0.2.17-Linux-arm64.deb。
+- Windows x64：安装版 Nexlet-0.2.18-Windows-x64-Setup.exe，便携版 Nexlet-0.2.18-Windows-x64.exe。
+- Apple Silicon Mac：Nexlet-0.2.18-macOS-arm64.dmg。
+- Intel Mac：Nexlet-0.2.18-macOS-x64.dmg。
+- Linux x64：Nexlet-0.2.18-Linux-x86_64.AppImage、Nexlet-0.2.18-Linux-amd64.deb。
+- Linux arm64：Nexlet-0.2.18-Linux-arm64.AppImage、Nexlet-0.2.18-Linux-arm64.deb。
 - macOS ZIP、blockmap 与 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 
 手动安装前请完整退出旧版。现有本地数据继续使用原用户目录。
