@@ -1,3 +1,6 @@
-!dist/
-!dist/**
+dist/
 .qa/
+node_modules/
+.wrangler/
+.tanstack/
+.vite/

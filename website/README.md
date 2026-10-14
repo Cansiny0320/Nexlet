@@ -1,39 +1,59 @@
 # Nexlet 官网
 
-公开官网：<https://nexlet.cansiny0320.chatgpt.site>
+正式地址：<https://nexlet.cansiny0320.chatgpt.site>
 
-源码属于主仓库的 `website/`。静态内容在 `src/pages.mjs`，组件在 `src/components.mjs`，样式和资源在 `assets/`，`scripts/build.mjs` 生成可直接托管的 `dist/`。无需新增 npm 依赖。网站不调用桌面 IPC，不包含账号、表单、分析脚本或浏览器存储。
+官网是独立的 `website/` 工程。2026-10-14 已按批准方案迁移为 React + TanStack Start SSR；本次为本地实现与验收，线上仍以实际部署版本为准。
 
-图标使用 `src/vendor/icons.json` 中的静态 SVG：通用图标来自 Lucide 0.468.0（与桌面端版本一致），品牌图标来自 Simple Icons 11.0.0。保留原始路径与 viewBox，由构建内联到页面；无需运行时依赖或 CDN。来源见 JSON 中的 `source`，许可证随 `assets/LICENSE-Lucide.txt` 与 `assets/LICENSE-SimpleIcons.txt` 分发。新增图标应从图标库导入，不手写品牌轮廓。
+## 技术栈与运行
+
+- Node.js 24.19.0（最低 24.11.0）、pnpm 12.11.2、TypeScript 7.0.2。
+- React 19.2.6、TanStack Start 1.169.1、TanStack Router 1.170.44。
+- Vite+ 1.1.0（内含 Vite 8.3.3）、Sites Vite plugin 0.2.0、Cloudflare Vite plugin 1.37.1。
+- Tailwind CSS 4.2.1、shadcn/ui base-nova 配置、Base UI 1.9.0、Lucide React。保留 Nexlet 现有视觉主题，Tailwind 不注入会改变原布局的 Preflight。
+- Oxlint、Oxfmt、Vitest 5.0.3、Testing Library；Cloudflare Workers + 静态资源。
+
+在 `website/` 中执行：
 
 ```powershell
-node website/scripts/build.mjs
-node website/scripts/check.mjs
-node website/scripts/serve.mjs
+pnpm install --frozen-lockfile
+pnpm dev
+pnpm verify
+pnpm format:check
+pnpm test:browser
 ```
 
-`build` 写入 website/dist；`check` 只读；`serve` 在 127.0.0.1:4173 提供本地预览；浏览器打开首页和下载页时会请求 GitHub Release API。`node --test website/tests/*.test.mjs` 验证平台识别、Release 解析和请求失败场景；`node --test website/tests/releases.browser.mjs` 在本机 Chrome 中自动启动临时预览服务器，验证异步更新、失败回退和无 JavaScript 下载；`node website/scripts/browser-check.cjs` 使用主项目已有 Playwright 与 Microsoft Edge，写入 `.qa/` 截图和报告，不改变网页资源。浏览器验收记录见 `docs/validation.md`。
+使用 `packageManager` 指定的 pnpm 12.11.2；没有该版本时可用 `npx --yes pnpm@12.11.2 <命令>`。`verify` 包含 lint、类型检查、单元/组件测试与构建。首次 checkout 已包含生成路由树，构建或开发服务在路由变化时更新它。
 
-## 内容维护
+`build` 写入 `dist/client`、`dist/server` 和 `dist/.openai/hosting.json`；Cloudflare 插件同时写本地 `.wrangler` 状态。`test:browser` 自动启动**构建后的 Worker**、运行 Chrome headless 测试并关闭进程，结果与截图写入忽略的 `.qa/`。先运行 build/verify。可用 `BROWSER_CHANNEL=msedge` 选择已安装的 Edge，或传 `SITE_URL` 使用已有预览。测试拦截 GitHub Release 与 Clipboard API，不下载安装包、不改系统剪贴板。`format` 会修改文件；其余检查不自动修复源码。
 
-- `site.json` 保存正式 origin、源码仓库和事实核对日期；域名变化时同步生成 canonical、OG 与 sitemap。
-- 首页、下载、插件三页均为完整 HTML。JavaScript 增强平台选择、移动导航和复制；禁用脚本仍可导航，下载页三个平台链接直接可用。
-- `downloads.json` 记录已核实的回退版本、来源提交与安装包直链。首页和下载页加载时，`assets/releases.mjs` 从 GitHub `/repos/Cansiny0320/Nexlet/releases/latest` 获取最新正式 Release（不含 draft 和 prerelease）。只有 Windows x64 便携 EXE、两种 macOS DMG 和 `SHA256SUMS.txt` 全部匹配同一版本时，才同步更新下载链接、版本、更新日志和校验文件。每页请求一次，5 秒超时，不携带认证信息，不自动重试、不使用浏览器持久存储。请求失败、限流或附件不齐时提示用户并保留整套回退链接；关闭 JavaScript 时也可下载回退版本。仅凭 macOS 的 Intel UA 无法判断硬件架构；未知平台回退到手动选择。手动选择优先于异步检测。切换平台不会立即下载，主按钮执行下载。
-- 公开 Release、签名、公证、macOS 真机结果、市场等动态事实，发布前从真实来源核实。当前静态回退安装包为已核实的 0.2.5；正常联网时以 GitHub 最新正式 Release 为准。附件命名应继续遵循现有发布约定；只上传 CI artifact 或保存 draft 不会更新官网下载版本。
-- 不把公开仓库称为开源，除非项目已明确授予开源许可证。不编造评分、价格、用户数或下载地址。
-- 结构化数据只描述真实产品，不以伪造评分满足搜索富结果字段。FAQ 保留为正文，不承诺 FAQ 富结果。搜索或 AI 收录不是部署验收条件，也无法保证。
+## 源码组织与行为
 
-视觉基准为 `designs/2026-10-12-ui-v2/`，首页使用 `01-home-system-download.png`。官网产品插画由 HTML/CSS/SVG 绘制，属于功能示意，不代表桌面软件的新 UI。保留的 launcher PNG 是实际 Windows 预览截图；分享图是新官网首屏截图。
+- `src/routes/`：首页、下载、插件开发和根布局；`src/router.tsx` 保留原路径及尾斜杠。
+- `src/pages/`：React 页面内容；`src/components/`：共享布局、Base UI 下载菜单、复制按钮和版本展示。
+- `src/components/site-provider.tsx`：同一页面共享下载状态。服务端与首次客户端渲染使用相同回退；浏览器挂载后识别平台、查询版本。
+- `src/lib/platform.ts`、`src/lib/releases.ts`：纯平台判断、发布校验及超时请求。
+- `src/lib/seo.ts`、`public/robots.txt`、`public/sitemap.xml`：SEO；`site.json` 保存正式 origin、仓库和事实核对日期。
+- `src/styles/`：原有布局样式和 Tailwind / base-nova token 集成；`public/assets/`：图片、字体、图标与许可证。
+- `src/server.ts`：TanStack Start 的 Worker 入口。没有登录、数据库、财务依赖或 oRPC。
 
-网页字体使用本地托管的 Noto Sans SC 子集，随附 OFL 许可证；不向第三方字体服务发送请求。变更文案后可用 `scripts/build-font.py` 与 `fonttools[woff]` 从原 OFL 字体重建子集，日常构建不依赖 Python。
+`downloads.json` 保存已核实的完整回退版本和下载直链。首页和下载页在浏览器加载时向官方 GitHub latest Release 请求一次，5 秒超时，不携带认证、不自动重试。只有正式发布的 Windows x64 便携 EXE、macOS ARM64/x64 DMG 和 SHA256SUMS.txt 全部匹配同一版本，才整体更新版本、下载、更新日志和校验链接。失败仍可下载；客户端路由切换后也保留已确认版本，避免降级到更早版本。无 JavaScript 时保留静态回退直链。
 
-## Sites 发布
+未知平台或无法可靠判断的架构进入手动选择，macOS Intel UA 不代表实际 Intel 硬件。手动选择优先于晚到的架构识别，首页两处控件共享选择；切换选项不会开始下载。移动导航、菜单和复制反馈由 React 管理；Base UI 提供菜单焦点、方向键、Escape 和外部点击关闭。
 
-`.openai/hosting.json` 保存已注册 Site 的 ID，不能重新创建。`.gitignore` 显式保留生成的 dist，避免根仓库忽略构建目录的规则漏掉官网。
+三页均输出完整 SSR HTML，保留 canonical、OG、JSON-LD、公开 robots 和 sitemap；不存在的路径返回 HTTP 404 与 noindex。不要编造评分、下载数量或未发布功能。
 
-1. 只提交官网范围文件，推送主仓库；不得暂存其他会话的桌面改动。
-2. 从该提交导出 `website/` 到主仓库外的独立临时发布目录。不得在 website 建嵌套 .git，也不得改主仓库 origin。
-3. 使用 Sites 的短期 source credential 和官方 `site-workflow.mjs` 同步、提交、推送与打包。凭据只通过隐藏 stdin，不写文件或日志。Windows helper 需要 Git Bash；将 `D:/software/Git/bin` 放在该进程 PATH 前部，并设置该进程的 `TAR_OPTIONS=--force-local`，避免 GNU tar 将盘符当作远端主机。
-4. 在 Sites 使用用户授权的 public audience，保存并部署 helper 返回的精确 commit 与 archive。确认 succeeded，再匿名读取三页、robots、sitemap 和资源，核实没有认证跳转或 noindex。
+## 资源与视觉
 
-主仓库官网提交 SHA 与 Sites 同步仓库 SHA 不相同，但网站文件应完全一致。发布记录应写出二者，不混称同一个提交。源码回滚仅针对官网提交；已有线上版本可在 Sites 回滚。
+保留 `designs/2026-10-12-ui-v2/` 的设计基准与现有页面视觉。产品拼贴是功能示意；`launcher.png` 等保留既有截图身份。通用图标使用 Lucide React；品牌路径从 Simple Icons 11.0.0 原样迁入 `src/components/icon.tsx`，原始 viewBox 与 CC0 许可证保留。
+
+字体仍为本地 Noto Sans SC 和装饰用 LXGW WenKai 子集，许可证随资源分发。可用 `scripts/build-font.py`、`scripts/build-note-font.py` 与 `fonttools[woff]` 重建，日常构建不需要 Python。
+
+## Sites 发布边界
+
+保留既有 `project_id`：`appgprj_6acbbb32d78881919f324dcdf9ee6640`。`.openai/hosting.json` 已移除静态站的 `static` 配置，构建产物改为 Worker；不要重新注册 Site。源码与本地构建验收不代表线上已发布。
+
+发布需要单独授权。获得授权后，沿用 Sites 官方 `site-workflow.mjs` 的源码同步和打包流程；使用 `build-site.mjs` 运行本工程 build，保存其精确 commit/archive，保持既有 public audience，最后确认部署 succeeded。根仓库提交与 Sites source SHA 不要求相同，但网站源码应一致。不要把根仓库、桌面应用或本地 `.qa/`、`node_modules/`、`.wrangler/` 上传到 Sites 源码。
+
+旧静态源码及 manifest 可从迁移前 Git 版本恢复；若后续发布，生产回滚可使用原 Sites 版本。本次没有 commit、push 或部署。
+
+设计、计划和验收：`docs/specs/2026-10-14-tanstack-migration.md`、`docs/plans/2026-10-14-tanstack-migration.md`、`docs/validation-2026-10-14.md`。其他文档记录的是此前静态官网的历史状态。

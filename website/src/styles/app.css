@@ -1,0 +1,44 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import './site.css';
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-md: var(--radius);
+}
+:root {
+  --background: #fcfdff;
+  --foreground: #10152d;
+  --primary: #6047ff;
+  --primary-foreground: #fff;
+  --border: #eaf0f8;
+  --ring: #937eff;
+  --radius: 0.5rem;
+}
+/* Base UI owns anchoring, focus and dismissal; preserve the existing menu surface. */
+.download-positioner {
+  z-index: 60;
+}
+.download-positioner .download-menu {
+  position: relative;
+  top: auto;
+  left: auto;
+  max-width: calc(100vw - 24px);
+}
+.download-positioner .download-menu::before {
+  left: auto;
+  right: 18px;
+}
+.download-menu button[data-highlighted] {
+  background: #f4f1ff;
+}
+.site-header nav a[aria-current='page'] {
+  color: var(--purple);
+  border-bottom: 2px solid var(--purple);
+}

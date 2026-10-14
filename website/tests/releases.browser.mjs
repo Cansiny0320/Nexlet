@@ -1,64 +1,93 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { readFile, mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
-import { RELEASE_API } from '../assets/releases.mjs';
-import { releaseFixture } from './release-fixture.mjs';
+const RELEASE_API = 'https://api.github.com/repos/Cansiny0320/Nexlet/releases/latest';
+import { releaseFixture } from './release-fixture.ts';
 
 const fallback = JSON.parse(await readFile(new URL('../downloads.json', import.meta.url), 'utf8'));
-let server, browser, base;
+let browser;
+const base = process.env.SITE_URL;
 before(async () => {
-  server = spawn(process.execPath, [new URL('../scripts/serve.mjs', import.meta.url).pathname], {
-    env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe']
+  assert(base, 'Use pnpm test:browser to launch the built Worker');
+  browser = await chromium.launch({
+    channel: process.env.BROWSER_CHANNEL || 'chrome',
+    headless: true,
   });
-  base = await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Preview did not start')), 5000);
-    server.once('error', error => { clearTimeout(timer); reject(error); });
-    server.stdout.on('data', data => {
-      const url = data.toString().match(/Local: (http:\/\/[^\s]+)/)?.[1];
-      if (url) { clearTimeout(timer); resolve(url); }
-    });
-  });
-  browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 'chrome', headless: true });
 });
-after(async () => { await browser?.close(); server?.kill(); });
+after(async () => {
+  await browser?.close();
+});
+async function go(page, url) {
+  await page.goto(url);
+  await page.waitForFunction(() => document.documentElement.classList.contains('js'));
+}
 
 test('shortcut labels follow the browser OS on both pages without architecture detection', async () => {
   for (const device of [
     { platform: 'MacIntel', userAgent: 'Macintosh; Intel Mac OS X', modifier: 'Option' },
-    { platform: 'MacIntel', userAgent: 'Macintosh; Intel Mac OS X', uaPlatform: 'macOS', modifier: 'Option' },
-    { platform: 'Win32', userAgent: 'Windows NT 10.0; Win64; x64', uaPlatform: 'Windows', modifier: 'Alt' },
-    { platform: 'MacIntel', userAgent: 'Macintosh; Intel Mac OS X', maxTouchPoints: 5, modifier: 'Alt' }
+    {
+      platform: 'MacIntel',
+      userAgent: 'Macintosh; Intel Mac OS X',
+      uaPlatform: 'macOS',
+      modifier: 'Option',
+    },
+    {
+      platform: 'Win32',
+      userAgent: 'Windows NT 10.0; Win64; x64',
+      uaPlatform: 'Windows',
+      modifier: 'Alt',
+    },
+    {
+      platform: 'MacIntel',
+      userAgent: 'Macintosh; Intel Mac OS X',
+      maxTouchPoints: 5,
+      modifier: 'Alt',
+    },
   ]) {
     const page = await browser.newPage();
-    await page.addInitScript(device => {
+    await page.addInitScript((device) => {
       Object.defineProperty(navigator, 'platform', { value: device.platform });
       Object.defineProperty(navigator, 'userAgent', { value: device.userAgent });
       Object.defineProperty(navigator, 'maxTouchPoints', { value: device.maxTouchPoints || 0 });
-      Object.defineProperty(navigator, 'userAgentData', { value: device.uaPlatform ? { platform: device.uaPlatform, mobile: false } : undefined });
+      Object.defineProperty(navigator, 'userAgentData', {
+        value: device.uaPlatform ? { platform: device.uaPlatform, mobile: false } : undefined,
+      });
     }, device);
-    await page.route(RELEASE_API, route => route.fulfill({ json: releaseFixture() }));
-    await page.goto(base + '/');
-    assert.equal(await page.locator('.mock-search kbd').textContent(), `${device.modifier} + Space`);
+    await page.route(RELEASE_API, (route) => route.fulfill({ json: releaseFixture() }));
+    await go(page, base + '/');
+    assert.equal(
+      await page.locator('.mock-search kbd').textContent(),
+      `${device.modifier} + Space`,
+    );
     if (device.modifier === 'Option') {
       await page.locator('.download-toggle').first().click();
       await page.locator('#hero-downloads [data-platform="windows-x64"]').click();
       assert.equal(await page.locator('.mock-search kbd').textContent(), 'Option + Space');
     }
-    await page.goto(base + '/download/');
-    assert.deepEqual(await page.locator('.step-visual.keys kbd').allTextContents(), [device.modifier, 'Space']);
-    assert.equal(await page.locator('.onboarding-steps li').nth(1).locator('p').textContent(), `默认 ${device.modifier} + Space，可在设置中修改。`);
-    assert((await page.locator('.faq-list').textContent()).includes(`Ctrl + ${device.modifier} + Space`));
+    await go(page, base + '/download/');
+    assert.deepEqual(await page.locator('.step-visual.keys kbd').allTextContents(), [
+      device.modifier,
+      'Space',
+    ]);
+    assert.equal(
+      await page.locator('.onboarding-steps li').nth(1).locator('p').textContent(),
+      `默认 ${device.modifier} + Space，可在设置中修改。`,
+    );
+    assert(
+      (await page.locator('.faq-list').textContent()).includes(`Ctrl + ${device.modifier} + Space`),
+    );
     await page.close();
   }
 });
 
 test('download page updates all links and version together without downloading files', async () => {
   const page = await browser.newPage();
-  const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.route(RELEASE_API, route => route.fulfill({ json: releaseFixture() }));
-  await page.goto(base + '/download/');
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.route(RELEASE_API, (route) => route.fulfill({ json: releaseFixture() }));
+  await go(page, base + '/download/');
   await page.getByText('最新正式版', { exact: true }).waitFor();
   assert.equal(await page.locator('[data-release-version]').textContent(), '9.9.9');
   for (const link of await page.locator('[data-direct-download], [data-checksums-link]').all()) {
@@ -72,15 +101,26 @@ test('download page updates all links and version together without downloading f
 test('late Release and architecture responses preserve the manual platform in both homepage controls', async () => {
   const page = await browser.newPage();
   await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'userAgentData', { value: {
-      platform: 'macOS', mobile: false, getHighEntropyValues: () => new Promise(resolve => { window.resolvePlatform = resolve; })
-    }});
+    Object.defineProperty(navigator, 'userAgentData', {
+      value: {
+        platform: 'macOS',
+        mobile: false,
+        getHighEntropyValues: () =>
+          new Promise((resolve) => {
+            window.resolvePlatform = resolve;
+          }),
+      },
+    });
     Object.defineProperty(navigator, 'userAgent', { value: 'Macintosh; Intel Mac OS X' });
   });
   let respond;
-  const requested = new Promise(resolve => { respond = resolve; });
-  await page.route(RELEASE_API, route => { respond(route); });
-  await page.goto(base + '/');
+  const requested = new Promise((resolve) => {
+    respond = resolve;
+  });
+  await page.route(RELEASE_API, (route) => {
+    respond(route);
+  });
+  await go(page, base + '/');
   const request = await requested;
   await page.locator('.download-toggle').first().click();
   await page.locator('#hero-downloads [data-platform="macos-x64"]').click();
@@ -92,7 +132,10 @@ test('late Release and architecture responses preserve the manual platform in bo
   }
   await page.locator('.download-toggle').first().click();
   await page.locator('#hero-downloads [data-platform="windows-x64"]').click();
-  assert.match(await page.locator('[data-primary-download]').first().getAttribute('href'), /v9\.9\.9\/Nexlet-9\.9\.9-Windows-x64\.exe$/);
+  assert.match(
+    await page.locator('[data-primary-download]').first().getAttribute('href'),
+    /v9\.9\.9\/Nexlet-9\.9\.9-Windows-x64\.exe$/,
+  );
   await page.close();
 });
 
@@ -103,27 +146,44 @@ test('unknown platform keeps the selection entry after refreshing', async () => 
     Object.defineProperty(navigator, 'userAgent', { value: 'Unknown' });
     Object.defineProperty(navigator, 'platform', { value: '' });
   });
-  await page.route(RELEASE_API, route => route.fulfill({ json: releaseFixture() }));
-  await page.goto(base + '/');
+  await page.route(RELEASE_API, (route) => route.fulfill({ json: releaseFixture() }));
+  await go(page, base + '/');
   await page.getByText('最新正式版', { exact: true }).first().waitFor();
-  assert.equal(await page.locator('[data-primary-download]').first().getAttribute('href'), '/download/');
+  assert.equal(
+    await page.locator('[data-primary-download]').first().getAttribute('href'),
+    '/download/',
+  );
   await page.close();
 });
 
 test('rate limits, network errors, invalid JSON and incomplete releases retain the entire fallback', async () => {
-  const incomplete = releaseFixture(); incomplete.assets.pop();
-  for (const reply of [route => route.fulfill({ status: 403, json: {} }), route => route.abort(),
-    route => route.fulfill({ body: 'invalid JSON' }), route => route.fulfill({ json: incomplete })]) {
+  const incomplete = releaseFixture();
+  incomplete.assets.pop();
+  for (const reply of [
+    (route) => route.fulfill({ status: 403, json: {} }),
+    (route) => route.abort(),
+    (route) => route.fulfill({ body: 'invalid JSON' }),
+    (route) => route.fulfill({ json: incomplete }),
+  ]) {
     const page = await browser.newPage();
     await page.route(RELEASE_API, reply);
-    await page.goto(base + '/download/');
+    await go(page, base + '/download/');
     await page.getByText('版本检查失败 · 可下载', { exact: true }).waitFor();
     assert.equal(await page.locator('[data-release-version]').textContent(), fallback.version);
     for (const [key, platform] of Object.entries(fallback.platforms)) {
-      assert.equal(await page.locator(`[data-direct-download="${key}"]`).getAttribute('href'), platform.url);
+      assert.equal(
+        await page.locator(`[data-direct-download="${key}"]`).getAttribute('href'),
+        platform.url,
+      );
     }
-    assert.equal(await page.locator('[data-checksums-link]').getAttribute('href'), fallback.checksumsUrl);
-    assert.equal(await page.locator('[data-release-link]').getAttribute('href'), fallback.releaseUrl);
+    assert.equal(
+      await page.locator('[data-checksums-link]').getAttribute('href'),
+      fallback.checksumsUrl,
+    );
+    assert.equal(
+      await page.locator('[data-release-link]').getAttribute('href'),
+      fallback.releaseUrl,
+    );
     await page.close();
   }
 });
@@ -134,18 +194,21 @@ test('no JavaScript retains versioned direct downloads and matching checksums', 
   await page.goto(base + '/download/');
   assert.equal(await page.locator('[data-direct-download]').count(), 3);
   assert.equal(await page.locator('[data-release-version]').textContent(), fallback.version);
-  assert.equal(await page.locator('[data-checksums-link]').getAttribute('href'), fallback.checksumsUrl);
+  assert.equal(
+    await page.locator('[data-checksums-link]').getAttribute('href'),
+    fallback.checksumsUrl,
+  );
   await context.close();
 });
 
 test('version and failure text fit desktop and mobile layouts', async () => {
   const page = await browser.newPage();
-  await page.route(RELEASE_API, route => route.fulfill({ status: 403, json: {} }));
+  await page.route(RELEASE_API, (route) => route.fulfill({ status: 403, json: {} }));
   await mkdir(new URL('../.qa/', import.meta.url), { recursive: true });
   for (const width of [320, 390, 768, 1065, 1107, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ['/', '/download/']) {
-      await page.goto(base + route);
+      await go(page, base + route);
       await page.getByText('版本检查失败 · 可下载', { exact: true }).first().waitFor();
       await page.evaluate(() => document.fonts.ready);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -154,12 +217,25 @@ test('version and failure text fit desktop and mobile layouts', async () => {
           const text = await hint.boundingBox();
           for (const card of await page.locator('.product-showcase .mock-window').all()) {
             const box = await card.boundingBox();
-            const overlaps = text.x < box.x + box.width && text.x + text.width > box.x && text.y < box.y + box.height && text.y + text.height > box.y;
-            assert(!overlaps, `Download text overlaps artwork at ${width}px: ${JSON.stringify({ text, box })}`);
+            const overlaps =
+              text.x < box.x + box.width &&
+              text.x + text.width > box.x &&
+              text.y < box.y + box.height &&
+              text.y + text.height > box.y;
+            assert(
+              !overlaps,
+              `Download text overlaps artwork at ${width}px: ${JSON.stringify({ text, box })}`,
+            );
           }
         }
       }
-      if (width === 390) await page.screenshot({ path: new URL(`../.qa/releases-${route === '/' ? 'home' : 'download'}.png`, import.meta.url).pathname, fullPage: true });
+      if (width === 390)
+        await page.screenshot({
+          path: fileURLToPath(
+            new URL(`../.qa/releases-${route === '/' ? 'home' : 'download'}.png`, import.meta.url),
+          ),
+          fullPage: true,
+        });
     }
   }
   await page.close();
