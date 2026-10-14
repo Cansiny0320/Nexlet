@@ -41,7 +41,7 @@ describe('主程序更新', () => {
     expect(updates.read()).toMatchObject({ phase: 'downloaded', percent: 100 });
     await updates.install();
     expect(prepare).toHaveBeenCalledOnce();
-    expect(transport.quitAndInstall).toHaveBeenCalledWith(false, true);
+    expect(transport.quitAndInstall).toHaveBeenCalledWith(true, true);
     expect(prepare.mock.invocationCallOrder[0]).toBeLessThan(transport.quitAndInstall.mock.invocationCallOrder[0]);
   });
 

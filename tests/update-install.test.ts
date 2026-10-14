@@ -20,7 +20,7 @@ import { createUpdateTransport } from '../src/main/update-transport';
 
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
 
-it.each([false, true])('launches the physical installer path, including elevation=%s', async elevated => {
+it.each([false, true])('launches the physical installer silently with automatic restart, including elevation=%s', async elevated => {
   vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
   const directory = await mkdtemp(path.join(tmpdir(), 'nexlet-install-path-'));
   const physical = path.join(directory, 'physical cache');
@@ -35,12 +35,12 @@ it.each([false, true])('launches the physical installer path, including elevatio
     const launch = vi.spyOn(updater, 'spawnLog').mockResolvedValue(true);
     vi.stubGlobal('process', Object.assign(Object.create(process), { resourcesPath: path.join(directory, 'resources') }));
     try {
-      expect(updater.install(false, true)).toBe(true);
+      expect(updater.install(true, true)).toBe(true);
       const installer = realpathSync.native(path.join(physical, 'Setup.exe'));
       if (elevated) {
-        expect(launch).toHaveBeenCalledExactlyOnceWith(path.join(process.resourcesPath, 'elevate.exe'), [installer, '--updated', '--force-run']);
+        expect(launch).toHaveBeenCalledExactlyOnceWith(path.join(process.resourcesPath, 'elevate.exe'), [installer, '--updated', '/S', '--force-run']);
       } else {
-        expect(launch).toHaveBeenCalledExactlyOnceWith(installer, ['--updated', '--force-run']);
+        expect(launch).toHaveBeenCalledExactlyOnceWith(installer, ['--updated', '/S', '--force-run']);
       }
     } finally { vi.unstubAllGlobals(); }
   } finally { await rm(directory, { recursive: true, force: true }); }
