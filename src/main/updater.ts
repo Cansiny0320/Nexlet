@@ -10,7 +10,7 @@ export interface UpdateTransport {
   on(event: string, listener: (...args: any[]) => void): unknown;
   checkForUpdates(): Promise<unknown>;
   downloadUpdate(): Promise<unknown>;
-  quitAndInstall(silent?: boolean, relaunch?: boolean): void;
+  quitAndInstall(silent?: boolean, relaunch?: boolean): void | Promise<void>;
 }
 const newer = (version: string, current: string) => !!semver.valid(version) && !semver.prerelease(version) && semver.gt(version, current);
 
@@ -129,7 +129,7 @@ export class AppUpdates {
   async install(): Promise<void> {
     if (this.status.mode !== 'automatic' || this.status.phase !== 'downloaded') throw Error('更新尚未下载完成');
     this.set({ phase: 'installing' });
-    try { await this.prepareInstall(); this.transport!.quitAndInstall(true, true); } catch (error) { this.fail(error); }
+    try { await this.prepareInstall(); await this.transport!.quitAndInstall(true, true); } catch (error) { this.fail(error); }
   }
   downloadUrl(): string {
     if (this.status.mode !== 'portable' || this.status.phase !== 'available' || !this.portableUrl) throw Error('请先检查可手动下载的更新');
