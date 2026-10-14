@@ -39,7 +39,7 @@ test('别名可检索；逐功能禁用拦截旧结果并能在管理页恢复',
  await expect(call('launch',{id:command.id,inputId:command.inputId})).rejects.toThrow('禁用');
  const matched=await call('search',{query:'{"a":1}'});expect(matched.matches.some((c:any)=>c.id==='match:json')).toBe(false);
  await page.getByRole('button',{name:'打开设置',exact:true}).click();await page.getByLabel('筛选功能').fill('结构化数据');await page.locator('.command-management-row').filter({hasText:'JSON 工具'}).click();
- await page.getByLabel('禁用此功能').uncheck();await page.getByRole('button',{name:'保存功能设置'}).click();
+ await page.getByRole('switch',{name:'禁用此功能',exact:true}).uncheck();await page.getByRole('button',{name:'保存功能设置'}).click();
  const state=await call('state');expect(state.shortcutStatuses['tool:json'].effective).toBe('Control+Alt+J');expect(state.commandConfig.commands['tool:json'].aliases).toContain('结构化数据');
 });
 

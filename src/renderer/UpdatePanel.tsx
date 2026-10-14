@@ -1,3 +1,5 @@
+import { Button } from './components/ui/button';
+import { Switch } from './components/ui/switch';
 import { Download, RefreshCw } from 'lucide-react';
 import { api, errorText, useApp } from './common';
 import { ReleaseNotes } from './ReleaseNotes';
@@ -26,14 +28,14 @@ export function UpdatePanel() {
   const label = { idle: '检查是否有新的正式版本', checking: '正在检查更新…', latest: '当前已是最新正式版本', available: `发现新版本 ${update.version}`, downloading, downloaded: `版本 ${update.version} 已下载，准备安装`, installing: '正在准备安装并重启…', error: update.error || '更新失败，请重试' }[update.phase];
   return <>
     <div className="setting-row"><div><strong>自动检查更新</strong><p>启动后自动检查，此后每 6 小时检查一次；下载和安装由你确认。</p></div>
-      <button className={`toggle ${state.settings.autoCheckUpdates ? 'on' : ''}`} role="switch" aria-label="自动检查更新" aria-checked={state.settings.autoCheckUpdates} disabled={update.mode === 'unsupported'} onClick={() => void toggleAutomaticChecks()}><i/></button>
+      <Switch aria-label="自动检查更新" checked={state.settings.autoCheckUpdates} disabled={update.mode === 'unsupported'} onCheckedChange={() => void toggleAutomaticChecks()}/>
     </div>
     <div className="setting-row"><div><strong>应用更新</strong><p role="status">{update.mode === 'unsupported' ? '开发模式或当前平台暂不支持更新' : label}</p>
       {update.mode === 'portable' && <p>{state.platform==='linux'?'下载 deb 后手动安装升级；AppImage 支持应用内更新。':'便携版下载后需手动替换；使用安装版可直接重启更新。'}</p>}</div>
       <div className="tool-buttons">
-        {update.phase === 'available' ? <button className="button primary" onClick={() => void action(update.mode === 'portable' ? 'updatePortable' : 'updateDownload')}><Download size={16}/>{update.mode === 'portable' ? (state.platform==='linux'?'下载 deb 安装包':'下载便携版') : '下载更新'}</button> :
-          update.phase === 'downloaded' ? <button className="button primary" onClick={() => void action('updateInstall')}>重启安装</button> :
-          <button className="button" disabled={busy || update.mode === 'unsupported'} onClick={() => void action('updateCheck')}><RefreshCw size={16}/>{busy ? '更新处理中…' : '检查更新'}</button>}
+        {update.phase === 'available' ? <Button onClick={() => void action(update.mode === 'portable' ? 'updatePortable' : 'updateDownload')}><Download size={16}/>{update.mode === 'portable' ? (state.platform==='linux'?'下载 deb 安装包':'下载便携版') : '下载更新'}</Button> :
+          update.phase === 'downloaded' ? <Button onClick={() => void action('updateInstall')}>重启安装</Button> :
+          <Button variant="outline" disabled={busy || update.mode === 'unsupported'} onClick={() => void action('updateCheck')}><RefreshCw size={16}/>{busy ? '更新处理中…' : '检查更新'}</Button>}
       </div>
     </div>
     {update.phase === 'downloading' && <div className="update-progress">

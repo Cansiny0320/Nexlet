@@ -92,7 +92,7 @@ test('附加工具正常输入、错误输入与深色主题',async()=>{
   await page.getByRole('textbox',{name:'工具输入'}).fill('!!!');await page.getByRole('button',{name:'解码',exact:true}).click();await expect(page.locator('.has-error')).toBeVisible();
   await open('时间戳');await page.getByRole('textbox',{name:'Unix 时间戳'}).fill('0');await expect(page.locator('output').nth(1)).toHaveText('1970-01-01T00:00:00.000Z');await page.getByRole('textbox',{name:'Unix 时间戳'}).fill('invalid');await expect(page.locator('output').first()).toHaveText('请输入有效时间戳');
   await open('UUID');await page.getByRole('button',{name:'生成',exact:true}).click();expect(await page.getByRole('textbox',{name:'生成的 UUID'}).inputValue()).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
-  await open('设置');await page.getByRole('combobox',{name:'主题',exact:true}).selectOption('dark');await expect(page.locator('html')).toHaveAttribute('data-theme','dark');await page.screenshot({path:path.join(root,'test-results','settings-dark.png')});await page.getByRole('combobox',{name:'主题',exact:true}).selectOption('light');
+  await open('设置');await page.getByRole('combobox',{name:'主题',exact:true}).click();await page.getByRole('option',{name:'深色',exact:true}).click();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');await page.screenshot({path:path.join(root,'test-results','settings-dark.png')});await page.getByRole('combobox',{name:'主题',exact:true}).click();await page.getByRole('option',{name:'浅色',exact:true}).click();
 });
 
 test('真实插件安装、独立存储、权限拒绝、禁用和卸载',async()=>{

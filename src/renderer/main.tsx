@@ -1,8 +1,7 @@
 import React,{lazy,Suspense} from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import './styles.css';
-import './desktop-tools.css';
+import './ui.css';
 const Capture=lazy(()=>import('./Capture').then(m=>({default:m.Capture})));
 const ImageTools=lazy(()=>import('./ImageTools').then(m=>({default:m.ImageTools})));
 const desktop=new URLSearchParams(location.search).get('desktop');
