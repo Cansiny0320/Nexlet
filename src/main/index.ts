@@ -1,5 +1,5 @@
 import { CommandRegistry } from './command-registry';
-import { WindowActions, windowCommands } from './window-actions';
+import { WindowActions } from './window-actions';
 import { DesktopTools, desktopCommands } from './desktop-tools';
 import { createWindowBackend } from './window-native';
 import { PanelConfigStore } from './panel-config';
@@ -154,7 +154,7 @@ async function bootstrap() {
   function position() {const area=screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;const bounds=main.getBounds();main.setPosition(Math.round(area.x+(area.width-bounds.width)/2),Math.round(area.y+Math.max(25,(area.height-bounds.height)*0.3)));}
   async function show() {windowActions.remember();await platform.rememberTarget();if(main.isMinimized())main.restore();position();revealWindow(main);main.webContents.send('host-change','focus');notify();}
   function sourceCommands(settings=store.settings()):Command[] {
-    return [...BUILTIN_COMMANDS,...windowCommands(),...desktopCommands(),...catalog.items,...systemActions.commands(),...plugins.commands(),...settings.webShortcuts.map(w=>({id:'web:'+w.id,name:w.name,subtitle:w.url,kind:'web' as const,keywords:[],color:'#3188ef'}))];
+    return [...BUILTIN_COMMANDS,...desktopCommands(),...catalog.items,...systemActions.commands(),...plugins.commands(),...settings.webShortcuts.map(w=>({id:'web:'+w.id,name:w.name,subtitle:w.url,kind:'web' as const,keywords:[],color:'#3188ef'}))];
   }
   const shortcuts=new ShortcutManager(testMode?{register:()=>true,unregister:()=>{}}:globalShortcut,id=>{
     if(id==='wake'){if(main.isVisible()&&main.isFocused())main.hide();else void show();}
