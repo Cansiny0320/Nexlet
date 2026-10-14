@@ -55,6 +55,9 @@ export function App(){
   useEffect(()=>{if(!state||restoring)return;const media=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=state.settings.theme==='system'?(media.matches?'dark':'light'):state.settings.theme;apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);},[state?.settings.theme,restoring]);
   useEffect(()=>{const handle=(event:KeyboardEvent)=>{
     if(event.isComposing||event.keyCode===229||event.repeat||dialogSpec||transferring||document.querySelector('.modal-backdrop,dialog[open]'))return;
+    if(event.key==='Backspace'&&!event.defaultPrevented&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.shiftKey&&!detached&&view!=='launcher'&&event.target instanceof HTMLInputElement&&event.target.closest('.titlebar')&&event.target.value===''){
+      event.preventDefault();navigate('launcher');return;
+    }
     if((event.ctrlKey||event.metaKey)&&event.key===','){event.preventDefault();navigate('settings');}
     if(event.key==='Escape'&&!event.defaultPrevented){if(query)setQuery('');else if(launchInput)clearLaunchInput();else if(view!=='launcher'&&!detached)navigate('launcher');else void api('window',{action:'hide'});}
   };window.addEventListener('keydown',handle);return()=>window.removeEventListener('keydown',handle);},[view,query,launchInput,dialogSpec,transferring,navigate,clearLaunchInput]);
