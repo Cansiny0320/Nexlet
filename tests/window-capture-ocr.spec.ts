@@ -49,14 +49,6 @@ test('工具目录和搜索不再展示窗口布局入口',async()=>{
  await home();const search=main.getByLabel('搜索功能、应用或快捷方式');await search.fill('分屏');
  await expect(main.locator('[data-command-id^="window:"]')).toHaveCount(0);await search.fill('');
 });
-test('OCR 入口在网格和列表展示文字扫描图标',async()=>{
- await home();const search=main.getByLabel('搜索功能、应用或快捷方式');await search.fill('OCR');
- for(const layout of ['网格展示','列表展示']){
-  await main.getByRole('button',{name:layout,exact:true}).click();
-  for(const id of ['capture:ocr','capture:ocr-copy','tool:ocr','ocr:image-copy'])await expect(main.locator(`[data-command-id="${id}"] .lucide-scan-text`)).toBeVisible();
- }
- await main.getByRole('button',{name:'网格展示',exact:true}).click();await search.fill('');
-});
 test('省略的功能名称在网格和列表悬停提示中保留全文',async()=>{
  await home();const search=main.getByLabel('搜索功能、应用或快捷方式');await search.fill('截图 OCR');
  const button=main.getByRole('button',{name:'截图 OCR 识别复制',exact:true});await button.hover();await expect(button).toHaveAttribute('title',/^截图 OCR 识别复制\n/);

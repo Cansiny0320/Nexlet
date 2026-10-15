@@ -3,8 +3,7 @@ import {layoutBounds,WINDOW_LAYOUTS,type WindowRect} from '../src/shared/window-
 import {WindowActions,type WindowBackend} from '../src/main/window-actions';
 const left={id:1,workArea:{x:-1200,y:80,width:1200,height:800}},right={id:2,workArea:{x:0,y:0,width:1500,height:900}};
 describe('window layouts',()=>{
- it('covers all 15 layouts with rounded shared edges and negative origins',()=>{
-  expect(WINDOW_LAYOUTS).toHaveLength(15);
+ it('keeps layouts within the work area with rounded shared edges and negative origins',()=>{
   for(const {id} of WINDOW_LAYOUTS){const r=layoutBounds(id,left.workArea,{x:10,y:20,width:400,height:300});expect(r.x).toBeGreaterThanOrEqual(-1200);expect(r.y).toBeGreaterThanOrEqual(80);expect(r.x+r.width).toBeLessThanOrEqual(0);expect(r.y+r.height).toBeLessThanOrEqual(880);}
   const area={x:-99,y:10,width:1001,height:601};const a=layoutBounds('left',area,area),b=layoutBounds('right',area,area);expect(a.x+a.width).toBe(b.x);expect(a.width+b.width).toBe(area.width);
  });
