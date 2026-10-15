@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import koffi from 'koffi';
 
 function loadShell() {
@@ -23,12 +24,12 @@ function loadShell() {
 let native: ReturnType<typeof loadShell> | undefined;
 
 export function launchWindowsApplication(appId: string): void {
-  if (!/^[a-zA-Z0-9_.-]+![a-zA-Z0-9_.-]+$/.test(appId)) throw new Error('Windows 应用标识无效');
+  if (!/^[a-zA-Z0-9_.-]+![a-zA-Z0-9_.-]+$/.test(appId)) throw new Error(t("Windows 应用标识无效"));
   const shell = native ??= loadShell();
   // STA + disable OLE1 DDE. An existing different apartment may still use the Shell.
   const initialized = shell.initialize(null, 0x6) as number;
   if (initialized < 0 && (initialized >>> 0) !== 0x80010106) {
-    throw new Error(`无法初始化 Windows 应用启动服务（HRESULT 0x${(initialized >>> 0).toString(16)}）`);
+    throw new Error(t("无法初始化 Windows 应用启动服务（HRESULT 0x{{v0}}）", { v0: (initialized >>> 0).toString(16) }));
   }
   try {
     // Explorer's process exit code does not describe application activation success.
@@ -42,10 +43,10 @@ export function launchWindowsApplication(appId: string): void {
     });
     if (!accepted) {
       const code = shell.lastError() as number;
-      const reason = code === 2 || code === 3 ? '应用不存在或已卸载，请刷新应用列表'
-        : code === 5 ? '系统拒绝访问该应用'
-        : code === 1223 ? '启动已取消' : '系统未能启动该应用';
-      throw new Error(`无法启动应用：${reason}（Windows 错误 ${code}）`);
+      const reason = code === 2 || code === 3 ? t("应用不存在或已卸载，请刷新应用列表")
+        : code === 5 ? t("系统拒绝访问该应用")
+        : code === 1223 ? t("启动已取消") : t("系统未能启动该应用");
+      throw new Error(t("无法启动应用：{{v0}}（Windows 错误 {{v1}}）", { v0: reason, v1: code }));
     }
   } finally {
     // S_OK and S_FALSE both increment COM's per-thread initialization count.

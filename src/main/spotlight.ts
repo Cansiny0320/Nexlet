@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { spawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -12,11 +13,11 @@ export class SpotlightSearch {
     this.forget(owner);
     const scopes=[...new Set(this.paths())];
     const empty={items:[],limited:false,scopes};
-    if(!query.trim())return {status:'idle',message:SPOTLIGHT_IDLE,...empty};
+    if(!query.trim())return {status:'idle',message:t(SPOTLIGHT_IDLE),...empty};
     const expression=spotlightQuery(query);
     const controller=new AbortController(),{signal}=controller;
     this.pending.set(owner,controller);
-    const timer=setTimeout(()=>controller.abort(new Error('Spotlight 搜索超时，请缩小搜索范围或重试')),5000);
+    const timer=setTimeout(()=>controller.abort(new Error(t("Spotlight 搜索超时，请缩小搜索范围或重试"))),5000);
     try{
       const paths=new Set<string>();
       for(const scope of scopes.length?scopes:[undefined]){
@@ -37,10 +38,10 @@ export class SpotlightSearch {
       finally{signal.removeEventListener('abort',abortMetadata);}
       signal.throwIfAborted();
       const items=rows.filter((row):row is FileResult=>row!==null).slice(0,200);
-      return {status:'ready',message:items.length?'':'没有找到相关文件；尚未被 Spotlight 索引或被排除的文件可能无法找到',items,limited:paths.size>200,scopes};
+      return {status:'ready',message:items.length?'':t("没有找到相关文件；尚未被 Spotlight 索引或被排除的文件可能无法找到"),items,limited:paths.size>200,scopes};
     }catch(error){
       if(signal.aborted&&signal.reason?.name==='AbortError')return {status:'idle',message:'',...empty};
-      return {status:'unavailable',message:signal.aborted?String(signal.reason.message):'Spotlight 搜索失败，请检查搜索目录是否可访问后重试',...empty};
+      return {status:'unavailable',message:signal.aborted?String(signal.reason.message):t("Spotlight 搜索失败，请检查搜索目录是否可访问后重试"),...empty};
     }finally{
       clearTimeout(timer);
       if(this.pending.get(owner)===controller)this.pending.delete(owner);
@@ -70,11 +71,11 @@ export class SpotlightSearch {
           if(path.isAbsolute(file))paths.add(file);
           if(paths.size>200){finish(undefined,true);return;}
         }
-        if(buffer.length>1024*1024)finish(new Error('Spotlight 返回路径过长'),true);
+        if(buffer.length>1024*1024)finish(new Error(t("Spotlight 返回路径过长")),true);
       });
       child.stderr.resume();
       child.on('error',error=>finish(error,true));
-      child.on('close',code=>finish(code===0?undefined:new Error('Spotlight 进程退出失败')));
+      child.on('close',code=>finish(code===0?undefined:new Error(t("Spotlight 进程退出失败"))));
     });
   }
   forget(owner:number){this.pending.get(owner)?.abort();this.pending.delete(owner);}

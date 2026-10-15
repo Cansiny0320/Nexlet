@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import {shell,systemPreferences} from 'electron';
 import koffi from 'koffi';
 
@@ -11,5 +12,5 @@ export async function ensureScreenCaptureAccess(platform:NodeJS.Platform=process
   if(request()||systemPreferences.getMediaAccessStatus('screen')==='granted')return;
  }
  await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
- throw Error(status==='restricted'?'屏幕录制受到系统策略限制，已打开系统设置，请联系设备管理员允许 Nexlet':'已打开屏幕录制设置，请允许 Nexlet；若系统提示，请退出并重新打开 Nexlet 后重试');
+ throw Error(status==='restricted'?t("屏幕录制受到系统策略限制，已打开系统设置，请联系设备管理员允许 Nexlet"):t("已打开屏幕录制设置，请允许 Nexlet；若系统提示，请退出并重新打开 Nexlet 后重试"));
 }

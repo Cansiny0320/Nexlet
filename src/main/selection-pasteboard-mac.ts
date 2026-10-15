@@ -1,3 +1,4 @@
+import { t as translate } from '../shared/i18n';
 import koffi from 'koffi';
 export type NativePasteboardSnapshot={native:'mac';data:Record<string,Buffer>[]};
 let appKit:ReturnType<typeof koffi.load>|undefined;
@@ -14,20 +15,20 @@ export function createSelectionPasteboard(name?:string){
  const boardClass=cls('NSPasteboard'),poolClass=cls('NSAutoreleasePool'),arrayClass=cls('NSMutableArray'),itemClass=cls('NSPasteboardItem'),dataClass=cls('NSData');
  const pooled=<T>(work:(board:unknown)=>T):T=>{
   const pool=object(object(poolClass,selectors.alloc),selectors.init);let key:unknown;
-  try{if(name)key=makeString(null,name,0x08000100);const board=name?withObject(boardClass,selectors['pasteboardWithName:'],key):object(boardClass,selectors.generalPasteboard);if(!board)throw Error('无法访问原剪贴板');return work(board);}
+  try{if(name)key=makeString(null,name,0x08000100);const board=name?withObject(boardClass,selectors['pasteboardWithName:'],key):object(boardClass,selectors.generalPasteboard);if(!board)throw Error(translate("无法访问原剪贴板"));return work(board);}
   finally{if(key)release(key);if(pool)message(pool,selectors.drain);}
  };
  return {
   sequence:()=>pooled(board=>Number(integer(board,selectors.changeCount))),
   snapshot:():NativePasteboardSnapshot=>pooled(board=>{
-   const entries=object(board,selectors.pasteboardItems),count=Number(integer(entries,selectors.count));if(count>100)throw Error('原剪贴板内容过多，请手动粘贴选区');
+   const entries=object(board,selectors.pasteboardItems),count=Number(integer(entries,selectors.count));if(count>100)throw Error(translate("原剪贴板内容过多，请手动粘贴选区"));
    const result:Record<string,Buffer>[]=[];let total=0;
    for(let i=0;i<count;i++){
-    const item=at(entries,selectors['objectAtIndex:'],i),types=object(item,selectors.types),typeCount=Number(integer(types,selectors.count));if(typeCount>128)throw Error('原剪贴板格式过多，请手动粘贴选区');
+    const item=at(entries,selectors['objectAtIndex:'],i),types=object(item,selectors.types),typeCount=Number(integer(types,selectors.count));if(typeCount>128)throw Error(translate("原剪贴板格式过多，请手动粘贴选区"));
     const values:Record<string,Buffer>=Object.create(null);
     for(let t=0;t<typeCount;t++){
-     const type=at(types,selectors['objectAtIndex:'],t),key=string(type,selectors.UTF8String),value=withObject(item,selectors['dataForType:'],type);if(!value)throw Error('无法完整读取原剪贴板，请手动粘贴选区');
-     const length=Number(integer(value,selectors.length));total+=length;if(total>64*1024*1024)throw Error('原剪贴板超过 64 MB，请手动粘贴选区');
+     const type=at(types,selectors['objectAtIndex:'],t),key=string(type,selectors.UTF8String),value=withObject(item,selectors['dataForType:'],type);if(!value)throw Error(translate("无法完整读取原剪贴板，请手动粘贴选区"));
+     const length=Number(integer(value,selectors.length));total+=length;if(total>64*1024*1024)throw Error(translate("原剪贴板超过 64 MB，请手动粘贴选区"));
      values[key]=length?Buffer.from(koffi.decode(object(value,selectors.bytes),'uint8_t',length)):Buffer.alloc(0);
     }
     result.push(values);
@@ -41,13 +42,13 @@ export function createSelectionPasteboard(name?:string){
     const item=object(object(object(itemClass,selectors.alloc),selectors.init),selectors.autorelease);
     for(const [type,bytes] of Object.entries(values)){
      const key=makeString(null,type,0x08000100);
-     try{const value=data(dataClass,selectors['dataWithBytes:length:'],bytes,bytes.length);if(!set(item,selectors['setData:forType:'],value,key))throw Error('无法准备原剪贴板格式');}finally{release(key);}
+     try{const value=data(dataClass,selectors['dataWithBytes:length:'],bytes,bytes.length);if(!set(item,selectors['setData:forType:'],value,key))throw Error(translate("无法准备原剪贴板格式"));}finally{release(key);}
     }
     add(entries,selectors['addObject:'],item);
    }
    if(Number(integer(board,selectors.changeCount))!==expected)return false;
    integer(board,selectors.clearContents);
-   if(snapshot.data.length&&!write(board,selectors['writeObjects:'],entries))throw Error('恢复原剪贴板失败');
+   if(snapshot.data.length&&!write(board,selectors['writeObjects:'],entries))throw Error(translate("恢复原剪贴板失败"));
    return true;
   })
  };

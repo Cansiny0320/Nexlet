@@ -1,3 +1,5 @@
+import { commandNames } from '../shared/localized-command';
+import { t } from '../shared/i18n';
 import {displayFor,fitBounds,layoutBounds,sameBounds,WINDOW_LAYOUTS,type WindowDisplay,type WindowRect} from '../shared/window-layout';
 import type {Command} from '../shared/types';
 export interface WindowBackend {capture():string|null;read(id:string):WindowRect;write(id:string,bounds:WindowRect):void;activate(id:string):void;close():void;}
@@ -8,11 +10,11 @@ export class WindowActions {
  constructor(private backend:WindowBackend,private displays:()=>WindowDisplay[]){}
  remember(){try{const target=this.backend.capture();if(target){this.target=target;this.issue=null;}}catch(error){this.target=null;this.issue=(error as Error).message;}}
  execute(action:string){
-  const id=this.target;if(!id)throw Error(this.issue||'请先激活要调整的窗口，再唤起 Nexlet');
+  const id=this.target;if(!id)throw Error(this.issue||t("请先激活要调整的窗口，再唤起 Nexlet"));
   const before=this.backend.read(id),displays=this.displays(),current=displayFor(before,displays);
   let desired:WindowRect;
   if(action==='restore'){
-   const previous=this.original.get(id);if(!previous)throw Error('当前窗口没有可恢复的位置');
+   const previous=this.original.get(id);if(!previous)throw Error(t("当前窗口没有可恢复的位置"));
    desired=fitBounds(previous,displayFor(previous,displays).workArea);
   }else{
    if(!this.original.has(id)){this.original.set(id,{...before});if(this.original.size>32)this.original.delete(this.original.keys().next().value!);}
@@ -30,8 +32,8 @@ export class WindowActions {
   this.backend.write(id,desired);this.backend.activate(id);
   if(action==='restore')this.original.delete(id);
   const actual=this.backend.read(id);
-  return {bounds:actual,...(!sameBounds(actual,desired)?{warning:'目标应用限制了窗口尺寸或位置，已按其允许的范围调整'}:{})};
+  return {bounds:actual,...(!sameBounds(actual,desired)?{warning:t("目标应用限制了窗口尺寸或位置，已按其允许的范围调整")}:{})};
  }
  close(){this.backend.close();this.original.clear();this.target=null;}
 }
-export function windowCommands():Command[]{return [...WINDOW_LAYOUTS,{id:'restore',name:'恢复窗口位置'},{id:'previous-display',name:'窗口移到上一屏'},{id:'next-display',name:'窗口移到下一屏'}].map(l=>({id:'window:'+l.id,name:l.name,subtitle:'调整唤起 Nexlet 前的窗口',kind:'system',keywords:['窗口','window','布局','分屏'],color:'#548cba'}));}
+export function windowCommands():Command[]{return [...WINDOW_LAYOUTS,{id:'restore',name:"恢复窗口位置"},{id:'previous-display',name:"窗口移到上一屏"},{id:'next-display',name:"窗口移到下一屏"}].map(l=>({id:'window:'+l.id,name:t(l.name),subtitle:t("调整唤起 Nexlet 前的窗口"),kind:'system',keywords:['窗口','window','布局','分屏',...commandNames(l.name)],color:'#548cba'}));}

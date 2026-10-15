@@ -10,12 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LocaleRouteImport } from './routes/$locale'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as PluginsRouteImport } from './routes/plugins'
+import { Route as LocaleIndexRouteImport } from './routes/$locale.index'
+import { Route as LocaleDownloadRouteImport } from './routes/$locale.download'
+import { Route as LocalePluginsRouteImport } from './routes/$locale.plugins'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocaleRoute = LocaleRouteImport.update({
+  id: '/$locale',
+  path: '/$locale',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DownloadRoute = DownloadRouteImport.update({
@@ -28,33 +37,81 @@ const PluginsRoute = PluginsRouteImport.update({
   path: '/plugins',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocaleIndexRoute = LocaleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LocaleRoute,
+} as any)
+const LocaleDownloadRoute = LocaleDownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
+  getParentRoute: () => LocaleRoute,
+} as any)
+const LocalePluginsRoute = LocalePluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
+  getParentRoute: () => LocaleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$locale': typeof LocaleRouteWithChildren
   '/download': typeof DownloadRoute
   '/plugins': typeof PluginsRoute
+  '/$locale/download': typeof LocaleDownloadRoute
+  '/$locale/plugins': typeof LocalePluginsRoute
+  '/$locale/': typeof LocaleIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/download': typeof DownloadRoute
   '/plugins': typeof PluginsRoute
+  '/$locale/download': typeof LocaleDownloadRoute
+  '/$locale/plugins': typeof LocalePluginsRoute
+  '/$locale': typeof LocaleIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$locale': typeof LocaleRouteWithChildren
   '/download': typeof DownloadRoute
   '/plugins': typeof PluginsRoute
+  '/$locale/download': typeof LocaleDownloadRoute
+  '/$locale/plugins': typeof LocalePluginsRoute
+  '/$locale/': typeof LocaleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/download' | '/plugins'
+  fullPaths:
+    | '/'
+    | '/$locale'
+    | '/download'
+    | '/plugins'
+    | '/$locale/download'
+    | '/$locale/plugins'
+    | '/$locale/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/download' | '/plugins'
-  id: '__root__' | '/' | '/download' | '/plugins'
+  to:
+    | '/'
+    | '/download'
+    | '/plugins'
+    | '/$locale/download'
+    | '/$locale/plugins'
+    | '/$locale'
+  id:
+    | '__root__'
+    | '/'
+    | '/$locale'
+    | '/download'
+    | '/plugins'
+    | '/$locale/download'
+    | '/$locale/plugins'
+    | '/$locale/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LocaleRoute: typeof LocaleRouteWithChildren
   DownloadRoute: typeof DownloadRoute
   PluginsRoute: typeof PluginsRoute
 }
@@ -66,6 +123,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$locale': {
+      id: '/$locale'
+      path: '/$locale'
+      fullPath: '/$locale'
+      preLoaderRoute: typeof LocaleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/download': {
@@ -82,11 +146,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PluginsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$locale/': {
+      id: '/$locale/'
+      path: '/'
+      fullPath: '/$locale/'
+      preLoaderRoute: typeof LocaleIndexRouteImport
+      parentRoute: typeof LocaleRoute
+    }
+    '/$locale/download': {
+      id: '/$locale/download'
+      path: '/download'
+      fullPath: '/$locale/download'
+      preLoaderRoute: typeof LocaleDownloadRouteImport
+      parentRoute: typeof LocaleRoute
+    }
+    '/$locale/plugins': {
+      id: '/$locale/plugins'
+      path: '/plugins'
+      fullPath: '/$locale/plugins'
+      preLoaderRoute: typeof LocalePluginsRouteImport
+      parentRoute: typeof LocaleRoute
+    }
   }
 }
 
+interface LocaleRouteChildren {
+  LocaleDownloadRoute: typeof LocaleDownloadRoute
+  LocalePluginsRoute: typeof LocalePluginsRoute
+  LocaleIndexRoute: typeof LocaleIndexRoute
+}
+
+const LocaleRouteChildren: LocaleRouteChildren = {
+  LocaleDownloadRoute: LocaleDownloadRoute,
+  LocalePluginsRoute: LocalePluginsRoute,
+  LocaleIndexRoute: LocaleIndexRoute,
+}
+
+const LocaleRouteWithChildren =
+  LocaleRoute._addFileChildren(LocaleRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LocaleRoute: LocaleRouteWithChildren,
   DownloadRoute: DownloadRoute,
   PluginsRoute: PluginsRoute,
 }

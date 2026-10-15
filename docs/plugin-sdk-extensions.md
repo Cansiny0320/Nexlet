@@ -1,3 +1,5 @@
+[简体中文](plugin-sdk-extensions.md) · [繁體中文](plugin-sdk-extensions.zh-Hant.md) · [English](plugin-sdk-extensions.en.md)
+
 # Nexlet SDK 扩展能力
 
 本扩展沿用 `apiVersion: 1`，保持原接口不变，以 Nexlet API 覆盖桌面插件的能力分类。**不提供 uTools 插件源码、接口名称或安装包兼容层。** 这些改动尚未发布；旧正式版宿主不认识新增权限。公开合同位于 `sdk/index.d.ts` 和 `src/shared/plugin-api.ts`，插件仓类型由 `node scripts/sync-plugin-sdk.mjs` 生成。

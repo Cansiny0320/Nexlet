@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import koffi from 'koffi';
 
 function loadNative() {
@@ -18,9 +19,9 @@ function loadNative() {
 let native: ReturnType<typeof loadNative> | undefined;
 
 export async function windowsPowerAction(action: 'lock' | 'sleep'): Promise<void> {
-  if (process.platform !== 'win32') throw Error('此操作仅支持 Windows');
+  if (process.platform !== 'win32') throw Error(t("此操作仅支持 Windows"));
   const api = native ??= loadNative();
-  const failure = () => Error(`Windows 系统操作失败（错误 ${api.lastError()}）`);
+  const failure = () => Error(t("Windows 系统操作失败（错误 {{v0}}）", { v0: api.lastError() }));
   if (action === 'lock') { if (!api.lock()) throw failure(); return; }
   // SetSuspendState requires SeShutdownPrivilege. Enable only the existing
   // token privilege, preserve its previous attributes, then restore and close.
@@ -38,13 +39,13 @@ export async function windowsPowerAction(action: 'lock' | 'sleep'): Promise<void
     // A nonzero return can still mean ERROR_NOT_ALL_ASSIGNED.
     const error = api.lastError() as number;
     previous = saved;
-    if (error) throw Error(`Windows 无法取得睡眠权限（错误 ${error}）`);
+    if (error) throw Error(t("Windows 无法取得睡眠权限（错误 {{v0}}）", { v0: error }));
     await new Promise<void>((resolve, reject) => {
       // The call may finish only after wake. Don't block Electron's main thread.
       // GetLastError belongs to the worker thread, so don't read it on the JS thread.
       api.suspend.async(0, 0, 0, (error: Error | null, accepted: number) => {
         if (error) reject(error);
-        else if (!accepted) reject(Error('Windows 未接受睡眠请求，请检查电源策略与睡眠支持'));
+        else if (!accepted) reject(Error(t("Windows 未接受睡眠请求，请检查电源策略与睡眠支持")));
         else resolve();
       });
     });

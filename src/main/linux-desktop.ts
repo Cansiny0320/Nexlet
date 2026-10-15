@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { access, readdir, readFile, stat } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { homedir } from 'node:os';
@@ -56,7 +57,7 @@ export async function linuxIconPath(icon:string):Promise<string|undefined>{
  }
 }
 export async function launchLinuxApplication(file:string):Promise<void>{
- if(!path.isAbsolute(file)||!file.endsWith('.desktop')||/[\0\r\n]/.test(file))throw Error('应用入口无效');
+ if(!path.isAbsolute(file)||!file.endsWith('.desktop')||/[\0\r\n]/.test(file))throw Error(t("应用入口无效"));
  try{await exec('gio',['launch',file],{timeout:10000,maxBuffer:64*1024});}
- catch(error){throw Error((error as NodeJS.ErrnoException).code==='ENOENT'?'缺少 gio，请安装 libglib2.0-bin 后重试': '无法启动应用，请检查应用是否仍已安装');}
+ catch(error){throw Error((error as NodeJS.ErrnoException).code==='ENOENT'?t("缺少 gio，请安装 libglib2.0-bin 后重试"): t("无法启动应用，请检查应用是否仍已安装"));}
 }

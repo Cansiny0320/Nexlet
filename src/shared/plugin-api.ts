@@ -10,6 +10,9 @@ export interface BackendContext { signal: AbortSignal; emit(value: unknown): voi
 /** Export an object named handlers from backend.cjs. Backend runs with full local Node privileges. */
 export type BackendHandlers = Record<string, (args: unknown, context: BackendContext) => unknown | Promise<unknown>>;
 export interface PluginSdkExtensions {
+  /** Application UI language; system.info().locale remains the OS locale. */
+  i18n: { getLocale(): Promise<'zh-CN' | 'zh-Hant' | 'en'>; onChange(callback: (locale: 'zh-CN' | 'zh-Hant' | 'en') => void): () => void };
+
   window: {
     info(window?: string): Promise<{ bounds: SdkRect; visible: boolean; focused: boolean; alwaysOnTop: boolean; fullScreen: boolean }>;
     show(window?: string): Promise<true>; hide(window?: string): Promise<true>; focus(window?: string): Promise<true>; close(window?: string): Promise<true>; detach(): Promise<true>;

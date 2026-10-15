@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { randomUUID } from 'node:crypto';
 import semver from 'semver';
 import type { UpdateStatus } from '../shared/types';
@@ -30,16 +31,16 @@ async function latestPortable(current: string) {
     headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(20000)
   });
   if (response.status === 404) return null;
-  if (!response.ok) throw Error(`检查更新失败（HTTP ${response.status}），请稍后重试`);
+  if (!response.ok) throw Error(t("检查更新失败（HTTP {{v0}}），请稍后重试", { v0: response.status }));
   return portableRelease(await response.json(), current, process.platform, process.arch);
 }
 
 function updateError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  if (/signature|sha512|checksum|code.?sign|digest/i.test(message)) return '更新包校验失败，未安装；请重试或从正式发布页下载';
-  if (/net::|ENOTFOUND|ECONN|ETIMEDOUT|timeout|fetch failed|network/i.test(message)) return '网络连接失败，请检查网络后重试';
-  if (/404|latest.*yml|No published versions/i.test(message)) return '当前发布尚未提供可用更新，请稍后重试';
-  return `更新失败：${message.slice(0, 500)}`;
+  if (/signature|sha512|checksum|code.?sign|digest/i.test(message)) return t("更新包校验失败，未安装；请重试或从正式发布页下载");
+  if (/net::|ENOTFOUND|ECONN|ETIMEDOUT|timeout|fetch failed|network/i.test(message)) return t("网络连接失败，请检查网络后重试");
+  if (/404|latest.*yml|No published versions/i.test(message)) return t("当前发布尚未提供可用更新，请稍后重试");
+  return t("更新失败：{{v0}}", { v0: message.slice(0, 500) });
 }
 
 export class AppUpdates {
@@ -122,17 +123,17 @@ export class AppUpdates {
     finally { this.checking = false; this.automaticCheckSnapshot = null; }
   }
   async download(): Promise<void> {
-    if (this.status.mode !== 'automatic' || this.status.phase !== 'available') throw Error('请先检查可用更新');
+    if (this.status.mode !== 'automatic' || this.status.phase !== 'available') throw Error(t("请先检查可用更新"));
     this.set({ phase: 'downloading', percent: null, transferred: null, total: null, bytesPerSecond: null, error: null });
     try { await this.transport!.downloadUpdate(); } catch (error) { this.fail(error); }
   }
   async install(): Promise<void> {
-    if (this.status.mode !== 'automatic' || this.status.phase !== 'downloaded') throw Error('更新尚未下载完成');
+    if (this.status.mode !== 'automatic' || this.status.phase !== 'downloaded') throw Error(t("更新尚未下载完成"));
     this.set({ phase: 'installing' });
     try { await this.prepareInstall(); await this.transport!.quitAndInstall(true, true); } catch (error) { this.fail(error); }
   }
   downloadUrl(): string {
-    if (this.status.mode !== 'portable' || this.status.phase !== 'available' || !this.portableUrl) throw Error('请先检查可手动下载的更新');
+    if (this.status.mode !== 'portable' || this.status.phase !== 'available' || !this.portableUrl) throw Error(t("请先检查可手动下载的更新"));
     return this.portableUrl;
   }
 }
@@ -147,7 +148,7 @@ export class UpdateSaveBarrier {
     try {
       await new Promise<void>((resolve, reject) => {
         this.pending = { token, windows: new Set(windows), resolve, reject };
-        timer = setTimeout(() => reject(Error('等待窗口保存超时，请确认所有稿纸已保存后重试')), timeout);
+        timer = setTimeout(() => reject(Error(t("等待窗口保存超时，请确认所有稿纸已保存后重试"))), timeout);
         for (const id of windows) send(id, token);
       });
     } finally { clearTimeout(timer!); this.pending = null; }

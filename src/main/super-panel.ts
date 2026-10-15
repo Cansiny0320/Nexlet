@@ -19,7 +19,11 @@ export class SuperPanelController {
  constructor(private inputs:LaunchInputs,private selection:SelectionService,private platform:SelectionPlatform,private deps:Dependencies){}
  get busy(){return this.executing;}
  owns(window:BrowserWindow){return this.window===window;}
- state():PanelState&{theme:string}{return {config:this.deps.config(),status:this.deps.status(),commands:this.deps.commands(),matches:this.matches,input:this.input,preview:this.preview,issue:this.issue,loading:this.loading,theme:this.deps.theme()};}
+ state():PanelState&{theme:string}{
+  const commands=this.deps.commands(), names=new Map(commands.map(command=>[command.id,command.name]));
+  const matches=this.matches.map(command=>({...command,name:names.get(command.id)||command.name}));
+  return {config:this.deps.config(),status:this.deps.status(),commands,matches,input:this.input,preview:this.preview,issue:this.issue,loading:this.loading,theme:this.deps.theme()};
+ }
  private changed(){if(this.window&&!this.window.isDestroyed())this.window.webContents.send('host-change','panel-state');}
  private async ensure(){
   if(this.window&&!this.window.isDestroyed())return this.window;

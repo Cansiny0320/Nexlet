@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { clipboard, ClipboardItem as ElectronClipboardItem, nativeImage } from 'electron';
 import { createHash, randomUUID } from 'node:crypto';
 import { writeFileSync, existsSync } from 'node:fs';
@@ -47,15 +48,15 @@ export class ClipboardService {
         const picture = imageBlob instanceof Blob ? nativeImage.createFromBuffer(Buffer.from(await imageBlob.arrayBuffer())) : nativeImage.createEmpty();
         if (!picture.isEmpty()) {
           const { width, height } = picture.getSize();
-          if (width * height > 36_000_000) throw new Error('图片过大，本次未记录（最多 3600 万像素）');
+          if (width * height > 36_000_000) throw new Error(t("图片过大，本次未记录（最多 3600 万像素）"));
           const png = picture.toPNG();
-          if (png.length > 20 * 1024 * 1024) throw new Error('图片超过 20 MB，本次未记录');
+          if (png.length > 20 * 1024 * 1024) throw new Error(t("图片超过 20 MB，本次未记录"));
           const fingerprint = hash(png);
           if (fingerprint === this.lastHash && this.store.hasClipHash(fingerprint)) { this.lastSequence = sequence; return; }
           const imagePath = path.join(this.store.images, fingerprint + '.png');
           if (!existsSync(imagePath)) writeFileSync(imagePath, png);
           const thumbnail = picture.resize({ width: Math.min(360, width) }).toDataURL();
-          item = { ...base, kind: 'image', text: `图片 ${width} × ${height}`, hash: fingerprint, imagePath, thumbnail, width, height };
+          item = { ...base, kind: 'image', text: t("图片 {{v0}} × {{v1}}", { v0: width, v1: height }), hash: fingerprint, imagePath, thumbnail, width, height };
         } else {
           const text = await clipboard.readText();
           if (text && Buffer.byteLength(text) <= 2 * 1024 * 1024) item = { ...base, kind: 'text', text, hash: hash('text:' + text) };
@@ -69,19 +70,19 @@ export class ClipboardService {
   }
   async copy(ids: string[]): Promise<void> {
     const items = ids.map(id => this.store.clip(id));
-    if (!items.length || items.some(i => !i)) throw new Error('请选择仍存在的记录');
+    if (!items.length || items.some(i => !i)) throw new Error(t("请选择仍存在的记录"));
     const selected = items as ClipItem[];
     if (selected.every(i => i.kind === 'text')) {
       const text = selected.map(i => i.text).join('\n'); await clipboard.writeText(text); this.lastHash = hash('text:' + text);
     } else if (selected.every(i => i.kind === 'files')) {
       const files = [...new Set(selected.flatMap(i => i.files || []))];
-      if (files.some(file => !existsSync(file))) throw new Error('部分原文件已移动或删除');
+      if (files.some(file => !existsSync(file))) throw new Error(t("部分原文件已移动或删除"));
       await this.platform.writeFiles(files); this.lastHash = hash('files:' + files.join('\0'));
     } else if (selected.length === 1 && selected[0].kind === 'image') {
       const image = nativeImage.createFromPath(selected[0].imagePath || '');
-      if (image.isEmpty()) throw new Error('图片附件不存在');
+      if (image.isEmpty()) throw new Error(t("图片附件不存在"));
       await clipboard.write([new ElectronClipboardItem({ 'image/png': new Blob([new Uint8Array(image.toPNG())], { type:'image/png' }) })]); this.lastHash = selected[0].hash;
-    } else throw new Error('合并复制支持多条文本或多个文件；图片请单独选择');
+    } else throw new Error(t("合并复制支持多条文本或多个文件；图片请单独选择"));
     this.lastSequence = this.platform.sequence();
     this.store.touchClips(ids);
     this.changed();

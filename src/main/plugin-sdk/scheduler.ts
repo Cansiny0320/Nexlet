@@ -1,3 +1,4 @@
+import { t } from '../../shared/i18n';
 import type { Schedule } from '../../shared/plugin-api';
 interface Storage { get<T>(key: string, fallback: T): T; set(key: string, value: unknown): void; }
 export class PluginScheduler {
@@ -8,10 +9,10 @@ export class PluginScheduler {
   }
   list(plugin: string): Schedule[] { return this.store.get<Record<string, Schedule[]>>('plugin-schedules', {})[plugin] || []; }
   set(plugin: string, value: Schedule): true {
-    if (!value || typeof value.id !== 'string' || !/^[\w.-]{1,100}$/.test(value.id) || typeof value.method !== 'string' || !/^[\w.-]{1,100}$/.test(value.method) || !Number.isFinite(value.at) || value.at < 0 || (value.intervalMs !== undefined && (!Number.isFinite(value.intervalMs) || value.intervalMs < 1000))) throw new Error('调度参数无效');
-    if (Buffer.byteLength(JSON.stringify(value.args ?? null)) > 256 * 1024) throw new Error('调度参数过大');
+    if (!value || typeof value.id !== 'string' || !/^[\w.-]{1,100}$/.test(value.id) || typeof value.method !== 'string' || !/^[\w.-]{1,100}$/.test(value.method) || !Number.isFinite(value.at) || value.at < 0 || (value.intervalMs !== undefined && (!Number.isFinite(value.intervalMs) || value.intervalMs < 1000))) throw new Error(t("调度参数无效"));
+    if (Buffer.byteLength(JSON.stringify(value.args ?? null)) > 256 * 1024) throw new Error(t("调度参数过大"));
     const values = this.list(plugin).filter(item => item.id !== value.id);
-    if (values.length >= 100) throw new Error('调度超过 100 个');
+    if (values.length >= 100) throw new Error(t("调度超过 100 个"));
     values.push({ id: value.id, method: value.method, at: value.at, args: value.args, intervalMs: value.intervalMs }); this.save(plugin, values); return true;
   }
   remove(plugin: string, id: string): boolean {
@@ -29,13 +30,13 @@ export class PluginScheduler {
       const controller = new AbortController(); this.running.set(key, controller);
       // Persist the next deadline before dispatch: no duplicate catch-up loop after a crash.
       this.save(plugin, this.list(plugin).map(item => item.id === schedule.id ? { ...item, at: schedule.intervalMs ? now + schedule.intervalMs : Number.MAX_SAFE_INTEGER, lastRun: now, lastError: undefined } : item));
-      const timer = setTimeout(() => controller.abort(new Error('调度超时')), 300_000);
+      const timer = setTimeout(() => controller.abort(new Error(t("调度超时"))), 300_000);
       try { await this.execute(plugin, schedule, controller.signal); }
       catch (error) { this.save(plugin, this.list(plugin).map(item => item.id === schedule.id ? { ...item, lastError: String((error as Error).message || error).slice(0, 1000) } : item)); }
       finally { clearTimeout(timer); this.running.delete(key); }
     })));
   }
-  stop(plugin: string): void { for (const [key, job] of this.running) if (key.startsWith(`${plugin}:`)) job.abort(new Error('插件已停止')); }
+  stop(plugin: string): void { for (const [key, job] of this.running) if (key.startsWith(`${plugin}:`)) job.abort(new Error(t("插件已停止"))); }
   clear(plugin: string): void { this.stop(plugin); this.save(plugin, []); }
-  close(): void { clearInterval(this.timer); for (const job of this.running.values()) job.abort(new Error('宿主退出')); }
+  close(): void { clearInterval(this.timer); for (const job of this.running.values()) job.abort(new Error(t("宿主退出"))); }
 }

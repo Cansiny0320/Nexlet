@@ -4435,3 +4435,77 @@ svg.app-logo {
     height: 17px;
   }
 }
+
+/* Language names remain readable in the header and in compact navigation. */
+.language-switch {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  font-size: 0.75rem;
+}
+.language-switch a {
+  white-space: nowrap;
+  color: var(--muted, #657080);
+}
+.language-switch a[aria-current='true'] {
+  color: var(--ink, #1f2733);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+html[lang='en'] .hero-title {
+  letter-spacing: -0.045em;
+}
+@media (max-width: 760px) {
+  .header-actions .language-switch {
+    display: flex;
+    gap: 0.45rem;
+  }
+  .header-actions .language-switch a {
+    font-size: 0.7rem;
+  }
+}
+
+/* The language navigation stays available when the primary mobile menu is closed. */
+.js .site-header nav.language-switch,
+.site-header nav.language-switch {
+  display: flex;
+  width: auto;
+  order: 0;
+  margin: 0;
+  padding: 0;
+  gap: 0.65rem;
+  font-size: 0.75rem;
+}
+.site-header nav.language-switch a {
+  height: auto;
+}
+@media (max-width: 760px) {
+  .js .site-header nav.language-switch {
+    gap: 0.45rem;
+    font-size: 0.7rem;
+  }
+  .header-actions {
+    gap: 0.6rem;
+    margin-right: 0.65rem;
+  }
+  .header-actions .github-icon {
+    display: none;
+  }
+}
+
+@font-face {
+  font-family: Nexlet Sans TC;
+  src: url('/assets/noto-sans-tc.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+html[lang='zh-Hant'] {
+  font-family: Arial, 'Nexlet Sans TC', 'Noto Sans TC', sans-serif;
+}
+html[lang='zh-Hant'] .scribble {
+  font-family: 'Nexlet Notes', 'Nexlet Sans TC', sans-serif;
+}
+html[lang='en'] .paper-lines p {
+  position: static;
+  line-height: 1.3;
+}

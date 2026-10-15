@@ -1,3 +1,5 @@
+import type { PluginLocales } from './plugin-locales';
+import type { Language } from './i18n';
 import type {PanelConfig,PanelStatus} from './super-panel';
 import type { CommandConfig, ShortcutStatus } from './command-config';
 import type { ContentMatch } from './launch';
@@ -7,16 +9,16 @@ export interface ClipItem { id: string; kind: ClipKind; text: string; hash: stri
 export interface CalcLine { id: string; expression: string; note: string; }
 export interface Scratchpad { id: string; name: string; createdAt: number; updatedAt: number; locked: boolean; color: string; lines: CalcLine[]; }
 export interface WebShortcut { id: string; name: string; url: string; type?: 'fixed' | 'search'; }
-export interface Settings { shortcut: string; theme: Theme; hideOnBlur: boolean; autoCheckUpdates: boolean; clipboardEnabled: boolean; maxClipboardItems: number; retentionDays: number; searchPaths: string[]; fileSearchPaths: string[]; webShortcuts: WebShortcut[]; }
+export interface Settings { language: Language; shortcut: string; theme: Theme; hideOnBlur: boolean; autoCheckUpdates: boolean; clipboardEnabled: boolean; maxClipboardItems: number; retentionDays: number; searchPaths: string[]; fileSearchPaths: string[]; webShortcuts: WebShortcut[]; }
 export interface Command { id: string; name: string; subtitle: string; kind: 'tool' | 'app' | 'shortcut' | 'plugin' | 'web' | 'match' | 'system' | 'local'; keywords: string[]; icon?: string; color?: string; path?: string; pluginId?: string; feature?: string; payload?: string; inputId?:string; matches?:ContentMatch[]; }
 export type PluginPermission = 'clipboard.read' | 'clipboard.write' | 'shell.openExternal' | 'network.request' | 'secrets' | import('./plugin-api').SdkPermission;
-export interface PluginManifest { id: string; name: string; version: string; description: string; apiVersion: 1; main: string; backend?: string; icon?: string; permissions: PluginPermission[]; features: { code: string; name: string; keywords: string[]; matches?:ContentMatch[] }[]; }
+export interface PluginManifest { locales?: PluginLocales; id: string; name: string; version: string; description: string; apiVersion: 1; main: string; backend?: string; icon?: string; permissions: PluginPermission[]; features: { locales?: PluginLocales; code: string; name: string; keywords: string[]; matches?:ContentMatch[] }[]; }
 export interface PluginRecord { manifest: PluginManifest; directory: string; enabled: boolean; development: boolean; installedAt: number; source?: 'marketplace' | 'local'; icon?: string; }
 export interface StartupStatus { supported: boolean; enabled: boolean; reason: string | null; }
 export interface PluginSessionState { id:string; name:string; code:string; detached:boolean; loading:boolean; }
 export interface UpdateStatus { mode: 'automatic' | 'portable' | 'unsupported'; phase: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'error'; version: string | null; notes: string; percent: number | null; transferred?: number | null; total?: number | null; bytesPerSecond?: number | null; error: string | null; }
 export interface AppState { panelConfig:PanelConfig; panelStatus:PanelStatus; commandConfig:CommandConfig; commandCatalog:Command[]; shortcutStatuses:Record<string,ShortcutStatus>; update: UpdateStatus; version: string; platform: string; settings: Settings; startup: StartupStatus; pinned: string[]; recent: string[]; commands: Command[]; plugins: PluginRecord[]; shortcutError: string | null; catalogLoading: boolean; nativeStatus: string | null; canPaste: boolean; }
-export const DEFAULT_SETTINGS: Settings = { shortcut: 'Alt+Space', theme: 'system', hideOnBlur: true, autoCheckUpdates: true, clipboardEnabled: true, maxClipboardItems: 500, retentionDays: 30, searchPaths: [], fileSearchPaths: [], webShortcuts: [] };
+export const DEFAULT_SETTINGS: Settings = { language: 'system', shortcut: 'Alt+Space', theme: 'system', hideOnBlur: true, autoCheckUpdates: true, clipboardEnabled: true, maxClipboardItems: 500, retentionDays: 30, searchPaths: [], fileSearchPaths: [], webShortcuts: [] };
 export const BUILTIN_COMMANDS: Command[] = [
   { id: 'tool:clipboard', name: '剪贴板', subtitle: '历史记录、收藏与悬浮中转', kind: 'tool', keywords: ['剪切板', 'clipboard', 'jtb'], color: '#6962ff' },
   { id: 'tool:scratchpad', name: '计算稿纸', subtitle: '随手计算，自动保存每一步', kind: 'tool', keywords: ['计算器', 'calculator', 'jsgz'], color: '#ff9c00' },

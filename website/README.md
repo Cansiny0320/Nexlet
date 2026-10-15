@@ -1,3 +1,5 @@
+[简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [English](README.en.md)
+
 # Nexlet 官网
 
 正式地址：<https://nexlet.cansiny0320.chatgpt.site>
@@ -57,3 +59,9 @@ pnpm test:browser
 旧静态源码及 manifest 可从迁移前 Git 版本恢复；若后续发布，生产回滚可使用原 Sites 版本。本次没有 commit、push 或部署。
 
 设计、计划和验收：`docs/specs/2026-10-14-tanstack-migration.md`、`docs/plans/2026-10-14-tanstack-migration.md`、`docs/validation-2026-10-14.md`。其他文档记录的是此前静态官网的历史状态。
+
+## 三语言
+
+简体保留 `/`、`/download/`、`/plugins/`；English 使用 `/en/` 前缀，繁体使用 `/zh-Hant/`。URL 决定 SSR 与首屏语言，各请求翻译实例隔离；页头切换保留页面。九个页面提供各自 title、description、canonical、OG、JSON-LD、hreflang 与 sitemap。词条位于 `src/lib/locales/`，Provider 位于 `site-language.tsx`，公开文档链接按语言选择。维护约定见 [i18n 说明](../docs/i18n.md)。
+
+繁体界面另提供 Noto Sans TC 子集，源自 Google Fonts 的 `ofl/notosanstc`，许可证为 `public/assets/OFL-NotoSansTC.txt`。重建使用 `python scripts/build-font.py <NotoSansTC.ttf> zh-Hant`；两个字体脚本会包含语言 JSON 中的字符。

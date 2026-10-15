@@ -1,3 +1,5 @@
+[简体中文](CONTRIBUTING.md) · [繁體中文](CONTRIBUTING.zh-Hant.md) · [English](CONTRIBUTING.en.md)
+
 # 参与 Nexlet
 
 欢迎提交问题、修复和插件。涉及新功能或数据变化时，先说明使用场景、预期行为与兼容性，再开始大范围实现。
@@ -15,6 +17,7 @@
 - 先确认缺陷根因，优先增加能证明用户行为的回归测试。
 - 复用现有类型与 helper，避免将无关重构混入功能提交。
 - 修改数据格式时兼容旧数据，说明迁移和回滚方式。
+- 同步维护三语言，保留用户内容和标识，遵循 [i18n 说明](docs/i18n.md)。
 
 插件可向 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) 提交，协议见 [Plugin API v1](docs/plugin-sdk.md)。
 

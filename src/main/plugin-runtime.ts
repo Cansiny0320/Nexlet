@@ -1,3 +1,5 @@
+import { localizedLabels } from '../shared/plugin-locales';
+import { t } from '../shared/i18n';
 import { BrowserWindow, WebContentsView, session, type Session } from 'electron';
 import { realpath, readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -34,7 +36,7 @@ export class PluginRuntime {
   configure(host:PluginHost){this.host=host;}
   state(owner:BrowserWindow):PluginSessionState|null {
     const current=this.forWindow(owner);
-    return current?{id:current.record.manifest.id,name:current.record.manifest.name,code:current.code,detached:current.detached,loading:!current.activated}:null;
+    return current?{id:current.record.manifest.id,name:localizedLabels(current.record.manifest).name,code:current.code,detached:current.detached,loading:!current.activated}:null;
   }
   private forWindow(owner:BrowserWindow){return [...this.sessions.values()].find(s=>s.owner===owner&&!s.closing);}
   get busy(){return this.preparing.size>0||this.detaching.size>0||[...this.sessions.values()].some(active=>!active.activated&&!active.closing);}
@@ -47,23 +49,23 @@ export class PluginRuntime {
     const generation=this.navigation,epoch=this.epochs.get(record.manifest.id)||0;
     const isCurrent=()=>!!this.host&&generation===this.navigation&&epoch===(this.epochs.get(record.manifest.id)||0);
     const run=async()=>{
-      if(!isCurrent())throw new Error('插件启动已取消');
+      if(!isCurrent())throw new Error(t("插件启动已取消"));
       let current=this.sessions.get(record.manifest.id);
       if(!current){
         if(prepare){
           const controller=new AbortController();this.preparing.set(record.manifest.id,controller);
           try{record=await prepare(isCurrent,controller.signal);}finally{this.preparing.delete(record.manifest.id);}
-          if(!isCurrent())throw new Error('插件启动已取消');
+          if(!isCurrent())throw new Error(t("插件启动已取消"));
         }
         const previous=this.forWindow(this.host!.main());
         if(previous)await this.stop(previous.record.manifest.id,false);
-        if(generation!==this.navigation)throw new Error('插件启动已取消');
+        if(generation!==this.navigation)throw new Error(t("插件启动已取消"));
         current=this.create(record,code,snapshot);
       }
       const active=current;
       const activate=async()=>{
         await active.loaded;
-        if(active.closing||active.disposed)throw new Error('插件启动已取消');
+        if(active.closing||active.disposed)throw new Error(t("插件启动已取消"));
         if(active.activated){
           active.code=code;active.input=this.inputs.grant(active.view.webContents.id,snapshot);
           active.payload=active.input.type==='text'?active.input.text.slice(0,65536):'';
@@ -88,12 +90,12 @@ export class PluginRuntime {
     isolated.webRequest.onBeforeRequest((details,reply)=>{const url=new URL(details.url);reply({cancel:!(url.protocol==='nexlet-plugin:'&&url.hostname===id)&&!['data:','blob:'].includes(url.protocol)});});
     isolated.protocol.handle('nexlet-plugin',async request=>{
       try{
-        const url=new URL(request.url);if(url.hostname!==id)throw new Error('来源不符');
+        const url=new URL(request.url);if(url.hostname!==id)throw new Error(t("来源不符"));
         const directory=await root,relative=safeEntryPath(decodeURIComponent(url.pathname.slice(1))),file=await realpath(path.join(directory,relative)),relation=path.relative(directory,file);
-        if(relation.startsWith('..')||path.isAbsolute(relation))throw new Error('资源不在插件目录中');
-        const bytes=await readFile(file);if(bytes.length>10*1024*1024)throw new Error('文件过大');
+        if(relation.startsWith('..')||path.isAbsolute(relation))throw new Error(t("资源不在插件目录中"));
+        const bytes=await readFile(file);if(bytes.length>10*1024*1024)throw new Error(t("文件过大"));
         return new Response(bytes,{headers:{'Content-Type':MIME[path.extname(file)]||'application/octet-stream','Content-Security-Policy':CSP,'X-Content-Type-Options':'nosniff'}});
-      }catch{return new Response('无法读取插件资源',{status:403});}
+      }catch{return new Response(t("无法读取插件资源"),{status:403});}
     });
     const view=new WebContentsView({webPreferences:{preload:path.join(__dirname,'../preload/plugin.cjs'),partition,sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,spellcheck:false}});
     let ready!:()=>void,rejectReady!:(error:Error)=>void;
@@ -109,12 +111,12 @@ export class PluginRuntime {
       if(input.key==='Escape'){event.preventDefault();void this.exitWindow(active.owner);}
       else if((input.control||input.meta)&&input.key===','){event.preventDefault();const owner=active.owner;void this.exitWindow(owner).then(()=>{if(!owner.isDestroyed())owner.webContents.send('host-change','navigate:settings');});}
     });
-    view.webContents.once('render-process-gone',()=>this.fail(active,'意外退出，可以重新打开'));
-    view.webContents.once('unresponsive',()=>this.fail(active,'无响应，已关闭此插件'));
+    view.webContents.once('render-process-gone',()=>this.fail(active,t("意外退出，可以重新打开")));
+    view.webContents.once('unresponsive',()=>this.fail(active,t("无响应，已关闭此插件")));
     view.webContents.once('destroyed',()=>this.dispose(active,true));
     let timer:ReturnType<typeof setTimeout>;
-    const deadline=new Promise<never>((_resolve,reject)=>{timer=setTimeout(()=>reject(new Error('插件加载超时')),12000);});
-    active.loaded=Promise.race([view.webContents.loadURL(`nexlet-plugin://${id}/${record.manifest.main}`).then(()=>handshake),deadline]).then(()=>{clearTimeout(timer);},error=>{clearTimeout(timer);if(active.closing)throw new Error('插件启动已取消');this.fail(active,error instanceof Error?error.message:'加载失败');throw error;});
+    const deadline=new Promise<never>((_resolve,reject)=>{timer=setTimeout(()=>reject(new Error(t("插件加载超时"))),12000);});
+    active.loaded=Promise.race([view.webContents.loadURL(`nexlet-plugin://${id}/${record.manifest.main}`).then(()=>handshake),deadline]).then(()=>{clearTimeout(timer);},error=>{clearTimeout(timer);if(active.closing)throw new Error(t("插件启动已取消"));this.fail(active,error instanceof Error?error.message:t("加载失败"));throw error;});
     void active.loaded.catch(()=>{});return active;
   }
   ready(contentsId:number){this.callers.get(contentsId)?.ready();}
@@ -152,12 +154,12 @@ export class PluginRuntime {
     const target=this.host!.createDetached();
     try{
       await new Promise<void>((resolve,reject)=>{
-        const loaded=()=>finish(),failed=()=>finish(new Error('独立窗口加载失败')),closed=()=>finish(new Error('独立窗口已关闭'));
-        const timer=setTimeout(()=>finish(new Error('独立窗口加载超时')),8000);
+        const loaded=()=>finish(),failed=()=>finish(new Error(t("独立窗口加载失败"))),closed=()=>finish(new Error(t("独立窗口已关闭")));
+        const timer=setTimeout(()=>finish(new Error(t("独立窗口加载超时"))),8000);
         const finish=(error?:Error)=>{clearTimeout(timer);if(!target.webContents.isDestroyed()){target.webContents.removeListener('did-finish-load',loaded);target.webContents.removeListener('did-fail-load',failed);}target.removeListener('closed',closed);error?reject(error):resolve();};
         if(!target.webContents.isLoading())finish();else{target.webContents.once('did-finish-load',loaded);target.webContents.once('did-fail-load',failed);target.once('closed',closed);}
       });
-      if(active.closing||owner.isDestroyed()||target.isDestroyed())throw new Error('插件分离已取消');
+      if(active.closing||owner.isDestroyed()||target.isDestroyed())throw new Error(t("插件分离已取消"));
       active.removeOwnerListeners();owner.contentView.removeChildView(active.view);
       this.attach(active,target,true);this.reparent(owner,target);this.host!.changed(owner);
       await this.emit(active,'detach',undefined);if(active.closing)return;
@@ -172,13 +174,13 @@ export class PluginRuntime {
     active.closing=true;this.sessions.delete(id);
     this.releaseSession(active.view.webContents.id);
     if(!active.owner.isDestroyed()){active.owner.contentView.removeChildView(active.view);if(notify)this.host?.changed(active.owner);}
-    active.rejectReady(new Error('插件启动已取消'));
+    active.rejectReady(new Error(t("插件启动已取消")));
     if(active.activated)await this.emit(active,'out',inputContext(active.input,active.code));
     this.dispose(active,notify);
   }
-  private fail(active:RunningPlugin,message:string){if(active.closing||active.disposed)return;this.dispose(active,true);this.host?.error(`插件「${active.record.manifest.name}」${message}`);}
+  private fail(active:RunningPlugin,message:string){if(active.closing||active.disposed)return;this.dispose(active,true);this.host?.error(t("插件「{{v0}}」{{v1}}", { v0: active.record.manifest.name, v1: message }));}
   private dispose(active:RunningPlugin,notify:boolean){
-    if(active.disposed)return;active.disposed=true;active.closing=true;active.rejectReady(new Error('插件已关闭'));
+    if(active.disposed)return;active.disposed=true;active.closing=true;active.rejectReady(new Error(t("插件已关闭")));
     if(this.sessions.get(active.record.manifest.id)===active)this.sessions.delete(active.record.manifest.id);
     active.removeOwnerListeners();this.overlays.delete(active.owner.id);
     if(!active.owner.isDestroyed())active.owner.contentView.removeChildView(active.view);

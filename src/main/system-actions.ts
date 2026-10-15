@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import type { Command } from '../shared/types';
 import { systemCommands, type SystemAction } from './system-commands';
 
@@ -7,18 +8,16 @@ export interface SystemExecutor {
 }
 
 export class SystemActions {
-  private entries;
+  private get entries() { return systemCommands(this.platform, this.release); }
   private busy = false;
-  constructor(platform: string, release: string, private executor: SystemExecutor) {
-    this.entries = systemCommands(platform, release);
-  }
+  constructor(private platform: string, private release: string, private executor: SystemExecutor) {}
   commands(): Command[] {
     return this.entries.map(({ url: _url, action: _action, confirm: _confirm, ...command }) => command);
   }
   async launch(id: string, confirm: (command: Command) => Promise<boolean>): Promise<boolean> {
     const entry = this.entries.find(c => c.id === id);
-    if (!entry) throw Error('系统命令不存在或不支持当前系统');
-    if (this.busy) throw Error('正在处理系统操作，请稍候');
+    if (!entry) throw Error(t("系统命令不存在或不支持当前系统"));
+    if (this.busy) throw Error(t("正在处理系统操作，请稍候"));
     this.busy = true;
     try {
       if (entry.confirm && !await confirm(entry)) return false;

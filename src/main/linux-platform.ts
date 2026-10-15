@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -13,7 +14,7 @@ export function decodeFileUris(text:string):string[]{
  }return [...files];
 }
 export function encodeFileUris(files:string[]):string{
- if(!files.length||files.length>256||files.some(f=>!path.isAbsolute(f)||/[\0\r\n]/.test(f)))throw Error('文件列表无效');
+ if(!files.length||files.length>256||files.some(f=>!path.isAbsolute(f)||/[\0\r\n]/.test(f)))throw Error(t("文件列表无效"));
  return files.map(f=>pathToFileURL(f,{windows:false}).href).join('\r\n')+'\r\n';
 }
 export interface LinuxTarget {handle:string;pid:number;}
@@ -26,16 +27,16 @@ export class LinuxPaste {
  async remember():Promise<LinuxTarget|null>{
   if(this.wayland)return null;
   this.status=null;
-  try{const handle=await this.command(['getactivewindow']);if(!/^\d+$/.test(handle))return null;const pid=Number(await this.command(['getwindowpid',handle]));return Number.isSafeInteger(pid)&&pid>0&&pid!==process.pid?{handle,pid}:null;}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')this.status='X11 自动回贴需要 xdotool，请安装后重试；当前可复制后手动粘贴';return null;}
+  try{const handle=await this.command(['getactivewindow']);if(!/^\d+$/.test(handle))return null;const pid=Number(await this.command(['getwindowpid',handle]));return Number.isSafeInteger(pid)&&pid>0&&pid!==process.pid?{handle,pid}:null;}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')this.status=t("X11 自动回贴需要 xdotool，请安装后重试；当前可复制后手动粘贴");return null;}
  }
  async paste(target:LinuxTarget){
-  if(this.wayland)throw Error('Wayland 请复制后手动粘贴');
-  if(!/^\d+$/.test(target.handle))throw Error('原窗口已变化，请重新唤起');
+  if(this.wayland)throw Error(t("Wayland 请复制后手动粘贴"));
+  if(!/^\d+$/.test(target.handle))throw Error(t("原窗口已变化，请重新唤起"));
   try{
-   if(Number(await this.command(['getwindowpid',target.handle]))!==target.pid)throw Error('原窗口已变化，请重新唤起');
+   if(Number(await this.command(['getwindowpid',target.handle]))!==target.pid)throw Error(t("原窗口已变化，请重新唤起"));
    await this.command(['windowactivate','--sync',target.handle]);
-   if(await this.command(['getactivewindow'])!==target.handle||Number(await this.command(['getwindowpid',target.handle]))!==target.pid)throw Error('无法恢复原窗口焦点，内容已复制，请手动粘贴');
+   if(await this.command(['getactivewindow'])!==target.handle||Number(await this.command(['getwindowpid',target.handle]))!==target.pid)throw Error(t("无法恢复原窗口焦点，内容已复制，请手动粘贴"));
    await this.command(['key','--clearmodifiers','ctrl+v']);
-  }catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')throw Error('自动回贴需要 xdotool，内容已复制，请手动粘贴');throw error;}
+  }catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')throw Error(t("自动回贴需要 xdotool，内容已复制，请手动粘贴"));throw error;}
  }
 }

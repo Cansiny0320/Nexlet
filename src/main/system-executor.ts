@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
@@ -25,7 +26,7 @@ export function createSystemExecutor(platform = process.platform): SystemExecuto
           await exec(path.win32.join(system, 'WindowsPowerShell/v1.0/powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command', "$ErrorActionPreference='Stop'; (New-Object -ComObject Shell.Application).ToggleDesktop()"], { windowsHide: true, timeout: 10000 });
         } else {
           const args = { restart: ['/r', '/t', '0'], shutdown: ['/s', '/t', '0'], logout: ['/l'] }[action];
-          if (!args) throw Error('系统操作无效');
+          if (!args) throw Error(t("系统操作无效"));
           // No /f: let applications protect unsaved work.
           await exec(path.win32.join(system, 'shutdown.exe'), args, { windowsHide: true, timeout: 10000 });
         }
@@ -39,14 +40,14 @@ export function createSystemExecutor(platform = process.platform): SystemExecuto
           await exec('/System/Applications/Mission Control.app/Contents/MacOS/Mission Control', ['1'], { timeout: 10000 }); return;
         }
         if (action === 'lock' && !systemPreferences.isTrustedAccessibilityClient(false)) {
-          throw Error('锁屏需要辅助功能权限，请在系统设置 → 隐私与安全性 → 辅助功能中允许 Nexlet');
+          throw Error(t("锁屏需要辅助功能权限，请在系统设置 → 隐私与安全性 → 辅助功能中允许 Nexlet"));
         }
         const script = macScripts[action];
-        if (!script) throw Error('系统操作无效');
+        if (!script) throw Error(t("系统操作无效"));
         await exec('/usr/bin/osascript', ['-e', script], { timeout: 30000 });
         return;
       }
-      throw Error('当前平台不支持此系统操作');
+      throw Error(t("当前平台不支持此系统操作"));
     }
   };
 }

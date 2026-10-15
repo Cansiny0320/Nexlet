@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from 'react';
 import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Pin, X, Check, Search, FileSearch, LockKeyhole, Moon, RotateCw, Power, LogOut, Monitor, SlidersHorizontal, Volume2, Wifi, Bluetooth, Battery, HardDrive, Bell, Palette, Image, Keyboard, Mouse, Printer, Accessibility, Shield, Users, Languages, ScanText } from 'lucide-react';
 import type { AppState, Command, HostAction } from '../shared/types';
@@ -28,8 +29,8 @@ export function Modal({spec,onResolve}:{spec:DialogSpec;onResolve:(result:string
   useEffect(()=>{input.current?.focus();input.current?.select();},[]);
   return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onResolve(null);}}><form className="modal" onSubmit={e=>{e.preventDefault();onResolve(spec.input!==undefined?value:true);}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Escape')onResolve(null);}}>
     <h2>{spec.title}</h2>{spec.message&&<p>{spec.message}</p>}{spec.input!==undefined&&<input ref={input} value={value} placeholder={spec.placeholder} onChange={e=>setValue(e.target.value)} aria-label={spec.title}/>}
-    <div className="modal-actions"><button type="button" className="button quiet" onClick={()=>onResolve(null)}>取消</button><button type="submit" className={`button ${spec.danger?'danger':'primary'}`}>{spec.confirm||'确定'}</button></div>
+    <div className="modal-actions"><button type="button" className="button quiet" onClick={()=>onResolve(null)}>{t("取消")}</button><button type="submit" className={`button ${spec.danger?'danger':'primary'}`}>{spec.confirm||t("确定")}</button></div>
   </form></div>;
 }
 export function PanelHeader({title,description,children}:{title:string;description?:string;children?:ReactNode}){return <div className="panel-heading"><div><h2>{title}</h2>{description&&<p>{description}</p>}</div>{children}</div>;}
-export function relativeTime(time:number){const seconds=Math.max(0,Math.floor((Date.now()-time)/1000));return seconds<60?'刚刚':seconds<3600?`${Math.floor(seconds/60)} 分钟前`:seconds<86400?`${Math.floor(seconds/3600)} 小时前`:`${Math.floor(seconds/86400)} 天前`;}
+export function relativeTime(time:number){const seconds=Math.max(0,Math.floor((Date.now()-time)/1000));return seconds<60?t("刚刚"):seconds<3600?t("{{v0}} 分钟前", { v0: Math.floor(seconds/60) , count: Math.floor(seconds/60) }):seconds<86400?t("{{v0}} 小时前", { v0: Math.floor(seconds/3600) , count: Math.floor(seconds/3600) }):t("{{v0}} 天前", { v0: Math.floor(seconds/86400) , count: Math.floor(seconds/86400) });}

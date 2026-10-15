@@ -1,3 +1,4 @@
+import { localeBridge } from './locale';
 import { ipcRenderer } from 'electron';
 import type { PluginSdkExtensions, PluginInputExtensions, PluginClipboardExtensions } from '../shared/plugin-api';
 export const invoke = (method: string, args?: unknown) => ipcRenderer.invoke('plugin-api', method, args);
@@ -7,6 +8,7 @@ export const onSdkEvent = (event: string, callback: (value: any) => void) => {
   ipcRenderer.on('plugin-sdk-event', listener); return () => ipcRenderer.removeListener('plugin-sdk-event', listener);
 };
 export const sdk: PluginSdkExtensions = {
+  i18n: { getLocale: localeBridge.get, onChange: localeBridge.onChange },
   window: { info: window => invoke('window.info', { window }), show: window => invoke('window.show', { window }), hide: window => invoke('window.hide', { window }), focus: window => invoke('window.focus', { window }), close: window => invoke('window.close', { window }), detach: () => invoke('window.detach'), set: (options, window) => invoke('window.set', { options, window }), create: options => invoke('window.create', options), send: (message, window) => invoke('window.send', { message, window }), onMessage: callback => onSdkEvent('window.message', callback), onClosed: callback => onSdkEvent('window.closed', callback) },
   commands: { list: () => invoke('commands.list'), set: features => invoke('commands.set', { features }), redirect: options => invoke('commands.redirect', options) },
   search: { set: options => invoke('search.set', options), results: results => invoke('search.results', results), onChange: callback => onSdkEvent('search.change', callback), onSelect: callback => onSdkEvent('search.select', callback) },

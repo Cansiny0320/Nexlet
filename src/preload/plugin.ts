@@ -1,3 +1,4 @@
+import { localeBridge } from './locale';
 import { contextBridge, ipcRenderer } from 'electron';
 import { sdk, invoke, inputExtensions, clipboardExtensions } from './plugin-sdk';
 type Callback=(value:unknown)=>unknown;
@@ -30,3 +31,5 @@ contextBridge.exposeInMainWorld('nexlet', Object.freeze({
   openExternal:(url:string)=>ipcRenderer.invoke('plugin-api','openExternal',url),
   onActivate:(callback:(value:unknown)=>void)=>{ const listener=(_event:unknown,value:unknown)=>callback(value); ipcRenderer.on('plugin-activate',listener); return()=>ipcRenderer.removeListener('plugin-activate',listener); }
 }));
+
+contextBridge.exposeInMainWorld('appLanguage', localeBridge);

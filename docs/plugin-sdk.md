@@ -1,3 +1,5 @@
+[简体中文](plugin-sdk.md) · [繁體中文](plugin-sdk.zh-Hant.md) · [English](plugin-sdk.en.md)
+
 # Nexlet Plugin API v1
 
 插件由 `plugin.json` 和本地 HTML / CSS / JavaScript 组成。使用 Web 标准编写界面，通过沙箱 preload 提供的 `window.nexlet` 请求宿主能力。内置工具与外部插件使用不同的 IPC 接口。
@@ -44,6 +46,12 @@ npm run package:example
 ZIP 包根目录必须直接包含 `plugin.json`。可直接选择开发目录调试，退出后重新打开会读取更新后的文件；修改 manifest 或权限后需要重新导入。每个插件同一时刻只有一个会话，多条 feature 指令通过激活通知切换。
 
 `icon` 可选，必须是包内 PNG 相对路径，不超过 512 KB，宽高不超过 2048 像素。宿主生成搜索和已安装列表中的缩略图。未提供时使用默认插件图标。
+
+## 应用语言
+
+`await nexlet.i18n.getLocale()` 返回 `zh-CN`、`zh-Hant` 或 `en`；`nexlet.i18n.onChange(callback)` 订阅应用语言变化并返回取消订阅函数，不需要额外权限。`system.info().locale` 仍表示系统语言。兼容旧宿主时应先检测 `i18n`；先订阅再读取，若先收到事件则忽略迟到的首次读取值。
+
+Manifest、feature 和市场条目可选声明 `locales`，为不同语言提供 `name`、`description`，市场分类可提供 `category`。缺省回退到原字段，ID、code、版本、路径、权限与用户数据不变。示例和维护约定见 [i18n 说明](i18n.md)。
 
 ## 插件市场
 

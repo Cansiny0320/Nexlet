@@ -1,3 +1,5 @@
+import { formatLocale } from '../shared/i18n';
+import { t } from '../shared/i18n';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
@@ -22,7 +24,7 @@ export class Store {
   pads(): Scratchpad[] {
     const existing = this.get<Scratchpad[] | null>('pads', null);
     if (existing !== null) return existing;
-    const first: Scratchpad = { id: randomUUID(), name: new Date().toLocaleString('zh-CN', { hour12: false }), createdAt: Date.now(), updatedAt: Date.now(), locked: false, color: '#e9e6df', lines: [{ id: randomUUID(), expression: '', note: '' }] };
+    const first: Scratchpad = { id: randomUUID(), name: new Date().toLocaleString(formatLocale(), { hour12: false }), createdAt: Date.now(), updatedAt: Date.now(), locked: false, color: '#e9e6df', lines: [{ id: randomUUID(), expression: '', note: '' }] };
     this.set('pads', [first]); return [first];
   }
   addClip(item: ClipItem): ClipItem {
@@ -54,7 +56,7 @@ export class Store {
   }
   hasClipHash(hash: string): boolean { return !!this.db.prepare('SELECT 1 FROM clips WHERE hash=?').get(hash); }
   favorite(id: string, value: boolean): void {
-    const item = this.clip(id); if (!item) throw new Error('记录已不存在');
+    const item = this.clip(id); if (!item) throw new Error(t("记录已不存在"));
     item.favorite = value;
     this.db.prepare('UPDATE clips SET favorite=?,data=? WHERE id=?').run(Number(value), JSON.stringify(item), id);
   }
@@ -63,7 +65,7 @@ export class Store {
       const item = this.clip(id); if (!item) continue;
       this.db.prepare('DELETE FROM clips WHERE id=?').run(id);
       if (item.imagePath && path.dirname(path.resolve(item.imagePath)) === path.resolve(this.images)) {
-        try { unlinkSync(item.imagePath); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') console.warn('图片清理失败', (e as Error).message); }
+        try { unlinkSync(item.imagePath); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') console.warn(t("图片清理失败"), (e as Error).message); }
       }
     }
   }

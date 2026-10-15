@@ -1,3 +1,4 @@
+import { formatLocale } from './i18n';
 import { pinyin } from 'pinyin-pro';
 import type { Command } from './types';
 
@@ -30,5 +31,5 @@ export function searchCommands(commands: Command[], query: string, recent: strin
     }
     const position = recent.indexOf(command.id);
     return { command, score: score + (position >= 0 ? Math.max(0, 20 - position) : 0) };
-  }).filter(v => v.score > 0).sort((a, b) => b.score - a.score || a.command.name.localeCompare(b.command.name, 'zh-CN')).slice(0, limit).map(v => v.command);
+  }).filter(v => v.score > 0).sort((a, b) => b.score - a.score || a.command.name.localeCompare(b.command.name, formatLocale())).slice(0, limit).map(v => v.command);
 }

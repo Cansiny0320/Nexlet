@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { Component, Suspense, useEffect, useState, type ReactNode } from 'react';
 import type { ToolSession } from './tool-session';
 import { errorText } from './common';
@@ -19,8 +20,8 @@ class LoadErrorBoundary extends Component<Props, { error: Error | null; session:
   componentDidCatch(error: Error) { this.props.onError(error); }
   render() {
     if (this.state.error) return <div className="loading-screen" role="alert">
-      <p>工具加载失败：{errorText(this.state.error)}</p>
-      <button className="button" onClick={this.props.onBack}>返回首页</button>
+      <p>{t("工具加载失败：")}{errorText(this.state.error)}</p>
+      <button className="button" onClick={this.props.onBack}>{t("返回首页")}</button>
     </div>;
     return this.props.children;
   }
@@ -46,7 +47,7 @@ function MountedTool({ session, children, onReady }: Props) {
 
 export function ToolBoundary(props: Props) {
   return <LoadErrorBoundary {...props}>
-    <Suspense fallback={<div className="loading-screen" role="status">正在加载工具…</div>}>
+    <Suspense fallback={<div className="loading-screen" role="status">{t("正在加载工具…")}</div>}>
       <MountedTool {...props} />
     </Suspense>
   </LoadErrorBoundary>;

@@ -1,4 +1,6 @@
-import { Link } from '@tanstack/react-router';
+import { basePath, languageNames, locales, type PagePath } from '../lib/i18n';
+import { useSiteTranslation } from '../components/site-language';
+import { LocaleLink as Link } from '../components/site-language';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import site from '../../site.json';
 import { Icon } from './icon';
@@ -16,6 +18,8 @@ function Brand() {
   );
 }
 export function SiteShell({ path, children }: { path: string; children: ReactNode }) {
+  const { t, locale } = useSiteTranslation();
+
   const { hydrated } = useSite();
   const [menu, setMenu] = useState({ path, open: false });
   const menuOpen = menu.path === path && menu.open;
@@ -41,19 +45,19 @@ export function SiteShell({ path, children }: { path: string; children: ReactNod
   return (
     <>
       <a className="skip-link" href="#main">
-        跳到主要内容
+        {t('跳到主要内容')}
       </a>
       <header className="site-header">
         <div className="shell header-inner">
-          <Link className="brand" to="/" aria-label="Nexlet 首页">
+          <Link className="brand" to="/" aria-label={t('Nexlet 首页')}>
             <Brand />
           </Link>
-          <nav id="navigation" className={menuOpen ? 'is-open' : ''} aria-label="主导航">
+          <nav id="navigation" className={menuOpen ? 'is-open' : ''} aria-label={t('主导航')}>
             {(
               [
-                ['/', '概览'],
-                ['/download/', '下载'],
-                ['/plugins/', '插件开发'],
+                ['/', t('概览')],
+                ['/download/', t('下载')],
+                ['/plugins/', t('插件开发')],
               ] as const
             ).map(([to, label]) => (
               <Link
@@ -67,11 +71,29 @@ export function SiteShell({ path, children }: { path: string; children: ReactNod
             ))}
           </nav>
           <div className="header-actions">
-            <a className="github-icon" href={site.repository} aria-label="GitHub 源代码">
+            <nav className="language-switch" aria-label={t('语言')}>
+              {locales.map((language) => (
+                <Link
+                  key={language}
+                  to={
+                    (['/', '/download/', '/plugins/'].includes(basePath(path))
+                      ? basePath(path)
+                      : '/') as PagePath
+                  }
+                  locale={language}
+                  hrefLang={language}
+                  lang={language}
+                  aria-current={locale === language ? 'true' : undefined}
+                >
+                  {languageNames[language]}
+                </Link>
+              ))}
+            </nav>
+            <a className="github-icon" href={site.repository} aria-label={t('GitHub 源代码')}>
               <Icon name="github" />
             </a>
             <Link className="button primary" to="/download/">
-              下载 Nexlet
+              {t('下载 Nexlet')}
             </Link>
           </div>
           <Button
@@ -82,7 +104,8 @@ export function SiteShell({ path, children }: { path: string; children: ReactNod
             hidden={!hydrated}
             onClick={() => setMenuOpen(!menuOpen)}
           >
-            菜单 <Icon name="menu" />
+            {t('菜单')}
+            <Icon name="menu" />
           </Button>
         </div>
       </header>
@@ -98,7 +121,7 @@ export function SiteShell({ path, children }: { path: string; children: ReactNod
             <a href={site.repository}>
               <Icon name="github" /> GitHub
             </a>
-            <Link to="/plugins/">插件文档</Link>
+            <Link to="/plugins/">{t('插件文档')}</Link>
           </div>
         </div>
       </footer>

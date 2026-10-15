@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 export interface SelectionTarget {pid:number;handle?:string;app:string;name?:string;}
 export type SelectionContent={type:'text';text:string}|{type:'files';paths:string[]}|{type:'image';data:string};
 export interface SelectionResult {target:SelectionTarget|null;content?:SelectionContent;issue?:string;}
@@ -16,7 +17,7 @@ export class SelectionService {
   const generation=++this.generation,target=await this.backend.target();
   const result:SelectionResult={target};
   const matches=excluded.some(value=>[target?.app,target?.name].some(name=>name?.toLowerCase()===value.toLowerCase()));
-  if(!target||matches)return {...result,issue:matches?'当前应用已排除选区获取':undefined};
+  if(!target||matches)return {...result,issue:matches?t("当前应用已排除选区获取"):undefined};
   const previous=this.pending;
   const work=(async()=>{
    await previous.catch(()=>{});
@@ -27,7 +28,7 @@ export class SelectionService {
     if(!await current())return result;
     if(direct!==undefined)return {...result,...(direct?{content:direct}:{})};
     return await this.backend.exclusive(async()=>{
-     const before=this.backend.sequence();if(before===null)return {...result,issue:'无法确认剪贴板版本，请手动粘贴选区'};
+     const before=this.backend.sequence();if(before===null)return {...result,issue:t("无法确认剪贴板版本，请手动粘贴选区")};
      const snapshot=await this.backend.snapshot();
      if(this.backend.sequence()!==before||!await this.backend.waitKeys()||!await current())return result;
      await this.backend.copy(target);
@@ -51,7 +52,7 @@ export class SelectionService {
       if(capturedVersion!==undefined&&this.backend.sequence()===capturedVersion)await this.backend.restore(snapshot,capturedVersion);
      }
     });
-   }catch(error){return {...result,issue:(error as Error).message||'无法读取选区，请手动粘贴'};}
+   }catch(error){return {...result,issue:(error as Error).message||t("无法读取选区，请手动粘贴")};}
   })();this.pending=work;return work;
  }
 }

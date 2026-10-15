@@ -1,6 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://nexlet.cansiny0320.chatgpt.site/</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://nexlet.cansiny0320.chatgpt.site/download/</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://nexlet.cansiny0320.chatgpt.site/plugins/</loc><lastmod>2026-10-12</lastmod></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/download/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/download/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/download/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/download/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/download/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/plugins/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/plugins/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/zh-Hant/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/zh-Hant/download/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/download/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/download/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/download/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/download/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/zh-Hant/plugins/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/plugins/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/en/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/en/download/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/download/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/download/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/download/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/download/"/>
+  </url>
+  <url><loc>https://nexlet.cansiny0320.chatgpt.site/en/plugins/</loc><lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://nexlet.cansiny0320.chatgpt.site/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://nexlet.cansiny0320.chatgpt.site/zh-Hant/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nexlet.cansiny0320.chatgpt.site/en/plugins/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nexlet.cansiny0320.chatgpt.site/plugins/"/>
+  </url>
 </urlset>

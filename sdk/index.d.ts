@@ -27,7 +27,11 @@ export type ContentMatch =
   | { type: 'image' }
   | { type: 'files'; extensions?: string[]; fileType?: 'file' | 'directory'; minCount?: number; maxCount?: number };
 
+export type AppLocale = 'zh-CN' | 'zh-Hant' | 'en';
+export type PluginLocales = Partial<Record<AppLocale, { name?: string; description?: string; category?: string }>>;
+
 export interface PluginFeature {
+  locales?: PluginLocales;
   code: string;
   name: string;
   keywords: string[];
@@ -35,6 +39,7 @@ export interface PluginFeature {
 }
 
 export interface PluginManifest {
+  locales?: PluginLocales;
   id: string;
   name: string;
   version: string;

@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import childProcess from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,7 +17,7 @@ function spawnInstaller(command: string, args: string[], waitForHandoff: boolean
       child.once('exit', (code, signal) => {
         child.unref();
         if (code === 0) resolve();
-        else reject(Error(`更新安装器提权失败或已取消（${signal || code}）`));
+        else reject(Error(t("更新安装器提权失败或已取消（{{v0}}）", { v0: signal || code })));
       });
     } else {
       child.once('spawn', () => { child.unref(); resolve(); });

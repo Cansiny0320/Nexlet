@@ -1,16 +1,17 @@
+import { t } from './i18n';
 import { createScanner, parseTree, SyntaxKind, type Node, type ParseError } from 'jsonc-parser';
 import Decimal from 'decimal.js';
 
 export type JsonNode = Node;
 export const JSON_LIMIT = 500_000;
 export function parseJson(source: string): Node {
-  if (source.length > JSON_LIMIT) throw Error('JSON 超过 500 KB，请缩小内容后再处理');
+  if (source.length > JSON_LIMIT) throw Error(t("JSON 超过 500 KB，请缩小内容后再处理"));
   const scanner = createScanner(source, true);
   let depth = 0, tokens = 0, token: SyntaxKind;
   while ((token = scanner.scan()) !== SyntaxKind.EOF) {
-    if (++tokens > 60_000) throw Error('JSON 字段过多，请缩小内容后再处理');
+    if (++tokens > 60_000) throw Error(t("JSON 字段过多，请缩小内容后再处理"));
     if (token === SyntaxKind.OpenBraceToken || token === SyntaxKind.OpenBracketToken) {
-      if (++depth > 64) throw Error('JSON 嵌套不能超过 64 层');
+      if (++depth > 64) throw Error(t("JSON 嵌套不能超过 64 层"));
     } else if (token === SyntaxKind.CloseBraceToken || token === SyntaxKind.CloseBracketToken) depth--;
   }
   const errors: ParseError[] = [];
@@ -18,7 +19,7 @@ export function parseJson(source: string): Node {
   if (errors.length || !root) {
     const offset = errors[0]?.offset || 0;
     const lines = source.slice(0, offset).split('\n');
-    throw Error(`JSON 格式错误：第 ${lines.length} 行，第 ${lines.at(-1)!.length + 1} 列`);
+    throw Error(t("JSON 格式错误：第 {{v0}} 行，第 {{v1}} 列", { v0: lines.length, v1: lines.at(-1)!.length + 1 }));
   }
   return root;
 }

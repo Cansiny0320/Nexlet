@@ -36,7 +36,13 @@ try {
   console.log(`Testing built Worker: ${base}`);
   const tests = spawn(
     process.execPath,
-    ['--test', '--test-concurrency=1', 'tests/releases.browser.mjs', 'tests/site.browser.mjs'],
+    [
+      '--test',
+      '--test-concurrency=1',
+      'tests/releases.browser.mjs',
+      'tests/site.browser.mjs',
+      'tests/i18n.browser.mjs',
+    ],
     {
       cwd: root,
       env: { ...process.env, SITE_URL: base },

@@ -1,3 +1,4 @@
+import { t } from '../../shared/i18n';
 import type { PluginRecord } from '../../shared/types';
 import type { Schedule } from '../../shared/plugin-api';
 import type { Store } from '../store';
@@ -53,31 +54,31 @@ export class PluginSdk {
     this.scheduler = new PluginScheduler(store, id => records().some(record => record.manifest.id === id && record.enabled && !!record.manifest.backend && record.manifest.permissions.includes('backend')),
       async (id, schedule, signal) => {
         const record = records().find(record => record.manifest.id === id && record.enabled);
-        if (!record) throw new Error('插件已停用');
+        if (!record) throw new Error(t("插件已停用"));
         return this.backends.call(record, schedule.method, schedule.args, signal, () => {});
       });
   }
   async invoke(caller: SdkCaller, method: unknown, value: unknown): Promise<unknown> {
-    if (typeof method !== 'string') throw new Error('API 方法无效');
+    if (typeof method !== 'string') throw new Error(t("API 方法无效"));
     let token = this.owners.get(caller.contents.id); if (!token) { token = {}; this.owners.set(caller.contents.id, token); }
     const plugin = caller.record.manifest.id;
     const context: SdkContext = { ...caller, plugin,
-      require: permission => { if (!caller.record.manifest.permissions.includes(permission)) throw new Error(`未授权：${permission}`); },
+      require: permission => { if (!caller.record.manifest.permissions.includes(permission)) throw new Error(t("未授权：{{v0}}", { v0: permission })); },
       emit: (event, value) => { if (this.owners.get(caller.contents.id) === token && !caller.contents.isDestroyed()) caller.contents.send('plugin-sdk-event', { event, value }); }
     };
     if (method === 'tasks.cancel') return this.tasks.cancel(caller.contents.id, value);
-    if (method.startsWith('window.')) { if (!this.windows) throw new Error('窗口集成未配置'); return this.windows.invoke(context, method, value); }
-    if (method.startsWith('commands.') || method.startsWith('search.')) { if (!this.commands) throw new Error('指令集成未配置'); return this.commands.invoke({ ...context, owner: context.hostOwner ?? context.owner }, method, value); }
+    if (method.startsWith('window.')) { if (!this.windows) throw new Error(t("窗口集成未配置")); return this.windows.invoke(context, method, value); }
+    if (method.startsWith('commands.') || method.startsWith('search.')) { if (!this.commands) throw new Error(t("指令集成未配置")); return this.commands.invoke({ ...context, owner: context.hostOwner ?? context.owner }, method, value); }
     if (method.startsWith('screen.')) return this.screen.invoke(context, method, value);
     if (method.startsWith('browser.')) return this.browsers.invoke(context, method, value);
     if (method.startsWith('media.')) return this.media.invoke(context, method, value);
     if (method.startsWith('tools.')) return this.tools.invoke(context, method, value);
     if (method.startsWith('mcp.')) return this.mcp.invoke(context, method);
-    if (method.startsWith('ai.')) { if (!this.ai) throw new Error('AI 集成未配置'); return this.ai.invoke(context, method, value); }
-    if (method.startsWith('services.')) { if (!this.services) throw new Error('服务集成未配置'); return this.services.invoke(context, method, value); }
+    if (method.startsWith('ai.')) { if (!this.ai) throw new Error(t("AI 集成未配置")); return this.ai.invoke(context, method, value); }
+    if (method.startsWith('services.')) { if (!this.services) throw new Error(t("服务集成未配置")); return this.services.invoke(context, method, value); }
     if (method === 'input.key' || method === 'input.mouse') return this.input.invoke(context, method, value);
     if (['system.', 'files.', 'process.', 'dialogs.', 'notifications.', 'clipboard.', 'input.'].some(prefix => method.startsWith(prefix))) {
-      if (!this.system) throw new Error('系统集成未配置'); return this.system.invoke(context, method, value);
+      if (!this.system) throw new Error(t("系统集成未配置")); return this.system.invoke(context, method, value);
     }
     if (method === 'storage.keys') return Object.keys(this.store.get('plugin-data:' + plugin, {}));
     if (method === 'storage.remove') {
@@ -99,7 +100,7 @@ export class PluginSdk {
     }
     if (method.startsWith('backend.') || method.startsWith('schedules.')) {
       context.require('backend');
-      if (!caller.record.manifest.backend) throw new Error('插件未声明 backend 入口');
+      if (!caller.record.manifest.backend) throw new Error(t("插件未声明 backend 入口"));
       switch (method) {
         case 'backend.call': {
           const args = object(value), id = string(args.id, 100);
@@ -111,7 +112,7 @@ export class PluginSdk {
         case 'schedules.remove': return this.scheduler.remove(plugin, string(value, 100));
       }
     }
-    throw new Error('不支持的插件 API');
+    throw new Error(t("不支持的插件 API"));
   }
   closeSession(id: number): void { this.owners.delete(id); this.tasks.close(id); this.system?.closeSession(id); this.windows?.closeSession(id); this.commands?.closeSession(id); this.browsers.closeSession(id); this.mcp.closeSession(id); }
   stop(plugin: string): void { this.scheduler.stop(plugin); this.backends.stop(plugin); this.windows?.stop(plugin); this.browsers.stop(plugin); this.mcp.stop(plugin); this.tools.stop(plugin); }

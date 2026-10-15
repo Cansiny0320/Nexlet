@@ -1,7 +1,8 @@
+import { SiteLanguage, useSiteTranslation, LocaleLink } from '../components/site-language';
+import { basePath, localeFromPath } from '../lib/i18n';
 import {
   createRootRoute,
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   useRouterState,
@@ -37,34 +38,37 @@ export const Route = createRootRoute({
 });
 function Root() {
   const path = useRouterState({ select: (state) => state.location.pathname });
-  const page = pages.find((page) => page.path === path);
+  const page = pages.find((page) => page.path === basePath(path));
   const hydrated = useHydrated();
   return (
-    <html lang="zh-CN" className={hydrated ? 'js' : undefined}>
+    <html lang={localeFromPath(path)} className={hydrated ? 'js' : undefined}>
       <head>
         <HeadContent />
       </head>
       <body className={page?.className}>
-        <SiteProvider path={path}>
-          <SiteShell path={path}>
-            <Outlet />
-          </SiteShell>
-        </SiteProvider>
+        <SiteLanguage locale={localeFromPath(path)}>
+          <SiteProvider path={basePath(path)}>
+            <SiteShell path={path}>
+              <Outlet />
+            </SiteShell>
+          </SiteProvider>
+        </SiteLanguage>
         <Scripts />
       </body>
     </html>
   );
 }
 function NotFound() {
+  const { t } = useSiteTranslation();
   return (
     <section className="shell document">
-      <title>页面不存在 — Nexlet</title>
+      <title>{t('页面不存在 — Nexlet')}</title>
       <meta name="robots" content="noindex" />
       <p className="eyebrow">404</p>
-      <h1>页面不存在</h1>
-      <Link className="button primary" to="/">
-        返回首页
-      </Link>
+      <h1>{t('页面不存在')}</h1>
+      <LocaleLink className="button primary" to="/">
+        {t('返回首页')}
+      </LocaleLink>
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import { t } from '../../shared/i18n';
 import { createServer, type Server } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { object, type SdkContext } from './context';
@@ -9,8 +10,8 @@ export class PluginMcp {
   async invoke(context: SdkContext, method: string): Promise<unknown> {
     context.require('mcp'); context.require('tools'); context.require('backend');
     if (method === 'mcp.stop') { this.closeSession(context.contents.id); return true; }
-    if (method !== 'mcp.start') throw new Error('不支持的 MCP API');
-    if (this.servers.has(context.contents.id)) throw new Error('MCP 已启动，请先停止');
+    if (method !== 'mcp.start') throw new Error(t("不支持的 MCP API"));
+    if (this.servers.has(context.contents.id)) throw new Error(t("MCP 已启动，请先停止"));
     return this.start(context.contents.id, context.plugin);
   }
   async start(owner: number, plugin: string): Promise<{ url: string; token: string }> {
@@ -32,7 +33,7 @@ export class PluginMcp {
         if (message.jsonrpc !== '2.0' || typeof message.method !== 'string') throw new Error('Invalid Request');
         if (message.id !== undefined && typeof message.id !== 'string' && typeof message.id !== 'number') throw new Error('Invalid id');
         id = message.id as string | number ?? null;
-        if (message.method === 'notifications/cancelled') { const params = object(message.params); jobs.get(JSON.stringify(params.requestId))?.abort(new Error('MCP 请求已取消')); reply(202); return; }
+        if (message.method === 'notifications/cancelled') { const params = object(message.params); jobs.get(JSON.stringify(params.requestId))?.abort(new Error(t("MCP 请求已取消"))); reply(202); return; }
         if (id === null) { reply(202); return; }
         let result: unknown;
         switch (message.method) {
@@ -43,7 +44,7 @@ export class PluginMcp {
             const params = object(message.params), key = JSON.stringify(id); if (jobs.has(key) || jobs.size >= 16) throw new Error('Duplicate or too many requests');
             if (typeof params.name !== 'string') throw new Error('Invalid tool name');
             const controller = new AbortController(); jobs.set(key, controller);
-            const timer = setTimeout(() => controller.abort(new Error('MCP 工具超时')), 120000);
+            const timer = setTimeout(() => controller.abort(new Error(t("MCP 工具超时"))), 120000);
             try { const value = await this.tools.call(plugin, params.name, params.arguments, controller.signal); result = { content: [{ type: 'text', text: JSON.stringify(value) ?? 'null' }] }; }
             catch (error) { result = { isError: true, content: [{ type: 'text', text: String((error as Error).message || error) }] }; }
             finally { clearTimeout(timer); jobs.delete(key); }
@@ -58,11 +59,11 @@ export class PluginMcp {
     const instance = { server, owner, plugin, jobs }; this.servers.set(owner, instance);
     try { await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); }); }
     catch (error) { this.servers.delete(owner); server.close(); throw error; }
-    if (this.servers.get(owner) !== instance) { server.closeAllConnections(); server.close(); throw new Error('MCP 启动已取消'); }
-    const address = server.address(); if (!address || typeof address === 'string') throw new Error('MCP 监听失败');
+    if (this.servers.get(owner) !== instance) { server.closeAllConnections(); server.close(); throw new Error(t("MCP 启动已取消")); }
+    const address = server.address(); if (!address || typeof address === 'string') throw new Error(t("MCP 监听失败"));
     return { url: `http://127.0.0.1:${address.port}/mcp`, token };
   }
-  closeSession(owner: number): void { const instance = this.servers.get(owner); if (!instance) return; this.servers.delete(owner); for (const job of instance.jobs.values()) job.abort(new Error('MCP 已停止')); instance.server.closeAllConnections(); instance.server.close(); }
+  closeSession(owner: number): void { const instance = this.servers.get(owner); if (!instance) return; this.servers.delete(owner); for (const job of instance.jobs.values()) job.abort(new Error(t("MCP 已停止"))); instance.server.closeAllConnections(); instance.server.close(); }
   stop(plugin: string): void { for (const [owner, server] of this.servers) if (server.plugin === plugin) this.closeSession(owner); }
   close(): void { for (const owner of this.servers.keys()) this.closeSession(owner); }
 }

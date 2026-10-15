@@ -1,3 +1,4 @@
+import { localeBridge } from './locale';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { HOST_ACTIONS, type HostAction } from '../shared/types';
 contextBridge.exposeInMainWorld('nexlet', Object.freeze({
@@ -5,3 +6,5 @@ contextBridge.exposeInMainWorld('nexlet', Object.freeze({
   call:(action:HostAction,payload?:unknown)=>{if(!HOST_ACTIONS.includes(action))return Promise.reject(new Error('不支持的操作'));return ipcRenderer.invoke('host-api',action,payload);},
   onChange:(callback:(event:string)=>void)=>{const listener=(_event:unknown,event:string)=>callback(event);ipcRenderer.on('host-change',listener);return()=>ipcRenderer.removeListener('host-change',listener);}
 }));
+
+contextBridge.exposeInMainWorld('appLanguage', localeBridge);

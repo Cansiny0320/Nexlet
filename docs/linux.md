@@ -1,3 +1,5 @@
+[简体中文](linux.md) · [繁體中文](linux.zh-Hant.md) · [English](linux.en.md)
+
 # Linux 使用说明
 
 当前开发版新增 Linux x64 和 arm64 支持；发行资产需等对应版本正式发布。Debian/Ubuntu 可使用 deb，其他桌面发行版优先使用 AppImage。当前验证环境与未验证项见本文末尾。
@@ -46,3 +48,7 @@ AppImage 使用 electron-updater 下载同架构更新，下载/重启由用户�
 CI 配置包含 Ubuntu 24.04 x64/arm64 原生构建，使用 Xvfb + Openbox 运行打包后 smoke。真实 GNOME/KDE Wayland、跨版本 AppImage 更新安装仍须另行验收。仅本地构建与测试不代表远端 CI 或发行版已发布。
 
 本次实际构建、校验值与验收边界见 [2026-10-13 验证记录](validation/linux-support-2026-10-13.md)。
+
+## 界面语言
+
+设置支持跟随系统、简体中文、繁体中文与 English，语言资源随包离线提供。系统原生对话框可能继续跟随桌面语言，详见 [i18n 说明](i18n.md)。

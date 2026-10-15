@@ -1,3 +1,4 @@
+import { t as translate } from './i18n';
 export interface WindowRect {x:number;y:number;width:number;height:number;}
 export interface WindowDisplay {id:number;workArea:WindowRect;}
 export const WINDOW_LAYOUTS=[
@@ -10,14 +11,14 @@ export const WINDOW_LAYOUTS=[
  {id:'maximize',name:'窗口最大化',box:[0,0,1,1]}, {id:'center',name:'窗口居中',box:[]}
 ] as const;
 export function layoutBounds(id:string,area:WindowRect,current:WindowRect):WindowRect{
- const layout=WINDOW_LAYOUTS.find(l=>l.id===id);if(!layout)throw Error('不支持的窗口布局');
+ const layout=WINDOW_LAYOUTS.find(l=>l.id===id);if(!layout)throw Error(translate('不支持的窗口布局'));
  if(id==='center'){const width=Math.min(current.width,area.width),height=Math.min(current.height,area.height);return {x:Math.round(area.x+(area.width-width)/2),y:Math.round(area.y+(area.height-height)/2),width,height};}
  const [l,t,r,b]=layout.box as readonly number[];
  const x=area.x+Math.round(area.width*l),y=area.y+Math.round(area.height*t);
  return {x,y,width:area.x+Math.round(area.width*r)-x,height:area.y+Math.round(area.height*b)-y};
 }
 export function displayFor(rect:WindowRect,displays:WindowDisplay[]):WindowDisplay{
- if(!displays.length)throw Error('没有可用显示器');
+ if(!displays.length)throw Error(translate('没有可用显示器'));
  const area=(d:WindowDisplay)=>Math.max(0,Math.min(rect.x+rect.width,d.workArea.x+d.workArea.width)-Math.max(rect.x,d.workArea.x))*Math.max(0,Math.min(rect.y+rect.height,d.workArea.y+d.workArea.height)-Math.max(rect.y,d.workArea.y));
  return [...displays].sort((a,b)=>area(b)-area(a)||Math.hypot(a.workArea.x-rect.x,a.workArea.y-rect.y)-Math.hypot(b.workArea.x-rect.x,b.workArea.y-rect.y))[0];
 }

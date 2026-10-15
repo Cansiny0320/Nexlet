@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { LinuxStartup } from './linux-startup';
 import type { App } from 'electron';
 import type { StartupStatus } from '../shared/types';
@@ -15,32 +16,38 @@ export class StartupManager {
   }
 
   read(): StartupStatus {
+    const { requiresApproval: _, ...status } = this.readStatus();
+    return status;
+  }
+
+  private readStatus(): StartupStatus & { requiresApproval?: boolean } {
     if (this.platform === 'linux' && this.host.isPackaged) return this.linux().read();
-    if (!['win32', 'darwin'].includes(this.platform)) return { supported: false, enabled: false, reason: '此平台暂不支持开机自启动' };
-    if (!this.host.isPackaged) return { supported: false, enabled: false, reason: '请在打包后的 Nexlet 中设置开机自启动' };
+    if (!['win32', 'darwin'].includes(this.platform)) return { supported: false, enabled: false, reason: t("此平台暂不支持开机自启动") };
+    if (!this.host.isPackaged) return { supported: false, enabled: false, reason: t("请在打包后的 Nexlet 中设置开机自启动") };
     try {
       const item = this.host.getLoginItemSettings(this.options());
       const blocked = this.platform === 'win32' && item.executableWillLaunchAtLogin === false;
       const pending = this.platform === 'darwin' && item.status === 'requires-approval';
       return {
         supported: true,
+        requiresApproval: pending,
         enabled: item.openAtLogin && !blocked && !pending,
-        reason: pending ? '请在系统设置 → 通用 → 登录项中允许 Nexlet' : item.openAtLogin && blocked ? '系统已禁用 Nexlet 自启动，可重新开启' : null
+        reason: pending ? t("请在系统设置 → 通用 → 登录项中允许 Nexlet") : item.openAtLogin && blocked ? t("系统已禁用 Nexlet 自启动，可重新开启") : null
       };
     } catch (error) {
-      return { supported: false, enabled: false, reason: `无法读取系统自启动设置：${(error as Error).message}` };
+      return { supported: false, enabled: false, reason: t("无法读取系统自启动设置：{{v0}}", { v0: (error as Error).message }) };
     }
   }
 
   set(enabled: boolean): StartupStatus {
     const before = this.read();
-    if (!before.supported) throw new Error(before.reason || '不支持开机自启动');
+    if (!before.supported) throw new Error(before.reason || t("不支持开机自启动"));
     if (this.platform === 'linux') return this.linux().set(enabled);
     this.host.setLoginItemSettings(this.platform === 'win32'
       ? { ...this.options(), openAtLogin: enabled, enabled, name: 'app.nexlet.desktop' }
       : { openAtLogin: enabled });
-    const after = this.read();
-    if (after.enabled !== enabled && !after.reason?.includes('系统设置')) throw new Error(after.reason || '系统未保存自启动设置，请检查应用位置与系统权限');
+    const { requiresApproval, ...after } = this.readStatus();
+    if (after.enabled !== enabled && !requiresApproval) throw new Error(after.reason || t("系统未保存自启动设置，请检查应用位置与系统权限"));
     return after;
   }
 

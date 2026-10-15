@@ -1,11 +1,13 @@
+import { formatLocale } from '../shared/i18n';
+import { t } from '../shared/i18n';
 import { useToolState } from './tool-session';
 import { useState,useEffect,useRef,useCallback } from 'react';
 import { ClipboardCopy, Send, Pin, ExternalLink, Settings, Brush, Star, Trash2, Type, Image as ImageIcon, Files, ClipboardList, Download, Copy, Pause, Play } from 'lucide-react';
 import type { ClipItem } from '../shared/types';
 import { api,useApp,errorText,IconButton,Empty,relativeTime } from './common';
 
-const filters=[['all','全部',ClipboardList],['text','文本',Type],['image','图像',ImageIcon],['files','文件',Files],['favorite','收藏',Star]] as const;
-const clipDateTime=new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+const filters=()=>[['all',t("全部"),ClipboardList],['text',t("文本"),Type],['image',t("图像"),ImageIcon],['files',t("文件"),Files],['favorite',t("收藏"),Star]] as const;
+const clipDateTime=()=>new Intl.DateTimeFormat(formatLocale(),{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
 export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(value:string)=>void;board:boolean}){
   const {state,toast,dialog,navigate,detach,canDetach}=useApp();
   const [kind,setKind]=useToolState('kind','all'),[items,setItems]=useState<ClipItem[]>([]),[selected,setSelected]=useToolState<string[]>('selected',[]),[cursor,setCursor]=useToolState('cursor',0),[expanded,setExpanded]=useToolState<string|null>('expanded',null);
@@ -18,10 +20,10 @@ export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(va
   useEffect(()=>{const hide=()=>setContext(null);window.addEventListener('click',hide);return()=>window.removeEventListener('click',hide);},[]);
   const action=useCallback(async(name:string,ids=selected,extra:Record<string,unknown>={})=>{
     try{const result=await api('clipAction',{action:name,ids,...extra});
-      if(name==='copy')toast('已复制');if(name==='paste')toast('已发送粘贴请求');if(name==='save'&&result)toast('图片已保存');
+      if(name==='copy')toast(t("已复制"));if(name==='paste')toast(t("已发送粘贴请求"));if(name==='save'&&result)toast(t("图片已保存"));
     }catch(e){toast(errorText(e),true);}setContext(null);
   },[selected,toast]);
-  const remove=async(ids=selected)=>{if(await dialog({title:'删除所选记录？',message:'只删除 Nexlet 中的历史记录，原文件不会被删除。',confirm:'删除',danger:true}))await action('delete',ids);};
+  const remove=async(ids=selected)=>{if(await dialog({title:t("删除所选记录？"),message:t("只删除 Nexlet 中的历史记录，原文件不会被删除。"),confirm:t("删除"),danger:true}))await action('delete',ids);};
   useEffect(()=>{const handle=(e:KeyboardEvent)=>{
     if(document.querySelector('.modal-backdrop'))return;
     const input=e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement;
@@ -43,33 +45,33 @@ export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(va
     else setSelected([item.id]);setCursor(index);
   }
   return <div className="clipboard-panel">
-    <div className="clipboard-tabs">{filters.map(([id,label,Icon])=><button key={id} className={kind===id?'active':''} onClick={()=>setKind(id)}><Icon size={16}/>{label}{id==='favorite'&&kind==='favorite'?`（${items.length}）`:''}</button>)}<span className="tabs-spacer"/><button className="pause-button" title={state.settings.clipboardEnabled?'暂停记录':'恢复记录'} aria-label={state.settings.clipboardEnabled?'暂停记录':'恢复记录'} onClick={()=>void api('settings',{clipboardEnabled:!state.settings.clipboardEnabled}).catch(e=>toast(errorText(e),true))}>{state.settings.clipboardEnabled?<Pause size={15}/>:<Play size={15}/>}</button></div>
-    {!state.settings.clipboardEnabled&&<div className="recording-paused">已暂停记录新内容</div>}
-    <div className="clipboard-layout"><div className="clipboard-list" tabIndex={0} aria-label="剪贴板历史">
-      {!items.length&&<Empty icon={<ClipboardList size={34}/>}>{query?'没有找到匹配的记录':board?'中转站没有可用记录':'复制文本、图片或文件后，历史会显示在这里'}</Empty>}
+    <div className="clipboard-tabs">{filters().map(([id,label,Icon])=><button key={id} className={kind===id?'active':''} onClick={()=>setKind(id)}><Icon size={16}/>{label}{id==='favorite'&&kind==='favorite'?`（${items.length}）`:''}</button>)}<span className="tabs-spacer"/><button className="pause-button" title={state.settings.clipboardEnabled?t("暂停记录"):t("恢复记录")} aria-label={state.settings.clipboardEnabled?t("暂停记录"):t("恢复记录")} onClick={()=>void api('settings',{clipboardEnabled:!state.settings.clipboardEnabled}).catch(e=>toast(errorText(e),true))}>{state.settings.clipboardEnabled?<Pause size={15}/>:<Play size={15}/>}</button></div>
+    {!state.settings.clipboardEnabled&&<div className="recording-paused">{t("已暂停记录新内容")}</div>}
+    <div className="clipboard-layout"><div className="clipboard-list" tabIndex={0} aria-label={t("剪贴板历史")}>
+      {!items.length&&<Empty icon={<ClipboardList size={34}/>}>{query?t("没有找到匹配的记录"):board?t("中转站没有可用记录"):t("复制文本、图片或文件后，历史会显示在这里")}</Empty>}
       {items.map((item,index)=><div key={item.id} ref={node=>{if(node)rows.current.set(item.id,node);else rows.current.delete(item.id);}} className={`clip-item ${selected.includes(item.id)?'selected':''}`} role="option" aria-selected={selected.includes(item.id)} tabIndex={-1} onClick={e=>select(item,index,e)} onDoubleClick={()=>void action(state.canPaste?'paste':'copy',[item.id])} onContextMenu={e=>{e.preventDefault();const targets=selected.includes(item.id)?selected:[item.id];setSelected(targets);setContext({x:Math.min(e.clientX,innerWidth-185),y:Math.min(e.clientY,innerHeight-240),ids:targets});}}>
-        {item.kind==='image'?<div className="clip-picture"><img src={expanded===item.id?`nexlet-image://local/${item.imagePath?.split(/[\\/]/).pop()}`:item.thumbnail} alt="剪贴板图片" draggable={false} className={expanded===item.id?'expanded':''}/><button onClick={e=>{e.stopPropagation();setExpanded(expanded===item.id?null:item.id);}}>{expanded===item.id?'收起':'展开'}</button></div>:
+        {item.kind==='image'?<div className="clip-picture"><img src={expanded===item.id?`nexlet-image://local/${item.imagePath?.split(/[\\/]/).pop()}`:item.thumbnail} alt={t("剪贴板图片")} draggable={false} className={expanded===item.id?'expanded':''}/><button onClick={e=>{e.stopPropagation();setExpanded(expanded===item.id?null:item.id);}}>{expanded===item.id?t("收起"):t("展开")}</button></div>:
          item.kind==='files'?<div className="clip-files"><Files size={25}/><div>{item.files?.map(file=><div key={file} title={file}>{file.split(/[\\/]/).pop()}</div>)}</div></div>:
-         <div className={`clip-text ${expanded===item.id?'expanded':''}`}>{item.text.slice(0,expanded===item.id?200000:600)}{item.text.length>150&&<button className="inline-expand" onClick={e=>{e.stopPropagation();setExpanded(expanded===item.id?null:item.id);}}>{expanded===item.id?'收起':'展开'}</button>}</div>}
-        <div className="clip-meta"><span><time dateTime={new Date(item.createdAt).toISOString()} title="最近复制或使用时间">{clipDateTime.format(item.createdAt)}</time> · {relativeTime(item.createdAt)}</span><span>{item.favorite&&<Star size={12} fill="currentColor"/>}{item.kind==='text'?`${Array.from(item.text).length} 字符`:item.kind==='image'?`${item.width} × ${item.height}`:`${item.files?.length} 个文件`}<em>{index+1}</em></span></div>
+         <div className={`clip-text ${expanded===item.id?'expanded':''}`}>{item.text.slice(0,expanded===item.id?200000:600)}{item.text.length>150&&<button className="inline-expand" onClick={e=>{e.stopPropagation();setExpanded(expanded===item.id?null:item.id);}}>{expanded===item.id?t("收起"):t("展开")}</button>}</div>}
+        <div className="clip-meta"><span><time dateTime={new Date(item.createdAt).toISOString()} title={t("最近复制或使用时间")}>{clipDateTime().format(item.createdAt)}</time> · {relativeTime(item.createdAt)}</span><span>{item.favorite&&<Star size={12} fill="currentColor"/>}{item.kind==='text'?t("{{v0}} 字符", { v0: Array.from(item.text).length , count: Array.from(item.text).length }):item.kind==='image'?`${item.width} × ${item.height}`:t("{{v0}} 个文件", { v0: item.files?.length , count: item.files?.length })}<em>{index+1}</em></span></div>
       </div>)}
     </div><aside className="clipboard-actions">
-      <IconButton className="round primary" title="复制" disabled={!selected.length} onClick={()=>void action('copy')}><ClipboardCopy size={22}/></IconButton>
-      <IconButton className="round primary" title={state.canPaste?'执行粘贴':'请从目标应用用快捷键唤起后粘贴'} disabled={!selected.length||!state.canPaste} onClick={()=>void action('paste')}><Send size={21}/></IconButton>
-      <IconButton className="round primary" title="悬浮中转" disabled={!selected.length} onClick={()=>void action('station')}><Pin size={21}/></IconButton>
+      <IconButton className="round primary" title={t("复制")} disabled={!selected.length} onClick={()=>void action('copy')}><ClipboardCopy size={22}/></IconButton>
+      <IconButton className="round primary" title={state.canPaste?t("执行粘贴"):t("请从目标应用用快捷键唤起后粘贴")} disabled={!selected.length||!state.canPaste} onClick={()=>void action('paste')}><Send size={21}/></IconButton>
+      <IconButton className="round primary" title={t("悬浮中转")} disabled={!selected.length} onClick={()=>void action('station')}><Pin size={21}/></IconButton>
       <div className="rail-spacer"/>
-      <IconButton title="打开独立剪贴板" disabled={!canDetach} onClick={()=>void detach()}><ExternalLink size={20}/></IconButton>
-      <IconButton title="剪贴板设置" onClick={()=>navigate('settings')}><Settings size={20}/></IconButton>
-      <IconButton title="清空历史记录" onClick={async()=>{if(await dialog({title:'清空剪贴板历史？',message:'收藏内容会保留。不会清空系统剪贴板，也不会删除原文件。',confirm:'清空历史',danger:true}))await action('clear',[],{includeFavorites:false});}}><Brush size={21}/></IconButton>
+      <IconButton title={t("打开独立剪贴板")} disabled={!canDetach} onClick={()=>void detach()}><ExternalLink size={20}/></IconButton>
+      <IconButton title={t("剪贴板设置")} onClick={()=>navigate('settings')}><Settings size={20}/></IconButton>
+      <IconButton title={t("清空历史记录")} onClick={async()=>{if(await dialog({title:t("清空剪贴板历史？"),message:t("收藏内容会保留。不会清空系统剪贴板，也不会删除原文件。"),confirm:t("清空历史"),danger:true}))await action('clear',[],{includeFavorites:false});}}><Brush size={21}/></IconButton>
     </aside></div>
-    {selected.length>1&&<div className="selection-status">已选择 {selected.length} 项 · Ctrl/Cmd+C 合并复制</div>}
+    {selected.length>1&&<div className="selection-status">{t("已选择 {{v0}} 项 · Ctrl/Cmd+C 合并复制", { v0: selected.length })}</div>}
     {context&&<div className="context-menu" style={{left:context.x,top:context.y}} onClick={e=>e.stopPropagation()}>
-      <button onClick={()=>void action('copy',context.ids)}><Copy size={15}/>复制</button>
-      <button disabled={!state.canPaste} onClick={()=>void action('paste',context.ids)}><Send size={15}/>执行粘贴</button>
-      <button onClick={()=>void action('station',context.ids)}><Pin size={15}/>悬浮中转</button><hr/>
-      <button onClick={()=>void action('favorite',context.ids,{value:!items.find(i=>i.id===context.ids[0])?.favorite})}><Star size={15}/>{items.find(i=>i.id===context.ids[0])?.favorite?'取消收藏':'收藏'}</button>
-      {context.ids.length===1&&items.find(i=>i.id===context.ids[0])?.kind==='image'&&<button onClick={()=>void action('save',context.ids)}><Download size={15}/>保存图片</button>}
-      <button onClick={()=>{void remove(context.ids);setContext(null);}}><Trash2 size={15}/>删除记录</button>
+      <button onClick={()=>void action('copy',context.ids)}><Copy size={15}/>{t("复制")}</button>
+      <button disabled={!state.canPaste} onClick={()=>void action('paste',context.ids)}><Send size={15}/>{t("执行粘贴")}</button>
+      <button onClick={()=>void action('station',context.ids)}><Pin size={15}/>{t("悬浮中转")}</button><hr/>
+      <button onClick={()=>void action('favorite',context.ids,{value:!items.find(i=>i.id===context.ids[0])?.favorite})}><Star size={15}/>{items.find(i=>i.id===context.ids[0])?.favorite?t("取消收藏"):t("收藏")}</button>
+      {context.ids.length===1&&items.find(i=>i.id===context.ids[0])?.kind==='image'&&<button onClick={()=>void action('save',context.ids)}><Download size={15}/>{t("保存图片")}</button>}
+      <button onClick={()=>{void remove(context.ids);setContext(null);}}><Trash2 size={15}/>{t("删除记录")}</button>
     </div>}
   </div>;
 }

@@ -1,3 +1,5 @@
+import { formatLocale } from '../shared/i18n';
+import { t } from '../shared/i18n';
 import { linuxDataRoots, scanLinuxApplications, linuxIconPath } from './linux-desktop';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -44,7 +46,7 @@ export class Catalog {
       if (process.platform === 'linux') {
         const items=await scanLinuxApplications([...linuxDataRoots().map(root=>path.join(root,'applications')),...extra]);
         for(const item of items){if(item.icon)this.iconSources.set(item.id,item.icon);delete item.icon;}
-        this.aliases.clear(); this.items=items.sort((a,b)=>a.name.localeCompare(b.name,'zh-CN')); return;
+        this.aliases.clear(); this.items=items.sort((a,b)=>a.name.localeCompare(b.name,formatLocale())); return;
       }
       const roots = process.platform === 'win32' ? [
         path.join(process.env.APPDATA || homedir(), 'Microsoft/Windows/Start Menu/Programs'),
@@ -74,7 +76,7 @@ export class Catalog {
               continue;
             }
             if (identity) identities.set(identity, id);
-            found.set(id, { id, name, subtitle: shortcut ? `快捷方式 · ${directory}` : directory, kind: shortcut ? 'shortcut' : 'app', keywords: [], path: full, icon: this.icons.get(id) });
+            found.set(id, { id, name, subtitle: shortcut ? t("快捷方式 · {{v0}}", { v0: directory }) : directory, kind: shortcut ? 'shortcut' : 'app', keywords: [], path: full, icon: this.icons.get(id) });
           } else if (entry.isDirectory()) await visit(full, depth + 1);
         }
       };
@@ -100,12 +102,12 @@ export class Catalog {
             if ([...found.values()].some(v => v.name === item.Name)) continue;
             const id = 'uwp:' + item.AppID;
             if (typeof item.IconPath === 'string' && item.IconPath) this.iconSources.set(id, item.IconPath);
-            found.set(id, { id, name: String(item.Name), subtitle: 'Windows 应用', kind: 'app', keywords: [] });
+            found.set(id, { id, name: String(item.Name), subtitle: t("Windows 应用"), kind: 'app', keywords: [] });
           }
-        } catch (error) { console.warn('系统应用索引暂不可用', (error as Error).message); }
+        } catch (error) { console.warn(t("系统应用索引暂不可用"), (error as Error).message); }
       }
       this.aliases = aliases;
-      this.items = [...found.values()].sort((a,b) => a.name.localeCompare(b.name,'zh-CN'));
+      this.items = [...found.values()].sort((a,b) => a.name.localeCompare(b.name,formatLocale()));
     } finally { this.loading = false; this.changed(); }
   }
   async withIcons(items: Command[]): Promise<Command[]> {

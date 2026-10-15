@@ -1,3 +1,4 @@
+import { useSiteTranslation } from '../components/site-language';
 import type { ComponentProps } from 'react';
 import type { Platform } from '../lib/releases';
 import { useSite } from './site-provider';
@@ -5,14 +6,16 @@ export function ReleaseVersion() {
   return <span data-release-version>{useSite().release.version}</span>;
 }
 export function ReleaseStatus() {
+  const { t } = useSiteTranslation();
+
   const { status } = useSite();
   return (
     <span data-release-status>
       {status === 'latest'
-        ? '最新正式版'
+        ? t('最新正式版')
         : status === 'failed'
-          ? '版本检查失败 · 可下载'
-          : '下载版本'}
+          ? t('版本检查失败 · 可下载')
+          : t('下载版本')}
     </span>
   );
 }

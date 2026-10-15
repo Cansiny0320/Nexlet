@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import type { Command } from './types';
 
 export type InputSource = 'input' | 'paste' | 'drop' | 'selection' | 'capture';
@@ -45,28 +46,28 @@ export function matchesMetadata(rule:ContentMatch,input:LaunchInput):boolean {
 }
 
 export function validateMatches(value:unknown):ContentMatch[] {
-  if(!Array.isArray(value)||value.length>10)throw new Error('内容匹配规则最多 10 项');
+  if(!Array.isArray(value)||value.length>10)throw new Error(t("内容匹配规则最多 10 项"));
   return value.map(raw=>{
-    if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('内容匹配规则无效');
+    if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error(t("内容匹配规则无效"));
     const v=raw as Record<string,unknown>;
     const range=(min:string,max:string,limit:number)=>{
       const output:Record<string,number>={};
-      for(const key of [min,max])if(v[key]!==undefined){if(!Number.isInteger(v[key])||Number(v[key])<1||Number(v[key])>limit)throw new Error('匹配范围无效');output[key]=Number(v[key]);}
-      if((output[min]??1)>(output[max]??limit))throw new Error('匹配范围无效');
+      for(const key of [min,max])if(v[key]!==undefined){if(!Number.isInteger(v[key])||Number(v[key])<1||Number(v[key])>limit)throw new Error(t("匹配范围无效"));output[key]=Number(v[key]);}
+      if((output[min]??1)>(output[max]??limit))throw new Error(t("匹配范围无效"));
       return output;
     };
     if(v.type==='image')return {type:'image'};
     if(v.type==='text')return {type:'text',...range('minLength','maxLength',INPUT_TEXT_LIMIT)};
     if(v.type==='regex'){
-      if(typeof v.pattern!=='string'||!v.pattern||v.pattern.length>512||v.flags!==undefined&&(typeof v.flags!=='string'||!/^(?!.*(.).*\1)[imsu]*$/.test(v.flags)))throw new Error('正则表达式或 flags 无效');
-      try{new RegExp(v.pattern,v.flags as string|undefined);}catch{throw new Error('正则表达式无效');}
+      if(typeof v.pattern!=='string'||!v.pattern||v.pattern.length>512||v.flags!==undefined&&(typeof v.flags!=='string'||!/^(?!.*(.).*\1)[imsu]*$/.test(v.flags)))throw new Error(t("正则表达式或 flags 无效"));
+      try{new RegExp(v.pattern,v.flags as string|undefined);}catch{throw new Error(t("正则表达式无效"));}
       return {type:'regex',pattern:v.pattern,...(v.flags?{flags:v.flags as string}:{}),...range('minLength','maxLength',REGEX_INPUT_LIMIT)};
     }
     if(v.type==='files'){
-      if(v.fileType!==undefined&&!['file','directory'].includes(v.fileType as string))throw new Error('文件匹配类型无效');
-      if(v.extensions!==undefined&&(!Array.isArray(v.extensions)||!v.extensions.length||v.extensions.length>30||v.extensions.some(e=>typeof e!=='string'||!/^[a-z0-9_-]{1,20}$/i.test(e))))throw new Error('文件扩展名无效');
+      if(v.fileType!==undefined&&!['file','directory'].includes(v.fileType as string))throw new Error(t("文件匹配类型无效"));
+      if(v.extensions!==undefined&&(!Array.isArray(v.extensions)||!v.extensions.length||v.extensions.length>30||v.extensions.some(e=>typeof e!=='string'||!/^[a-z0-9_-]{1,20}$/i.test(e))))throw new Error(t("文件扩展名无效"));
       return {type:'files',...(v.fileType?{fileType:v.fileType as 'file'|'directory'}:{}),...(v.extensions?{extensions:[...new Set((v.extensions as string[]).map(e=>e.toLowerCase()))]}:{}),...range('minCount','maxCount',INPUT_FILE_LIMIT)};
     }
-    throw new Error('不支持的内容匹配类型');
+    throw new Error(t("不支持的内容匹配类型"));
   });
 }

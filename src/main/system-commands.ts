@@ -1,3 +1,5 @@
+import { t } from '../shared/i18n';
+import { commandNames } from '../shared/localized-command';
 import type { Command } from '../shared/types';
 
 export type SystemAction = 'lock' | 'sleep' | 'restart' | 'shutdown' | 'logout' | 'desktop';
@@ -133,13 +135,13 @@ export function systemCommands(platform: string, release: string): SystemCommand
   const settings = platform === 'win32' ? (major >= 10 ? windowsSettings.filter(s => build >= (s.minBuild ?? 0) && build <= (s.maxBuild ?? Infinity)) : []) : major >= 22 ? macSettings : [];
   return [
     ...settings.map(({ id, name, target, keywords }) => ({
-      id: 'system:settings:' + id, name, subtitle: `${platform === 'darwin' ? 'macOS' : 'Windows'} 系统设置`,
-      kind: 'system' as const, keywords, color: '#778596',
+      id: 'system:settings:' + id, name: t(name), subtitle: t('{{v0}} 系统设置', {v0: platform === 'darwin' ? 'macOS' : 'Windows'}),
+      kind: 'system' as const, keywords: [...keywords, ...commandNames(name)], color: '#778596',
       url: (platform === 'darwin' ? 'x-apple.systempreferences:' : 'ms-settings:') + target
     })),
     ...actions.map(({ action, name, keywords, confirm }) => ({
-      id: 'system:action:' + action, name, subtitle: `${name} · ${confirm ? '确认后执行' : '系统操作'}`,
-      kind: 'system' as const, keywords, color: '#687b94', action, confirm
+      id: 'system:action:' + action, name: t(name), subtitle: `${t(name)} · ${t(confirm ? '确认后执行' : '系统操作')}`,
+      kind: 'system' as const, keywords: [...keywords, ...commandNames(name)], color: '#687b94', action, confirm
     }))
   ];
 }
