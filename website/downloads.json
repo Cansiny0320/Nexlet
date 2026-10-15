@@ -1,27 +1,27 @@
 {
-  "version": "0.2.23",
+  "version": "0.2.24",
   "prerelease": false,
-  "sourceCommit": "c7db38bdcbcbd9dcd985a8f4ddc5c9849e70bee5",
-  "releaseUrl": "https://github.com/Cansiny0320/Nexlet/releases/tag/v0.2.23",
-  "checksumsUrl": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.23/SHA256SUMS.txt",
+  "sourceCommit": "db3e5d5f3d966463e3e04dfff6e5b457ebf89683",
+  "releaseUrl": "https://github.com/Cansiny0320/Nexlet/releases/tag/v0.2.24",
+  "checksumsUrl": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.24/SHA256SUMS.txt",
   "platforms": {
     "windows-x64": {
       "label": "Windows x64",
       "button": "下载 Windows 版",
       "icon": "windows",
-      "url": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.23/Nexlet-0.2.23-Windows-x64.exe"
+      "url": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.24/Nexlet-0.2.24-Windows-x64.exe"
     },
     "macos-arm64": {
       "label": "macOS · Apple Silicon",
       "button": "下载 macOS 版",
       "icon": "apple",
-      "url": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.23/Nexlet-0.2.23-macOS-arm64.dmg"
+      "url": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.24/Nexlet-0.2.24-macOS-arm64.dmg"
     },
     "macos-x64": {
       "label": "macOS · Intel",
       "button": "下载 macOS 版",
       "icon": "apple",
-      "url": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.23/Nexlet-0.2.23-macOS-x64.dmg"
+      "url": "https://github.com/Cansiny0320/Nexlet/releases/download/v0.2.24/Nexlet-0.2.24-macOS-x64.dmg"
     }
   }
 }
