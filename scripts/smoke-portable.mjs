@@ -5,7 +5,7 @@ import { mkdtemp,mkdir,readFile,writeFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 const server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port;await new Promise(r=>server.close(r));
-await mkdir('.tmp',{recursive:true});const data=await mkdtemp(path.resolve('.tmp','portable-smoke-'));const db=new DatabaseSync(path.join(data,'nexlet.sqlite'));db.exec('CREATE TABLE documents (key TEXT PRIMARY KEY,value TEXT NOT NULL)');db.prepare('INSERT INTO documents VALUES (?,?)').run('settings',JSON.stringify({clipboardEnabled:false,hideOnBlur:false,theme:'light'}));db.close();
+await mkdir('.tmp',{recursive:true});const data=await mkdtemp(path.resolve('.tmp','portable-smoke-'));const db=new DatabaseSync(path.join(data,'nexlet.sqlite'));db.exec('CREATE TABLE documents (key TEXT PRIMARY KEY,value TEXT NOT NULL)');db.prepare('INSERT INTO documents VALUES (?,?)').run('settings',JSON.stringify({clipboardEnabled:false,hideOnBlur:false,theme:'light',language:'zh-CN'}));db.close();
 const env={...process.env,NEXLET_USER_DATA:data};delete env.ELECTRON_RUN_AS_NODE;delete env.NEXLET_TEST_MODE;
 const {version}=JSON.parse(await readFile('package.json','utf8'));
 const child=spawn(path.resolve(process.argv[2]||`release/Nexlet-${version}-Windows-x64.exe`),[`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{env,windowsHide:true,stdio:'ignore'});let browser,page;const errors=[];

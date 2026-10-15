@@ -2,7 +2,7 @@ import { _electron as electron } from '@playwright/test';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 await mkdir('.tmp',{recursive:true});const data=await mkdtemp(path.resolve('.tmp','market-live-'));
-const env={...process.env,NEXLET_TEST_MODE:'1',NEXLET_USER_DATA:data};delete env.ELECTRON_RUN_AS_NODE;
+const env={...process.env,NEXLET_TEST_MODE:'1',NEXLET_TEST_LOCALE:'zh-CN',NEXLET_USER_DATA:data};delete env.ELECTRON_RUN_AS_NODE;
 const app=await electron.launch({args:[process.cwd()],env});
 try{
   const page=await app.firstWindow();await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).waitFor();

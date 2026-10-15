@@ -1,4 +1,4 @@
-Nexlet 0.2.23 新增简体中文、繁体中文与 English 界面，并同步官网、文档和自有插件。
+Nexlet 0.2.24 新增简体中文、繁体中文与 English 界面，并同步官网、文档和自有插件。
 
 ## 语言与交互
 
@@ -16,11 +16,11 @@ Adds Simplified Chinese, Traditional Chinese and English across the desktop UI, 
 
 ## 下载
 
-- Windows x64：安装版 Nexlet-0.2.23-Windows-x64-Setup.exe；便携版 Nexlet-0.2.23-Windows-x64.exe。
-- Apple Silicon Mac：Nexlet-0.2.23-macOS-arm64.dmg。
-- Intel Mac：Nexlet-0.2.23-macOS-x64.dmg。
-- Linux x64：Nexlet-0.2.23-Linux-x86_64.AppImage、Nexlet-0.2.23-Linux-amd64.deb。
-- Linux arm64：Nexlet-0.2.23-Linux-arm64.AppImage、Nexlet-0.2.23-Linux-arm64.deb。
+- Windows x64：安装版 Nexlet-0.2.24-Windows-x64-Setup.exe；便携版 Nexlet-0.2.24-Windows-x64.exe。
+- Apple Silicon Mac：Nexlet-0.2.24-macOS-arm64.dmg。
+- Intel Mac：Nexlet-0.2.24-macOS-x64.dmg。
+- Linux x64：Nexlet-0.2.24-Linux-x86_64.AppImage、Nexlet-0.2.24-Linux-amd64.deb。
+- Linux arm64：Nexlet-0.2.24-Linux-arm64.AppImage、Nexlet-0.2.24-Linux-arm64.deb。
 - macOS ZIP、blockmap 与 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 
 手动安装前建议完整退出旧版。现有本地数据继续使用原用户目录。

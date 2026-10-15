@@ -1455,7 +1455,6 @@
   "不支持的窗口布局": "Unsupported window layout",
   "没有可用显示器": "No display available",
   "界面暂时无响应，请等待或从托盘重新打开": "The interface is not responding. Wait or reopen it from the tray.",
-  "在 {{v0}} 中打开": "Open in {{v0}}",
   "插件翻译字段无效": "Invalid plugin translations",
   "{{v0}} 项": "{{v0}} items",
   "显示前 200 项，共 {{v0}} 项；输入名称可继续筛选。": "Showing the first 200 of {{v0}} items. Type a name to filter.",
@@ -1491,5 +1490,6 @@
   "{{v0}} 天前_other": "{{v0}} days ago",
   "{{v0}} 项_one": "{{v0}} item",
   "{{v0}} 项_other": "{{v0}} items",
-  "原应用已关闭": "The original app has closed"
+  "原应用已关闭": "The original app has closed",
+  "在{{v0}}中打开": "Open in {{v0}}"
 }

@@ -8,7 +8,7 @@ await mkdir('.tmp',{recursive:true});
 const data=await mkdtemp(path.resolve('.tmp','packaged-smoke-'));
 const db=new DatabaseSync(path.join(data,'nexlet.sqlite'));
 db.exec('CREATE TABLE documents (key TEXT PRIMARY KEY,value TEXT NOT NULL)');
-db.prepare('INSERT INTO documents VALUES (?,?)').run('settings',JSON.stringify({clipboardEnabled:false,hideOnBlur:false,theme:'light'}));
+db.prepare('INSERT INTO documents VALUES (?,?)').run('settings',JSON.stringify({clipboardEnabled:false,hideOnBlur:false,theme:'light',language:'zh-CN'}));
 db.close();
 const env={...process.env,NEXLET_USER_DATA:data};delete env.ELECTRON_RUN_AS_NODE;delete env.NEXLET_TEST_MODE;
 const linuxMarker=process.platform==='linux'?await prepareLinuxSmoke(data,env):null;

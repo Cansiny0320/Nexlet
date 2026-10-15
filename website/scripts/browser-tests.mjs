@@ -9,7 +9,12 @@ try {
     server = spawn(
       process.execPath,
       ['node_modules/vite-plus/bin/vp', '-C', '.', 'preview', '--host', '127.0.0.1', '--port', '0'],
-      { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true },
+      {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+        detached: process.platform !== 'win32',
+      },
     );
     base = await new Promise((resolve, reject) => {
       let log = '';
@@ -61,6 +66,14 @@ try {
         stdio: 'ignore',
         windowsHide: true,
       });
-    else server.kill();
+    else {
+      // The preview CLI starts child processes that retain its output pipes.
+      // Close the whole owned process group so a successful test run can exit.
+      try {
+        process.kill(-server.pid, 'SIGTERM');
+      } catch (error) {
+        if (error.code !== 'ESRCH') throw error;
+      }
+    }
   }
 }
