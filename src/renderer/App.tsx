@@ -2,7 +2,7 @@ import { t } from '../shared/i18n';
 import { ToolSessionContext,createToolSession } from './tool-session';
 import type { ToolSessionSnapshot } from '../shared/tool-session';
 import { lazy, useState, useEffect, useRef, useCallback, useTransition } from 'react';
-import { Settings as SettingsIcon, Pin, Minus, Square, X, ChevronLeft, ExternalLink, GripVertical } from 'lucide-react';
+import { Pin, Minus, Square, X, ChevronLeft, ExternalLink, GripVertical } from 'lucide-react';
 import type { AppState, PluginSessionState } from '../shared/types';
 import { BUILTIN_COMMANDS } from '../shared/types';
 import { INPUT_TEXT_LIMIT, type LaunchInput, type InputSource } from '../shared/launch';
@@ -100,7 +100,7 @@ export function App(){
       <ToolBoundary session={session} onReady={toolReady} onError={toolError} onBack={()=>navigate('launcher')}>
       {view==='plugin'&&pluginSearch.state?.visible&&<PluginSearchResults results={pluginSearch.state.results} error={message=>toast(message,true)}/>}
       {view==='launcher'&&<Launcher query={query} setQuery={setQuery} input={input} launchInput={launchInput} source={inputSource} capturing={capturing}/>}
-      {view==='clipboard'&&<ClipboardPanel query={query} setQuery={setQuery} board={board}/>}
+      {view==='clipboard'&&<ClipboardPanel query={query} board={board}/>}
       {view==='scratchpad'&&<ScratchpadPanel initialExpression={payload}/>}
       {view==='json'&&<JsonTool key={payload} initial={payload}/>}
       {view==='filesearch'&&<FileSearch/>}

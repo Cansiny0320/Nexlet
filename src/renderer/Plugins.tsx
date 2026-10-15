@@ -1,10 +1,10 @@
 import { localizedLabels } from '../shared/plugin-locales';
 import { t } from '../shared/i18n';
-import { useState, useEffect } from 'react';
-import { PackagePlus, FolderOpen, Puzzle, Trash2, Play, Pause, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
+import { PackagePlus, FolderOpen, Puzzle, Trash2, Play, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { BUILTIN_COMMANDS } from '../shared/types';
 import { MarketPanel } from './Marketplace';
-import { api,useApp,errorText,PanelHeader,ToolIcon,Empty,IconButton } from './common';
+import { api,useApp,errorText,ToolIcon,IconButton } from './common';
 
 const permissionNames=():Record<string,string>=>({'clipboard.read':t("读取剪贴板"),'clipboard.write':t("写入剪贴板"),'shell.openExternal':t("打开外部链接"),'network.request':t("网络请求"),'secrets':t("插件独立加密密钥"),'files':t("读写本机文件"),'process':t("执行本机进程"),'backend':t("独立 Node.js 后台（完整本机权限）"),'browser':t("浏览器自动化"),'screen':t("屏幕采集与取色"),'input.simulate':t("模拟键盘鼠标及回贴"),'windows':t("管理插件窗口"),'notifications':t("系统通知"),'ai':t("配置和调用 AI 服务"),'services':t("账号、购买与云同步服务"),'tools':t("注册及执行后台工具"),'mcp':t("启动本机 MCP 服务"),'media':t("图像与音视频处理")});
 export function PluginsPanel(){

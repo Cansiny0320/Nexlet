@@ -1,6 +1,6 @@
 import { t } from '../shared/i18n';
 import {randomUUID} from 'node:crypto';
-import {panelCommands,type PanelConfig,type PanelItem,type PanelCommand} from '../shared/super-panel';
+import {panelCommands,type PanelConfig,type PanelItem} from '../shared/super-panel';
 interface Storage {get<T>(key:string,fallback:T):T;set(key:string,value:unknown):void;}
 const label=(v:unknown,max=250)=>{if(typeof v!=='string'||!v.trim()||v.length>max||/[\0\r\n]/.test(v))throw Error(t("面板参数无效"));return v.trim();};
 export class PanelConfigStore {

@@ -84,9 +84,9 @@ export class PluginManager {
     if (picked.canceled || !picked.filePaths[0]) return false;
     const source = picked.filePaths[0];
     const bundle = development ? await readPluginDirectory(source) : readPluginZip(await readFile(source));
-    return this.installBundle(owner,bundle,{source:'local',developmentDirectory:development?source:undefined});
+    return this.installBundle(bundle,{source:'local',developmentDirectory:development?source:undefined});
   }
-  async installBundle(owner:BrowserWindow,bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
+  async installBundle(bundle:PluginBundle,options:{source:'marketplace'|'local';developmentDirectory?:string}):Promise<boolean>{
     return this.replaceBundle(bundle,options);
   }
   private async replaceBundle(bundle:PluginBundle,options:InstallOptions):Promise<boolean>{

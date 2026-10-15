@@ -2,7 +2,6 @@ import { validatePluginLocales, type PluginLocales } from './plugin-locales';
 import { t } from './i18n';
 import { valid, gte, gt } from 'semver';
 
-export const MARKET_REPOSITORY = 'https://github.com/Cansiny0320/Nexlet-plugins';
 export const MARKET_INDEX_URL = 'https://raw.githubusercontent.com/Cansiny0320/Nexlet-plugins/main/index.json';
 export interface MarketEntry { locales?: PluginLocales; id: string; name: string; description: string; version: string; author: string; category: string; platforms: string[]; minHostVersion?: string; download: string; icon?: string; }
 export interface MarketIndex { schemaVersion: 1; plugins: MarketEntry[]; }

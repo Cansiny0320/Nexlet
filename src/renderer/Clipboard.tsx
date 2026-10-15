@@ -8,7 +8,7 @@ import { api,useApp,errorText,IconButton,Empty,relativeTime } from './common';
 
 const filters=()=>[['all',t("全部"),ClipboardList],['text',t("文本"),Type],['image',t("图像"),ImageIcon],['files',t("文件"),Files],['favorite',t("收藏"),Star]] as const;
 const clipDateTime=()=>new Intl.DateTimeFormat(formatLocale(),{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
-export function ClipboardPanel({query,setQuery,board}:{query:string;setQuery:(value:string)=>void;board:boolean}){
+export function ClipboardPanel({query,board}:{query:string;board:boolean}){
   const {state,toast,dialog,navigate,detach,canDetach}=useApp();
   const [kind,setKind]=useToolState('kind','all'),[items,setItems]=useState<ClipItem[]>([]),[selected,setSelected]=useToolState<string[]>('selected',[]),[cursor,setCursor]=useToolState('cursor',0),[expanded,setExpanded]=useToolState<string|null>('expanded',null);
   const [context,setContext]=useState<{x:number;y:number;ids:string[]}|null>(null);

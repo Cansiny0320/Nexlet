@@ -4,7 +4,7 @@ import type {WebShortcut} from '../shared/types';
 import {validateWebShortcut} from '../shared/web-shortcuts';
 import { useToolState } from './tool-session';
 import { useState,useEffect } from 'react';
-import { Copy, WandSparkles, Minimize2, RefreshCw, ArrowRight, Plus, Trash2, Globe, Pencil } from 'lucide-react';
+import { Copy, RefreshCw, Plus, Trash2, Globe, Pencil } from 'lucide-react';
 import { api,useApp,errorText,PanelHeader,Empty,IconButton } from './common';
 
 function encode64(value:string){const bytes=new TextEncoder().encode(value);let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);}

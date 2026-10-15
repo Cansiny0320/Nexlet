@@ -1,5 +1,5 @@
 import { t } from '../shared/i18n';
-import { app, net, type BrowserWindow } from 'electron';
+import { app, net } from 'electron';
 import type { Store } from './store';
 import type { PluginManager } from './plugins';
 import { readPluginZip, type PluginBundle } from './plugin-bundle';
@@ -56,7 +56,7 @@ export class Marketplace {
     try{const bytes=await this.download(MARKET_INDEX_URL,1024*1024),index=validateMarketIndex(JSON.parse(bytes.toString('utf8'))),fetchedAt=Date.now();this.store.set('market-index',{index,fetchedAt});return {entries:index.plugins,fetchedAt,cached:false,error:null};}
     catch(e){return {entries:cached?validateMarketIndex(cached.index).plugins:[],fetchedAt:cached?.fetchedAt||null,cached:!!cached,error:e instanceof Error?e.message:t("无法加载插件市场")};}
   }
-  async install(owner:BrowserWindow,id:string):Promise<boolean>{
+  async install(id:string):Promise<boolean>{
     if(this.pending)throw new Error(t("请等待当前插件安装完成"));this.pending=true;
     try{
       const index=await this.list(),entry=index.entries.find(e=>e.id===id);if(!entry)throw new Error(t("插件条目不存在，请刷新市场"));
@@ -64,7 +64,7 @@ export class Marketplace {
       const unavailable=marketAvailability(entry,process.platform,app.getVersion(),existing?{development:existing.development,version:existing.manifest.version}:undefined);if(unavailable)throw new Error(unavailable);
       const bundle=readPluginZip(await this.download(entry.download,25*1024*1024));
       if(bundle.manifest.id!==id||bundle.manifest.version!==entry.version)throw new Error(t("插件包的 ID 或版本与市场条目不一致"));
-      return this.plugins.installBundle(owner,bundle,{source:'marketplace'});
+      return this.plugins.installBundle(bundle,{source:'marketplace'});
     } finally {this.pending=false;}
   }
 }

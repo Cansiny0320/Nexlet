@@ -19,7 +19,7 @@ import { LINUX_DESKTOP_NAME } from './linux-startup';
 import { createUpdateTransport } from './update-transport';
 import { AppUpdates, UpdateSaveBarrier } from './updater';
 import { webContents, app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, globalShortcut, ipcMain, clipboard, ClipboardItem, dialog, shell, screen, protocol, systemPreferences } from 'electron';
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { copyFile, writeFile } from 'node:fs/promises';
 import { launchWindowsApplication } from './launch-windows';
 import path from 'node:path';
@@ -42,7 +42,6 @@ import { revealWindow, focusOnRestore } from './window-visibility';
 import { nativeWindowDrag } from './window-drag';
 import { BUILTIN_COMMANDS, HOST_ACTIONS, type AppState, type Settings, type Command, type Scratchpad } from '../shared/types';
 import { searchCommands } from '../shared/search';
-import { calculate } from '../shared/calculator';
 
 const testMode = process.env.NEXLET_TEST_MODE === '1';
 if (process.env.NEXLET_USER_DATA) { const directory=path.resolve(process.env.NEXLET_USER_DATA); mkdirSync(directory,{recursive:true}); app.setPath('userData',directory); }
@@ -408,7 +407,7 @@ async function bootstrap() {
       case 'pluginRemove':{const args=inputObject(payload);await plugins.remove(text(args.id,100),args.deleteData===true);return true;}
       case 'pluginInspect':return plugins.records();
       case 'marketplace':return marketplace.list(payload===true);
-      case 'marketInstall':return withDialog(()=>marketplace.install(window,text(payload,100)));
+      case 'marketInstall':return withDialog(()=>marketplace.install(text(payload,100)));
       case 'fileSearch':return files.search(event.sender.id,text(payload,1024));
       case 'fileSearchStatus':return files.status();
       case 'fileBrowse':{const args=inputObject(payload);return files.browse(event.sender.id,text(args.path,32767),text(args.filter??'',1024),typeof args.cursor==='string'?text(args.cursor,100):undefined);}

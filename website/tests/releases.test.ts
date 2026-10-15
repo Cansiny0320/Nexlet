@@ -85,7 +85,7 @@ test('reports rate limits, malformed JSON and timeout without returning partial 
     fetchLatestRelease({
       timeoutMs: 5,
       fetchImpl: (_, { signal }) =>
-        new Promise((resolve, reject) => {
+        new Promise((_resolve, reject) => {
           signal.addEventListener('abort', () => reject(signal.reason));
         }),
     }),

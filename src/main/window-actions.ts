@@ -1,7 +1,5 @@
-import { commandNames } from '../shared/localized-command';
 import { t } from '../shared/i18n';
-import {displayFor,fitBounds,layoutBounds,sameBounds,WINDOW_LAYOUTS,type WindowDisplay,type WindowRect} from '../shared/window-layout';
-import type {Command} from '../shared/types';
+import {displayFor,fitBounds,layoutBounds,sameBounds,type WindowDisplay,type WindowRect} from '../shared/window-layout';
 export interface WindowBackend {capture():string|null;read(id:string):WindowRect;write(id:string,bounds:WindowRect):void;activate(id:string):void;close():void;}
 export class WindowActions {
  private target:string|null=null;
@@ -36,4 +34,3 @@ export class WindowActions {
  }
  close(){this.backend.close();this.original.clear();this.target=null;}
 }
-export function windowCommands():Command[]{return [...WINDOW_LAYOUTS,{id:'restore',name:"恢复窗口位置"},{id:'previous-display',name:"窗口移到上一屏"},{id:'next-display',name:"窗口移到下一屏"}].map(l=>({id:'window:'+l.id,name:t(l.name),subtitle:t("调整唤起 Nexlet 前的窗口"),kind:'system',keywords:['窗口','window','布局','分屏',...commandNames(l.name)],color:'#548cba'}));}

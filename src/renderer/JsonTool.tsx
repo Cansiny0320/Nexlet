@@ -50,7 +50,7 @@ function JsonBranch({ node, source, label, depth = 0, expand }: { node: JsonNode
       {label !== undefined && <><span className="json-key">{JSON.stringify(label)}</span><span>: </span></>}
       {branch ? <><span>{left}</span>{!open && <><button className="json-collapsed" onClick={() => setOpen(true)}> {t("{{v0}} 项", { v0: children.length, count: children.length })}</button><span>{right}</span></>}</> : <span className={`json-value json-${node.type}`}>{literal}</span>}
     </div>
-    {branch && open && <div className="json-tree-children">{children.map((child, i) => { const property = node.type === 'object'; return <JsonBranch key={child.offset} node={property ? child.children![1] : child} source={source} label={property ? child.children![0].value : undefined} depth={depth + 1} expand={expand} />; })}<div className="json-tree-end">{right}</div></div>}
+    {branch && open && <div className="json-tree-children">{children.map(child => { const property = node.type === 'object'; return <JsonBranch key={child.offset} node={property ? child.children![1] : child} source={source} label={property ? child.children![0].value : undefined} depth={depth + 1} expand={expand} />; })}<div className="json-tree-end">{right}</div></div>}
   </div>;
 }
 

@@ -5,7 +5,6 @@ import traditional from './locales/zh-Hant.json';
 export const LOCALES = ['zh-CN', 'zh-Hant', 'en'] as const;
 export type Locale = typeof LOCALES[number];
 export type Language = Locale | 'system';
-export const LANGUAGE_LABELS = { system: '跟随系统', 'zh-CN': '简体中文', 'zh-Hant': '繁體中文', en: 'English' } as const;
 export function validLanguage(value: unknown): value is Language {
   return value === 'system' || LOCALES.includes(value as Locale);
 }

@@ -1,6 +1,6 @@
 import { t } from '../shared/i18n';
 import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from 'react';
-import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Pin, X, Check, Search, FileSearch, LockKeyhole, Moon, RotateCw, Power, LogOut, Monitor, SlidersHorizontal, Volume2, Wifi, Bluetooth, Battery, HardDrive, Bell, Palette, Image, Keyboard, Mouse, Printer, Accessibility, Shield, Users, Languages, ScanText } from 'lucide-react';
+import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Search, FileSearch, LockKeyhole, Moon, RotateCw, Power, LogOut, Monitor, SlidersHorizontal, Volume2, Wifi, Bluetooth, Battery, HardDrive, Bell, Palette, Image, Keyboard, Mouse, Printer, Accessibility, Shield, Users, Languages, ScanText } from 'lucide-react';
 import type { AppState, Command, HostAction } from '../shared/types';
 import { builtInArtwork } from './tool-artwork';
 
@@ -23,7 +23,6 @@ export function ToolIcon({command,size=32}:{command:Command;size?:number}){
 }
 export function IconButton({title,children,onClick,disabled=false,active=false,className=''}:{title:string;children:ReactNode;onClick?:()=>void;disabled?:boolean;active?:boolean;className?:string}){return <button type="button" aria-label={title} title={title} disabled={disabled} className={`icon-button ${active?'active':''} ${className}`} onClick={onClick}>{children}</button>;}
 export function Empty({children,icon}:{children:ReactNode;icon?:ReactNode}){return <div className="empty-state">{icon}<p>{children}</p></div>;}
-export function useAsyncAction(){const {toast}=useApp();return async<T,>(task:()=>Promise<T>,message?:string)=>{try{const result=await task();if(message)toast(message);return result;}catch(e){toast(errorText(e),true);return undefined;}};}
 export function Modal({spec,onResolve}:{spec:DialogSpec;onResolve:(result:string|boolean|null)=>void}){
   const [value,setValue]=useState(spec.input??'');const input=useRef<HTMLInputElement>(null);
   useEffect(()=>{input.current?.focus();input.current?.select();},[]);
