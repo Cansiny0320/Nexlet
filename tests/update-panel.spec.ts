@@ -4,6 +4,38 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { build } from 'esbuild';
 
+test('点击重启安装直接执行更新，不再弹出二次确认', async () => {
+  const data = await mkdtemp(path.join(tmpdir(), 'nexlet-update-install-'));
+  const env: Record<string, string> = { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), NEXLET_TEST_MODE: '1', NEXLET_USER_DATA: data };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const app = await electron.launch({ args: [process.cwd()], env });
+  try {
+    const page = await app.firstWindow();
+    await expect(page.locator('.launcher-input')).toBeVisible();
+    await app.evaluate(() => {
+      const n = (globalThis as any).__nexlet;
+      n.updateInstallCalls = [];
+      n.updates.transport = { quitAndInstall: (...args: boolean[]) => n.updateInstallCalls.push(args) };
+      Object.assign(n.updates.status, { mode: 'automatic', phase: 'downloaded', version: '99.0.0' });
+      n.main.webContents.send('host-change', 'navigate:settings');
+      n.main.webContents.send('host-change', 'state');
+    });
+    await expect(page.getByRole('status')).toHaveText('版本 99.0.0 已下载，准备安装');
+    // 记录瞬时弹窗，避免只检查最终 DOM 漏掉确认框。
+    await page.evaluate(() => {
+      (window as any).__updateConfirmationShown = false;
+      new MutationObserver(() => {
+        if (document.querySelector('.modal-backdrop')) (window as any).__updateConfirmationShown = true;
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+    await page.locator('.setting-row').filter({ hasText: '应用更新' }).getByRole('button', { name: '重启安装', exact: true }).click();
+    await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+    await expect.poll(() => app.evaluate(() => (globalThis as any).__nexlet.updateInstallCalls)).toEqual([[true, true]]);
+    expect(await page.evaluate(() => (window as any).__updateConfirmationShown)).toBe(false);
+    await expect(page.getByRole('status')).toHaveText('正在准备安装并重启…');
+  } finally { await app.close(); }
+});
+
 test('更新说明显示格式，下载显示实际字节、速度和校验阶段', async () => {
   const data = await mkdtemp(path.join(tmpdir(), 'nexlet-update-panel-'));
   const env: Record<string, string> = { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), NEXLET_TEST_MODE: '1', NEXLET_USER_DATA: data };

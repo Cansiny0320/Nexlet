@@ -11,7 +11,7 @@ function bytes(value: number) {
 }
 
 export function UpdatePanel() {
-  const { state, toast, dialog } = useApp();
+  const { state, toast } = useApp();
   const update = state.update;
   const busy = ['checking', 'downloading', 'installing'].includes(update.phase);
   const toggleAutomaticChecks = async () => {
@@ -20,7 +20,6 @@ export function UpdatePanel() {
   };
   const action = async (operation: 'updateCheck'|'updateDownload'|'updateInstall'|'updatePortable') => {
     try {
-      if (operation === 'updateInstall' && !await dialog({ title: '重启并安装更新？', message: 'Nexlet 将关闭并重新打开，已保存的数据会保留。JSON 等临时输入请先复制保留。', confirm: '重启安装' })) return;
       await api(operation);
     } catch (error) { toast(errorText(error), true); }
   };
