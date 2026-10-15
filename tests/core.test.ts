@@ -18,7 +18,6 @@ describe('统一搜索', () => {
   it.each(['飞书', 'feishu', 'fs'])('找到中文快捷方式 %s', q => expect(searchCommands(items,q)[0]?.id).toBe('1'));
   it('英文搜索和关键字', () => expect(searchCommands(items,'CLIP')[0]?.id).toBe('2'));
   it('没有匹配返回空列表', () => expect(searchCommands(items,'不存在的工具')).toEqual([]));
-  it('不把普通描述命中放在名称精确匹配之前', () => expect(searchCommands(items,'飞书')[0]?.id).toBe('1'));
 });
 describe('插件边界', () => {
   const manifest = { id:'example.hello', name:'示例', version:'1.0.0', apiVersion:1, main:'index.html', description:'', permissions:[], features:[{code:'hello',name:'你好',keywords:['hello']}] };
