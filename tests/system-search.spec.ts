@@ -18,7 +18,7 @@ test.describe('系统搜索与执行结果', () => {
     await expect.poll(async () => (await call('state')).catalogLoading, { timeout: 45000 }).toBe(false);
     await app.evaluate(({ dialog }) => {
       const g = globalThis as any, n = g.__nexlet;
-      g.systemCalls = []; g.confirmResponse = 0; g.failSystem = false;
+      g.systemCalls = []; g.confirmResponse = 1; g.failSystem = false;
       dialog.showMessageBox = (async (...args: any[]) => { g.lastSystemDialog = args.at(-1); return { response: g.confirmResponse, checkboxChecked: false }; }) as any;
       n.systemExecutor.execute = async (action: string) => { g.systemCalls.push(['action', action]); if (g.failSystem) throw Error('模拟系统拒绝访问'); };
       n.systemExecutor.open = async (url: string) => { g.systemCalls.push(['url', url]); if (g.failSystem) throw Error('模拟设置打开失败'); };
@@ -27,7 +27,7 @@ test.describe('系统搜索与执行结果', () => {
   test.afterAll(async () => { if (app) await app.close(); });
   test.beforeEach(async () => {
     await app.evaluate(() => {
-      const g = globalThis as any; g.systemCalls = []; g.failSystem = false; g.confirmResponse = 0;
+      const g = globalThis as any; g.systemCalls = []; g.failSystem = false; g.confirmResponse = 1;
       g.__nexlet.main.show();
     });
     await page.locator('.launcher-input').fill('');
@@ -82,14 +82,14 @@ test.describe('系统搜索与执行结果', () => {
     await page.locator('.launcher-input').fill('睡眠');
     await page.getByRole('button', { name: '睡眠', exact: true }).click();
     await expect.poll(() => app.evaluate(() => (globalThis as any).lastSystemDialog?.message)).toContain('睡眠');
-    expect(await app.evaluate(() => (globalThis as any).lastSystemDialog)).toMatchObject({ buttons: ['取消', '睡眠'], defaultId: 0, cancelId: 0 });
+    expect(await app.evaluate(() => (globalThis as any).lastSystemDialog)).toMatchObject({ buttons: ['确认', '取消'], defaultId: 1, cancelId: 1 });
     await expect(page.locator('.launcher-input')).toHaveValue('睡眠');
     expect(await app.evaluate(() => (globalThis as any).systemCalls)).toEqual([]);
     expect((await call('state')).recent).toEqual(recent); expect(await visible()).toBe(true);
   });
 
   test('确认后只执行一次并记录成功；未知 ID 不能执行', async () => {
-    await app.evaluate(() => { (globalThis as any).confirmResponse = 1; });
+    await app.evaluate(() => { (globalThis as any).confirmResponse = 0; });
     await page.locator('.launcher-input').fill('睡眠');
     await page.getByRole('button', { name: '睡眠', exact: true }).click();
     await expect.poll(visible).toBe(false);

@@ -96,6 +96,7 @@
   "未生效": "Inactive",
   "快捷键带入当前选区": "Capture selection with shortcut",
   "禁用此功能": "Disable this command",
+  "确认": "Confirm",
   "取消": "Cancel",
   "保存功能设置": "Save command settings",
   "功能暂不可用，配置已保留": "Command unavailable; settings have been kept",
