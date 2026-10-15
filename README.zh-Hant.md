@@ -1,5 +1,3 @@
-[简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [English](README.en.md)
-
 <p align="center"><img src="assets/icon.png" width="76" alt="Nexlet"></p>
 <h1 align="center">Nexlet</h1>
 <p align="center">按下快速鍵，把常用工具帶到手邊。</p>
@@ -13,6 +11,11 @@
   <a href="https://github.com/Cansiny0320/Nexlet-plugins">外掛市場倉庫</a> ·
   <a href="docs/plugin-sdk.zh-Hant.md">外掛開發</a> ·
   <a href="website/README.zh-Hant.md">官網</a>
+</p>
+<p align="center">
+  <a href="README.md">简体中文</a> ·
+  <a href="README.zh-Hant.md">繁體中文</a> ·
+  <a href="README.en.md">English</a>
 </p>
 
 Nexlet 是一個開源桌面工具箱，提供應用與快捷方式搜尋、剪貼簿、計算草稿、JSON 工具和可擴充套件外掛。主視窗保留搜尋、最近使用和固定工具，常用工具可以分離成獨立視窗。

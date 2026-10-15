@@ -1,5 +1,3 @@
-[简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [English](README.en.md)
-
 <p align="center"><img src="assets/icon.png" width="76" alt="Nexlet"></p>
 <h1 align="center">Nexlet</h1>
 <p align="center">Your everyday tools, one shortcut away.</p>
@@ -13,6 +11,11 @@
   <a href="https://github.com/Cansiny0320/Nexlet-plugins">Plugin repository</a> ·
   <a href="docs/plugin-sdk.en.md">Plugin development</a> ·
   <a href="website/README.en.md">Website</a>
+</p>
+<p align="center">
+  <a href="README.md">简体中文</a> ·
+  <a href="README.zh-Hant.md">繁體中文</a> ·
+  <a href="README.en.md">English</a>
 </p>
 
 Nexlet is an open-source desktop toolbox with app and shortcut search, clipboard history, a calculation scratchpad, JSON tools, and plugins. The launcher keeps search, recent items, and pinned tools together. Tools can move into their own windows.
