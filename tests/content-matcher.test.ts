@@ -40,6 +40,20 @@ describe('内容匹配合同',()=>{
     const image:LaunchInput={id:'image',type:'image',from:'paste',image:{id:'i',name:'image.png',size:10,isDirectory:false,mime:'image/png'}};
     expect((await matcher().search(1,commands,image,'image',[])).matches.map(c=>c.id)).toEqual(['image']);
   });
+  it('计算稿纸优先于通用文本插件，并保留公式与结果预览',async()=>{
+    const result=await matcher().search(1,[plugin('translate',[{type:'text'}],'翻译')],text('1+1'),'1+1',['translate']);
+    expect(result.matches.map(c=>c.id)).toEqual(['match:calc','translate','match:clipboard']);
+    expect(result.matches[0]).toMatchObject({name:'计算稿纸',payload:'1+1',inputId:'input-1'});
+    expect(result.matches[0].subtitle).toContain('1+1 = 2');
+  });
+  it.each(['π','pi','e','sin(pi)','cos(π)','2×(3+4)','50%'])('计算器支持的输入 %s 可以匹配计算稿纸',async value=>{
+    const result=await matcher().search(1,[],text(value),value,[]);
+    expect(result.matches[0]).toMatchObject({id:'match:calc',payload:value});
+  });
+  it.each(['hello','1+','1/0','sqrt(-1)'])('无效公式 %s 不产生计算入口',async value=>{
+    const result=await matcher().search(1,[],text(value),value,[]);
+    expect(result.matches.map(c=>c.id)).not.toContain('match:calc');
+  });
   it('恶意正则不会阻塞普通搜索，后续正常规则继续生效',async()=>{
     const commands=[plugin('evil',[{type:'regex',pattern:'^(a+)+$'}]),plugin('good',[{type:'regex',pattern:'!$'}])];
     const value='a'.repeat(1000)+'!';

@@ -18,6 +18,7 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   const result=!capturing&&response?.key===requestKey?response.value:null;
   const results=result?.results||[],matching=result?.matches||[];
   const layout=state.commandConfig.layout;
+  useEffect(()=>setSelected(''),[requestKey]);
   useEffect(()=>{
     let valid=true;setResponse(null);
     if(capturing)return;

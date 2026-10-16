@@ -41,6 +41,8 @@ export class ContentMatcher {
     response.matches=ordered.slice(0,60).map(attach);
     const builtins=builtinMatches(input);
     response.matches.push(...(input.type!=='text'&&query.trim()?searchCommands(builtins,query):builtins).map(attach));
+    const calculationIndex=response.matches.findIndex(c=>c.id==='match:calc');
+    if(calculationIndex>0)response.matches.unshift(...response.matches.splice(calculationIndex,1));
     return response;
   }
   private regex(owner:number,rules:{id:string;pattern:string;flags?:string}[],text:string):Promise<RegexResult>{
@@ -63,7 +65,7 @@ function builtinMatches(input:LaunchInput):Command[]{
   if(input.type!=='text')return [command('match:collect',t("收进剪贴板"),t("将本次输入保存到剪贴板历史"),'#6962ff')];
   const q=input.text.trim();if(!q)return [];
   const output:Command[]=[];
-  if(q.length<=512){const calc=calculate(q);if(calc.result&&/[0-9]/.test(q))output.push(command('match:calc',calc.result,t("{{v0}} = {{v1}} · 打开计算稿纸", { v0: q, v1: calc.result }),'#ff9c00',input.text));}
+  if(q.length<=512){const calc=calculate(q);if(calc.result)output.push(command('match:calc',t("计算稿纸"),t("{{v0}} = {{v1}} · 打开计算稿纸", { v0: q, v1: calc.result }),'#ff9c00',input.text));}
   if(q.length<=2048&&/^https?:\/\//i.test(q))output.push(command('input:url',t("打开链接"),q,'#3387f7',q));
   if(/^[{[]/.test(q))output.push(command('match:json',t("JSON 格式化"),t("将输入内容带入 JSON 工具"),'#42a869',input.text));
   if(/^\d{10}(?:\d{3})?$/.test(q)){const date=new Date(Number(q)*(q.length===10?1000:1));if(!Number.isNaN(date.getTime()))output.push(command('match:timestamp',date.toLocaleString(formatLocale(),{hour12:false}),t("{{v0}} · 打开时间戳工具", { v0: q }),'#ef6863',q));}
