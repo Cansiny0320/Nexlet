@@ -1,6 +1,8 @@
 import { t } from '../shared/i18n';
 import { Textarea } from './components/ui/textarea';
 import { Input } from './components/ui/input';
+import { ShortcutInput } from './components/shortcut-input';
+import { formatShortcut } from '../shared/shortcut-display';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import {useEffect,useState} from 'react';
@@ -18,9 +20,9 @@ export function CommandEditor({command,onClose}:{command:Command;onClose:()=>voi
   const save=async()=>{setSaving(true);try{await api('commandConfig',{action:'patch',id:command.id,patch:{aliases:aliases.split(/[\n,，]/).map(v=>v.trim()).filter(Boolean),shortcut,disabled,captureSelection}});toast(t("功能设置已保存"));onClose();}catch(e){toast(errorText(e),true);}finally{setSaving(false);}};
   return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!saving)onClose();}}><form className="modal command-editor" onSubmit={e=>{e.preventDefault();void save();}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Escape'&&!recording)onClose();}}>
     <h2>{command.name}{t("· 功能设置")}</h2><label>{t("功能别名")}<Textarea aria-label={t("功能别名")} value={aliases} placeholder={t("每行一个别名，也可用逗号分隔")} onChange={e=>setAliases(e.target.value)}/></label>
-    <label>{t("功能快捷键")}<Input aria-label={t("功能快捷键")} value={recording?t("按下组合键…"):shortcut} readOnly={recording} placeholder={t("例如 Control+Alt+J")} onChange={e=>setShortcut(e.target.value)} onKeyDown={e=>{if(!recording)return;e.preventDefault();if(e.nativeEvent.isComposing||e.repeat||['Control','Shift','Alt','Meta'].includes(e.key))return;if(e.key==='Escape'){setRecording(false);return;}setShortcut([e.metaKey?(state.platform==='darwin'?'Command':'Super'):null,e.ctrlKey?'Control':null,e.altKey?'Alt':null,e.shiftKey?'Shift':null,e.code==='Space'?'Space':e.key.length===1?e.key.toUpperCase():e.key].filter(Boolean).join('+'));setRecording(false);}}/></label>
+    <label>{t("功能快捷键")}<ShortcutInput platform={state.platform} aria-label={t("功能快捷键")} value={recording?t("按下组合键…"):shortcut} readOnly={recording} placeholder={t("例如 Control+Alt+J").replace('Control+Alt+J',formatShortcut('Control+Alt+J',state.platform))} onValueChange={setShortcut} onKeyDown={e=>{if(!recording)return;e.preventDefault();if(e.nativeEvent.isComposing||e.repeat||['Control','Shift','Alt','Meta'].includes(e.key))return;if(e.key==='Escape'){setRecording(false);return;}setShortcut([e.metaKey?(state.platform==='darwin'?'Command':'Super'):null,e.ctrlKey?'Control':null,e.altKey?'Alt':null,e.shiftKey?'Shift':null,e.code==='Space'?'Space':e.key.length===1?e.key.toUpperCase():e.key].filter(Boolean).join('+'));setRecording(false);}}/></label>
     <div className="tool-buttons"><Button type="button" variant="outline" onClick={()=>setRecording(!recording)}>{recording?t("取消录制"):t("录制快捷键")}</Button><Button type="button" variant="ghost" onClick={()=>{setShortcut('');setRecording(false);}}>{t("清除快捷键")}</Button></div>
-    {status?.desired&&<p>{t("已保存：")}{status.desired} · {status.effective?t("已生效：{{v0}}", { v0: status.effective }):status.inactive||status.error||t("未生效")}</p>}
+    {status?.desired&&<p>{t("已保存：")}{formatShortcut(status.desired,state.platform)} · {status.effective?t("已生效：{{v0}}", { v0: formatShortcut(status.effective,state.platform) }):status.inactive||status.error||t("未生效")}</p>}
     <label className="command-disabled"><Switch aria-label={t("快捷键带入当前选区")} checked={captureSelection} onCheckedChange={setCaptureSelection}/>{t("快捷键带入当前选区")}</label>
     <label className="command-disabled"><Switch aria-label={t("禁用此功能")} checked={disabled} onCheckedChange={setDisabled}/>{t("禁用此功能")}</label>
     <div className="modal-actions"><Button type="button" variant="ghost" disabled={saving} onClick={onClose}>{t("取消")}</Button><Button type="submit"  disabled={saving}>{t("保存功能设置")}</Button></div>
@@ -39,7 +41,7 @@ export function CommandManager(){
     <div className="settings-section-title"><SlidersHorizontal size={17}/>{t("功能管理")}</div>
     <p className="setting-description">{t("为功能设置别名、全局快捷键，或单独禁用。再次按功能快捷键会优先打开已有窗口。")}</p>
     <Input className="command-filter" aria-label={t("筛选功能")} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("搜索功能名称或别名")}/>
-    <div className="command-management-list">{filtered.slice(0,200).map(command=>{const pref=state.commandConfig.commands[command.id],status=state.shortcutStatuses[command.id];return <button className="command-management-row" key={command.id} onClick={()=>setEditing(command)}><ToolIcon command={command} size={26}/><span><strong>{command.name}</strong><small>{pref?.aliases?.join(' · ')||command.subtitle}</small></span><span className="command-state">{!known.has(command.id)?t("不可用"):pref?.disabled?t("已禁用"):t("已启用")}{status?.desired&&<small>{status.effective||status.inactive||status.error||t("未生效")}</small>}</span></button>;})}</div>
+    <div className="command-management-list">{filtered.slice(0,200).map(command=>{const pref=state.commandConfig.commands[command.id],status=state.shortcutStatuses[command.id];return <button className="command-management-row" key={command.id} onClick={()=>setEditing(command)}><ToolIcon command={command} size={26}/><span><strong>{command.name}</strong><small>{pref?.aliases?.join(' · ')||command.subtitle}</small></span><span className="command-state">{!known.has(command.id)?t("不可用"):pref?.disabled?t("已禁用"):t("已启用")}{status?.desired&&<small>{(status.effective?formatShortcut(status.effective,state.platform):status.inactive||status.error||t("未生效"))}</small>}</span></button>;})}</div>
     {filtered.length>200&&<p className="setting-description">{t("显示前 200 项，共 {{v0}} 项；输入名称可继续筛选。", { v0: filtered.length })}</p>}
     <div className="settings-section-title"><FolderOpen size={17}/>{t("本地启动项")}</div>
     <p className="setting-description">{t("添加文件或目录后，可按名称、别名搜索打开。")}</p>

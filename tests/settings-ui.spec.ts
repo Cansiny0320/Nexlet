@@ -31,6 +31,48 @@ test.beforeAll(async () => {
 test.afterAll(async () => { await app?.close(); });
 test.describe.configure({ mode: 'serial' });
 
+test('shortcut labels follow the platform while editing, recording and saving retain accelerator semantics', async () => {
+  const mac = process.platform === 'darwin';
+  const wake = page.getByLabel('全局快捷键', { exact: true });
+  const row = wake.locator('xpath=ancestor::div[contains(@class,"setting-row")]');
+  await expect(wake).toHaveValue(mac ? 'Option+Space' : 'Alt+Space');
+  await wake.fill('Control+Alt+F10');
+  await row.getByRole('button', { name: '保存', exact: true }).click();
+  await expect.poll(async () => (await call('state')).settings.shortcut).toBe('Control+Alt+F10');
+  await expect(wake).toHaveValue(mac ? 'Control+Option+F10' : 'Ctrl+Alt+F10');
+  // Saving a displayed alias without editing must not rewrite the stored shortcut.
+  await row.getByRole('button', { name: '保存', exact: true }).click();
+  expect((await call('state')).settings.shortcut).toBe('Control+Alt+F10');
+  await row.getByRole('button', { name: '录制', exact: true }).click();
+  await wake.press('Control+Shift+F11');
+  await expect(wake).toHaveValue(mac ? 'Control+Shift+F11' : 'Ctrl+Shift+F11');
+  await row.getByRole('button', { name: '保存', exact: true }).click();
+  await expect.poll(async () => (await call('state')).settings.shortcut).toBe('Control+Shift+F11');
+
+  const panel = page.getByLabel('面板快捷键', { exact: true });
+  await expect(panel).toHaveAttribute('placeholder', mac ? '例如 Control+Option+Space' : '例如 Ctrl+Alt+Space');
+  await panel.fill(mac ? 'Control+Option+F12' : process.platform === 'win32' ? 'Win+Alt+F12' : 'Super+Alt+F12');
+  await panel.locator('xpath=ancestor::div[contains(@class,"setting-row")]').getByRole('button', { name: '保存', exact: true }).click();
+  await expect.poll(async () => (await call('state')).panelConfig.shortcut).toBe(mac ? 'Control+Alt+F12' : 'Super+Alt+F12');
+
+  await page.getByLabel('筛选功能').fill('JSON');
+  await page.locator('.command-management-row').filter({ hasText: 'JSON 工具' }).click();
+  const command = page.getByLabel('功能快捷键', { exact: true });
+  await command.fill('Control+Alt+F9');
+  await page.getByRole('button', { name: '保存功能设置', exact: true }).click();
+  await expect.poll(async () => (await call('state')).commandConfig.commands['tool:json'].shortcut).toBe('Control+Alt+F9');
+  const commandRow = page.locator('.command-management-row').filter({ hasText: 'JSON 工具' });
+  await expect(commandRow).toContainText(mac ? 'Control+Option+F9' : 'Ctrl+Alt+F9');
+  await commandRow.click();
+  await expect(command).toHaveValue(mac ? 'Control+Option+F9' : 'Ctrl+Alt+F9');
+  await page.getByRole('button', { name: '清除快捷键', exact: true }).click();
+  await page.getByRole('button', { name: '保存功能设置', exact: true }).click();
+  await expect.poll(async () => (await call('state')).commandConfig.commands['tool:json'].shortcut).toBe('');
+  await page.getByLabel('筛选功能').fill('');
+  await page.locator('.settings-panel').evaluate(element => { element.scrollTop = 0; });
+  expect(errors).toEqual([]);
+});
+
 test('下拉框与输入框等高，Escape 关闭菜单并恢复焦点', async () => {
   const theme = page.getByRole('combobox', { name: '主题', exact: true });
   const inputBox = await page.getByLabel('全局快捷键', { exact: true }).boundingBox();
