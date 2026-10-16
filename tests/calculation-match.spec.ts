@@ -23,27 +23,10 @@ test.beforeEach(async () => {
   await writeFile(path.join(plugin, 'index.html'), '<!doctype html><html><body>Translation fixture</body></html>');
   const page = await app.firstWindow();
   await expect(page.locator('.launcher-input')).toBeVisible();
-  await page.evaluate(() => {
-    const events:unknown[]=[];(window as any).__selectionEvents=events;
-    const record=(value:unknown)=>{events.push(value);if(events.length>150)events.shift();};
-    for(const name of ['input','mouseover','mousemove'])document.addEventListener(name,event=>{
-      const mouse=event as MouseEvent,target=event.target as HTMLElement;
-      record({event:name,x:mouse.clientX,y:mouse.clientY,dx:mouse.movementX,dy:mouse.movementY,id:target.closest('[data-command-id]')?.getAttribute('data-command-id'),value:(target as HTMLInputElement).value,time:performance.now()});
-    },true);
-    let previous='';new MutationObserver(()=>{
-      const selected=document.querySelector('[data-command-id].selected')?.getAttribute('data-command-id')||'';
-      if(selected!==previous){previous=selected;record({selected,query:document.querySelector<HTMLInputElement>('.launcher-input')?.value,time:performance.now()});}
-    }).observe(document.body,{attributes:true,subtree:true,childList:true});
-  });
   await app.evaluate(({ dialog }, plugin) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [plugin] }); }, plugin);
   await page.evaluate(() => window.nexlet.call('pluginInstall', { development: true }));
 });
-test.afterEach(async ({},testInfo) => {
-  if(testInfo.status!==testInfo.expectedStatus){
-    const events=await (await app.firstWindow()).evaluate(()=>(window as any).__selectionEvents).catch(()=>[]);
-    await testInfo.attach('selection-events',{body:JSON.stringify(events,null,2),contentType:'application/json'});
-    console.log('Selection events:',JSON.stringify(events));
-  }
+test.afterEach(async () => {
   await app?.close();
   await rm(directory, { recursive: true, force: true });
 });
