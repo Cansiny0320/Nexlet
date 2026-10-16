@@ -25,6 +25,19 @@ afterEach(() => {
 });
 
 describe('catalog disk cache', () => {
+  it('invalidates pre-native icons on upgrade while retaining the catalog and newly loaded icons', () => {
+    const dir = directory(), first = open(dir), saved = snapshot();
+    first.save(saved); first.setIcon('app:editor', fingerprint, icon('old-generic')); first.close();
+    const legacy = new DatabaseSync(path.join(dir, 'catalog-cache.sqlite'));
+    legacy.exec('PRAGMA user_version=1'); legacy.close();
+    const upgraded = open(dir);
+    expect(upgraded.load(saved.context)).toEqual(saved);
+    expect(upgraded.getIcon('app:editor', fingerprint)).toBeUndefined();
+    upgraded.setIcon('app:editor', fingerprint, icon('native')); upgraded.close();
+    const restarted = open(dir);
+    expect(restarted.load(saved.context)).toEqual(saved);
+    expect(restarted.getIcon('app:editor', fingerprint)).toBe(icon('native'));
+  });
   it('restores the directory, aliases and loaded icons across database reopen', () => {
     const dir = directory(), first = open(dir), saved = snapshot();
     first.save(saved); first.setIcon('app:editor', fingerprint, icon('editor')); first.close();

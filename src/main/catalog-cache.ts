@@ -11,6 +11,7 @@ export interface CatalogSnapshot {
   fingerprints: [string, string][];
 }
 const VERSION = 1;
+const DATABASE_VERSION = 2;
 const MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 const MAX_ICON_BYTES = 512 * 1024;
 const text = (value: unknown, max: number): value is string => typeof value === 'string' && value.length <= max && !value.includes('\0');
@@ -68,10 +69,13 @@ export class CatalogCache {
     const db = this.db = new DatabaseSync(file);
     db.exec('PRAGMA busy_timeout=100; PRAGMA auto_vacuum=FULL; PRAGMA journal_mode=DELETE; PRAGMA max_page_count=12288;');
     const version = db.prepare('PRAGMA user_version').get() as { user_version: number };
-    if (version.user_version !== VERSION) db.exec('DROP TABLE IF EXISTS snapshot; DROP TABLE IF EXISTS icons;');
+    if (version.user_version !== VERSION && version.user_version !== DATABASE_VERSION) db.exec('DROP TABLE IF EXISTS snapshot; DROP TABLE IF EXISTS icons;');
     db.exec(`CREATE TABLE IF NOT EXISTS snapshot (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS icons (id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, data TEXT NOT NULL, bytes INTEGER NOT NULL, used INTEGER NOT NULL);
-      PRAGMA user_version=${VERSION};`);
+      CREATE TABLE IF NOT EXISTS icons (id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, data TEXT NOT NULL, bytes INTEGER NOT NULL, used INTEGER NOT NULL);`);
+    // v1 may contain generic Electron icons. Keep the catalog available at startup,
+    // but discard these bitmaps before restore can serve them again.
+    if (version.user_version === 1) db.exec('DELETE FROM icons');
+    db.exec(`PRAGMA user_version=${DATABASE_VERSION};`);
     const last = db.prepare('SELECT MAX(used) AS used FROM icons').get() as { used: number | null };
     this.clock = Math.max(this.clock, last.used || 0);
   }

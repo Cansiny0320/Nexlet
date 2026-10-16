@@ -3,8 +3,9 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-const mocks = vi.hoisted(() => ({ getFileIcon: vi.fn(), readShortcutLink: vi.fn(), createFromPath: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getFileIcon: vi.fn(), readShortcutLink: vi.fn(), createFromPath: vi.fn(), resourceIcon: vi.fn() }));
 vi.mock('electron', () => ({ app: { getFileIcon: mocks.getFileIcon }, shell: { readShortcutLink: mocks.readShortcutLink }, nativeImage: { createFromPath: mocks.createFromPath } }));
+vi.mock('../src/main/catalog-icons-windows', () => ({ loadWindowsResourceIcon: mocks.resourceIcon }));
 import { loadCatalogIcon, windowsIconFingerprint } from '../src/main/catalog-icons';
 
 it('invalidates cached icons when a shortcut target or custom resource changes', async () => {
@@ -28,7 +29,23 @@ it('invalidates cached icons when a shortcut target or custom resource changes',
 });
 
 const image = (value: string) => ({ isEmpty: () => !value, toDataURL: () => value });
-beforeEach(() => { vi.resetAllMocks(); mocks.createFromPath.mockReturnValue(image('')); });
+beforeEach(() => { vi.resetAllMocks(); mocks.createFromPath.mockReturnValue(image('')); mocks.resourceIcon.mockResolvedValue(''); });
+it.each([0, 3, -123])('extracts the shortcut resource at index %s before accepting a generic Electron icon', async iconIndex => {
+  mocks.readShortcutLink.mockReturnValue({ target: 'C:/Apps/Bifrost.exe', icon: 'C:/Apps/resources.dll', iconIndex });
+  mocks.resourceIcon.mockResolvedValue('native-bifrost');
+  mocks.getFileIcon.mockResolvedValue(image('generic'));
+  expect(await loadCatalogIcon('C:/Desktop/Bifrost.lnk', 'win32')).toBe('native-bifrost');
+  expect(mocks.resourceIcon).toHaveBeenCalledWith('C:/Apps/resources.dll', iconIndex);
+  expect(mocks.getFileIcon).not.toHaveBeenCalled();
+});
+it('tries the native target when a custom resource is unavailable, before generic fallbacks', async () => {
+  mocks.readShortcutLink.mockReturnValue({ target: 'C:/Apps/Bifrost.exe', icon: 'C:/Apps/missing.dll', iconIndex: 8 });
+  mocks.resourceIcon.mockImplementation(async file => file.endsWith('Bifrost.exe') ? 'native-bifrost' : '');
+  mocks.getFileIcon.mockResolvedValue(image('generic'));
+  expect(await loadCatalogIcon('C:/Desktop/Bifrost.lnk', 'win32')).toBe('native-bifrost');
+  expect(mocks.resourceIcon.mock.calls).toEqual([['C:/Apps/missing.dll', 8], ['C:/Apps/Bifrost.exe', 0]]);
+  expect(mocks.getFileIcon).not.toHaveBeenCalled();
+});
 describe('应用与快捷方式图标', () => {
   it('普通快捷方式显示目标程序的图标，不显示通用 lnk 图标', async () => {
     mocks.readShortcutLink.mockReturnValue({ target: 'C:/Apps/editor.exe', icon: '' });
