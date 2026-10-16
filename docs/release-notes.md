@@ -1,36 +1,31 @@
-Nexlet 0.2.30 精简安装包，将离线 OCR 拆为按需安装的独立插件，并修复 Windows 差分更新的打包方式。
+Nexlet 0.2.31 优化 Windows 应用列表：过滤附属快捷方式，启动时先显示缓存的应用和图标，再后台更新。
 
-## 包体积与更新
+## Windows 应用列表
 
-- 移除发布包中的 Source map、重复打包的前端依赖及多余语言资源，保留简体中文、繁体中文和 English。
-- 移除未使用的 FFmpeg 命令行程序。插件 SDK 的 `media.ffmpeg` 仍可使用显式指定的本机 FFmpeg 路径，需声明相应权限。
-- Windows 安装版和便携版分别打包，确保安装版保留适合差分更新的压缩布局。本次改变了压缩方式和大量文件，从旧版升级时增量下载仍可能接近全量；后续下载量取决于实际版本差异及本地缓存。
+- 过滤卸载入口、帮助文档和更新日志，保留正常应用、终端、系统管理工具和开发工具。
+- 结合快捷方式名称、目标文件和启动参数识别附属入口，保留原有去重规则及固定、最近使用记录的映射。
 
-## 离线 OCR 插件
+## 启动与图标缓存
 
-- 宿主不再内置 OCR。需要此功能时，下载本 Release 的 `nexlet-ocr.nexlet`，在 Nexlet 插件页面选择「安装插件」导入；需要 Nexlet 0.2.30 或更新版本。
-- 插件自带模型与运行时，安装后无需联网，支持图片和截图识别、识别后复制、取消、结果编辑及返回搜索。旧 OCR 快捷键、别名和固定偏好会迁移，安装插件后生效。
-- 新增受权限控制的本地计算能力，允许插件在隔离环境中运行 WASM 和 Worker；识别期间剪贴板变化时保留结果，避免自动复制覆盖新内容。
-- OCR 插件有独立版本号，不会自动安装，也不计入宿主更新包。
-
-## 其他
-
-- 设置页快捷键按当前平台显示，并补充 macOS 首次打开说明。
+- 应用目录和已加载的图标保存到本地缓存。重新启动后先恢复列表与图标，再在后台扫描变化；首次启动或缓存失效时正常扫描。
+- 后台检查快捷方式、目标程序和图标资源的变化，复用未变化的图标，更新新增或变化的条目，并移除已删除的入口。
+- 扫描失败时保留可用缓存；迟到的图标响应不会覆盖更新后的结果。缓存损坏时自动重建，不影响设置、剪贴板和固定记录。
+- 缓存使用独立数据库并限制容量。本次持久缓存适用于 Windows。
 
 ## English
 
-Reduces package size by excluding source maps, duplicated frontend dependencies, unused languages and the bundled FFmpeg executable. Windows installer and portable builds now use separate packaging paths to preserve differential-update compression. This transition may still require a near-full download.
+Windows now restores cached applications, shortcuts and previously loaded icons at startup, then refreshes the catalog in the background. Changed icon resources are refreshed, deleted entries are removed, and scan failures retain the last usable snapshot. The bounded cache is stored separately from user data and can be rebuilt after corruption.
 
-Offline OCR is now an optional plugin. Download `nexlet-ocr.nexlet` from this release and import it on the Plugins page in Nexlet 0.2.30 or later. Models are included for offline use; recognition, capture, cancellation, editing, copying and returning text to search are preserved. Existing OCR command preferences migrate to the plugin.
+Uninstall entries, help documents and release notes are filtered from the Windows catalog while normal applications, system tools and developer tools remain available. Shortcut deduplication and saved pin/recent mappings are preserved.
 
 ## 下载
 
-- Windows x64：安装版 Nexlet-0.2.30-Windows-x64-Setup.exe；便携版 Nexlet-0.2.30-Windows-x64.exe。
-- Apple Silicon Mac：Nexlet-0.2.30-macOS-arm64.dmg。
-- Intel Mac：Nexlet-0.2.30-macOS-x64.dmg。
-- Linux x64：Nexlet-0.2.30-Linux-x86_64.AppImage、Nexlet-0.2.30-Linux-amd64.deb。
-- Linux arm64：Nexlet-0.2.30-Linux-arm64.AppImage、Nexlet-0.2.30-Linux-arm64.deb。
-- 可选离线 OCR：nexlet-ocr.nexlet。
+- Windows x64：安装版 Nexlet-0.2.31-Windows-x64-Setup.exe；便携版 Nexlet-0.2.31-Windows-x64.exe。
+- Apple Silicon Mac：Nexlet-0.2.31-macOS-arm64.dmg。
+- Intel Mac：Nexlet-0.2.31-macOS-x64.dmg。
+- Linux x64：Nexlet-0.2.31-Linux-x86_64.AppImage、Nexlet-0.2.31-Linux-amd64.deb。
+- Linux arm64：Nexlet-0.2.31-Linux-arm64.AppImage、Nexlet-0.2.31-Linux-arm64.deb。
+- 可选离线 OCR：nexlet-ocr.nexlet，可在 Nexlet 插件页选择「安装插件」导入；需要 Nexlet 0.2.30 或更新版本。
 - macOS ZIP、blockmap 和 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 
 手动安装前请先完全退出旧版。现有本地数据继续使用原用户目录。

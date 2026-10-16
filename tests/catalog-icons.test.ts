@@ -1,8 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 const mocks = vi.hoisted(() => ({ getFileIcon: vi.fn(), readShortcutLink: vi.fn(), createFromPath: vi.fn() }));
 vi.mock('electron', () => ({ app: { getFileIcon: mocks.getFileIcon }, shell: { readShortcutLink: mocks.readShortcutLink }, nativeImage: { createFromPath: mocks.createFromPath } }));
-import { loadCatalogIcon } from '../src/main/catalog-icons';
+import { loadCatalogIcon, windowsIconFingerprint } from '../src/main/catalog-icons';
+
+it('invalidates cached icons when a shortcut target or custom resource changes', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'nexlet-icon-fingerprint-'));
+  try {
+    const file = path.join(directory, 'App.lnk'), target = path.join(directory, 'app.exe'), icon = path.join(directory, 'app.ico');
+    await Promise.all([writeFile(file, 'shortcut'), writeFile(target, 'target'), writeFile(icon, 'icon')]);
+    const link = { target, icon, args: '', cwd: '', iconIndex: 0 };
+    const first = await windowsIconFingerprint(file, link);
+    expect(await windowsIconFingerprint(file, link)).toBe(first);
+    await writeFile(target, 'new executable');
+    const second = await windowsIconFingerprint(file, link);
+    expect(second).not.toBe(first);
+    await writeFile(icon, 'new icon resource');
+    expect(await windowsIconFingerprint(file, link)).not.toBe(second);
+    expect(await windowsIconFingerprint(file, { ...link, iconIndex: 1 })).not.toBe(await windowsIconFingerprint(file, link));
+  } finally {
+    if (!path.resolve(directory).startsWith(path.join(tmpdir(), 'nexlet-icon-fingerprint-'))) throw Error('Unexpected fixture path');
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 const image = (value: string) => ({ isEmpty: () => !value, toDataURL: () => value });
 beforeEach(() => { vi.resetAllMocks(); mocks.createFromPath.mockReturnValue(image('')); });

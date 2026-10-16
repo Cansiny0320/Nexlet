@@ -44,7 +44,7 @@ export function App(){
   const resolver=useRef<((r:string|boolean|null)=>void)|null>(null),input=useRef<HTMLInputElement>(null),toastTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const toast=useCallback((text:string,error=false)=>{setNotification({text,error});if(toastTimer.current)clearTimeout(toastTimer.current);toastTimer.current=setTimeout(()=>setNotification(null),error?6500:2500);},[]);
   const titlebarDrag=useTitlebarDrag(view==='launcher',toast);
-  const refresh=useCallback(async()=>{try{setState(await api<AppState>('state'));}catch(e){setLoadError(errorText(e));}},[]);
+  const refresh=useCallback(async()=>{try{const next=await api<AppState>('state');setState(current=>current&&current.catalogRevision>next.catalogRevision?current:next);}catch(e){setLoadError(errorText(e));}},[]);
   const navigate=useCallback((next:string,initial='')=>{captureGeneration.current++;setCapturing(false);if(next!=='plugin')void api('window',{action:'exitPlugin'});startNavigation(()=>{setLaunchInput(null);setSession(createToolSession());setView(next);setPayload(initial);setQuery(next==='clipboard'?initial:'');});void api('clearInput');},[startNavigation]);
   const clearLaunchInput=useCallback(()=>{captureGeneration.current++;setCapturing(false);setLaunchInput(null);setQuery('');setInputSource('input');void api('clearInput');input.current?.focus();},[]);
   const dialog=useCallback((spec:DialogSpec)=>new Promise<string|boolean|null>(resolve=>{void api('window',{action:'busy',value:true});resolver.current?.(null);resolver.current=resolve;setDialogSpec(spec);}),[]);

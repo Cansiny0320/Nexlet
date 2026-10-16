@@ -41,6 +41,64 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe('Windows catalog shortcut deduplication', () => {
+  it('filters uninstallers, documentation and release notes before merging shortcuts', async () => {
+    const excluded = [
+      ['Uninstall Example.lnk', 'C:/Apps/app.exe', ''],
+      ['卸载向日葵.lnk', 'C:/Apps/SunloginClient.exe', '--mod=uninstall'],
+      ['Remove product.lnk', 'C:/Apps/unins000.exe', ''],
+      ['Remove QQ.lnk', 'C:/Apps/QQUninst.exe', ''],
+      ['Remove meeting.lnk', 'C:/Apps/WeMeetUninstall.exe', ''],
+      ['Maintenance.lnk', 'C:/Apps/app.exe', '--uninstall'],
+      ['Maintenance mode.lnk', 'C:/Apps/client.exe', '--mod=uninstall'],
+      ['Remove MSI.lnk', 'C:/Windows/System32/msiexec.exe', '/x{1234}'],
+      ['Changelog.lnk', 'C:/Apps/Changelog.txt', ''],
+      ['ChangelogRus.lnk', 'C:/Apps/Changelog.Rus.txt', ''],
+      ['Release history.lnk', 'C:/Apps/ReleaseNotes.html', ''],
+      ['ReadMe.lnk', 'C:/Apps/ReadMe.pdf', ''],
+      ['Application Verifier Help.lnk', 'C:/Windows/appverif.chm', ''],
+      ['Manual.lnk', 'C:/Apps/guide.hlp', ''],
+      ['Python 3.13 Module Docs (64-bit).lnk', 'C:/Apps/python.exe', '-m pydoc -b'],
+      ['Documentation for Desktop Apps.lnk', 'C:/SDK/DesktopAppsDocumentation.url', ''],
+      ['软件使用说明.lnk', 'C:/Apps/manual.pdf', ''],
+      ['软件更新日志.lnk', 'C:/Apps/history.txt', ''],
+      ['Git FAQs (Frequently Asked Questions).url', '', ''],
+      ['Node.js documentation.url', '', ''],
+    ];
+    for (const [name, target, args] of excluded) shortcut(menu, name, target, args);
+    const kept = shortcut(desktop, 'Example.lnk', 'C:/Apps/app.exe');
+    const catalog = new Catalog(() => {});
+    await catalog.scan();
+    expect(catalog.items.map(item => item.path)).toEqual([kept]);
+  });
+
+  it('retains applications, system tools, ordinary files and URLs without broad keyword matches', async () => {
+    const retained = [
+      ['Terminal.lnk', 'C:/Windows/WindowsTerminal.exe'],
+      ['Computer Management.lnk', 'C:/Windows/System32/compmgmt.msc'],
+      ['Control Panel.lnk', 'C:/Windows/System32/control.exe'],
+      ['Application Verifier (X64).lnk', 'C:/Windows/System32/appverif.exe'],
+      ['Disk Cleanup.lnk', 'C:/Windows/System32/cleanmgr.exe'],
+      ['Quick Assist.lnk', 'C:/Windows/quickassist.exe'],
+      ['HelpDesk.lnk', 'C:/Apps/HelpDesk.exe'],
+      ['Help Viewer.lnk', 'C:/Apps/HlpViewer.exe'],
+      ['Revo Uninstaller.lnk', 'C:/Apps/RevoUninstaller.exe'],
+      ['Git Bash.lnk', 'C:/Apps/Git/git-bash.exe'],
+      ['Python.lnk', 'C:/Apps/python.exe'],
+      ['Notes.lnk', 'C:/Work/notes.txt'],
+      ['Project.lnk', 'C:/Work/project.pdf'],
+      ['Website.url', ''],
+      ['Google Docs.url', ''],
+    ];
+    for (const [name, target] of retained) shortcut(menu, name, target);
+    shortcut(menu, 'Editor.lnk', 'C:/Apps/editor.exe', '"C:/Work/uninstall.txt"');
+    mocks.apps.mockResolvedValue([{ Name: 'Get Help', AppID: 'Microsoft.Help!App' }]);
+    const catalog = new Catalog(() => {});
+    await catalog.scan();
+    expect(catalog.items.map(item => item.name).sort()).toEqual([
+      ...retained.map(([name]) => name.replace(/\.(lnk|url)$/, '')), 'Editor', 'Get Help'
+    ].sort());
+  });
+
   it('merges menu and desktop copies by normalized target, keeping the original launch link and name aliases', async () => {
     const kept = shortcut(menu, 'QQ.lnk', 'C:\\Apps\\QQ\\QQ.exe');
     shortcut(desktop, 'QQ desktop.lnk', 'c:/apps/qq/./QQ.exe');

@@ -11,7 +11,8 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   const {state,toast,navigate,dialog}=useApp();
   const [response,setResponse]=useState<{key:string;value:SearchResponse}|null>(null),[selected,setSelected]=useState(''),[expanded,setExpanded]=useState(false),[all,setAll]=useState(false);
   const [menu,setMenu]=useState<{command:Command;x:number;y:number}|null>(null),[editing,setEditing]=useState<Command|null>(null);
-  const [icons,setIcons]=useState<Record<string,string>>({});
+  const [iconState,setIconState]=useState<{revision:number;values:Record<string,string>}>({revision:state.catalogRevision,values:{}});
+  const icons=iconState.revision===state.catalogRevision?iconState.values:{};
   const container=useRef<HTMLDivElement>(null),launching=useRef(false);
   const requestKey=JSON.stringify([query,launchInput?.id,source]);
   const searching=Boolean(query.trim()||launchInput);
@@ -43,9 +44,10 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   const iconRequest=JSON.stringify([...new Set(visible.filter(c=>!c.icon&&icons[c.id]===undefined&&(c.kind==='app'||c.kind==='shortcut'||c.kind==='system')).map(c=>c.id))]);
   useEffect(()=>{
     let valid=true;const ids=JSON.parse(iconRequest) as string[];
-    void (async()=>{for(let offset=0;valid&&offset<ids.length;offset+=64){const loaded=await api<Pick<Command,'id'|'icon'>[]>('catalogIcons',ids.slice(offset,offset+64));if(valid)setIcons(current=>({...current,...Object.fromEntries(loaded.map(c=>[c.id,c.icon||'']))}));}})().catch(e=>{if(valid)toast(errorText(e),true);});
+    const revision=state.catalogRevision;
+    void (async()=>{for(let offset=0;valid&&offset<ids.length;offset+=64){const loaded=await api<(Pick<Command,'id'|'icon'>&{revision:number})[]>('catalogIcons',ids.slice(offset,offset+64));if(valid)setIconState(current=>({revision,values:{...(current.revision===revision?current.values:{}),...Object.fromEntries(loaded.filter(c=>c.revision===revision).map(c=>[c.id,c.icon||'']))}}));}})().catch(e=>{if(valid)toast(errorText(e),true);});
     return()=>{valid=false;};
-  },[iconRequest,state.catalogLoading,toast]);
+  },[iconRequest,state.catalogLoading,state.catalogRevision,toast]);
   async function launch(command:Command){
     if(launching.current)return;launching.current=true;
     try{

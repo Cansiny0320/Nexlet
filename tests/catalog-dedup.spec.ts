@@ -27,6 +27,14 @@ test('Windows shortcut copies appear once and saved pins still work', async () =
       target: process.execPath, args: i === 2 ? '--dedup-variant' : '--dedup-fixture', cwd: links[0].slice(0, links[0].lastIndexOf('\\'))
     })), [first, second, variant]);
     expect(created).toEqual([true, true, true]);
+    const filteredLinks = await app.evaluate(({ shell }, directory) => [
+      { name: 'Uninstall catalog fixture', target: process.execPath, args: '--dedup-fixture' },
+      { name: 'Catalog maintenance fixture', target: process.execPath, args: '--uninstall' },
+      { name: 'Catalog Changelog fixture', target: directory + '\\Changelog.txt', args: '' },
+      { name: 'Catalog help fixture', target: directory + '\\manual.chm', args: '' },
+      { name: 'Catalog system fixture', target: process.env.SystemRoot + '\\System32\\compmgmt.msc', args: '' },
+    ].map(item => shell.writeShortcutLink(directory + '\\' + item.name + '.lnk', 'create', item)), menu);
+    expect(filteredLinks).toEqual([true, true, true, true, true]);
     const call = (action: string, payload?: unknown) => page.evaluate(({ action, payload }) => (window as any).nexlet.call(action, payload), { action, payload });
     await app.evaluate((_, saved) => {
       const n = (globalThis as any).__nexlet;
@@ -39,6 +47,8 @@ test('Windows shortcut copies appear once and saved pins still work', async () =
     const fixture = state.commands.filter((item: any) => item.name === 'Dedup fixture');
     expect(fixture).toHaveLength(1);
     expect(state.commands.filter((item: any) => item.name === 'Dedup variant')).toHaveLength(1);
+    expect(state.commands.filter((item: any) => item.name.startsWith('Catalog ') || item.name === 'Uninstall catalog fixture')
+      .map((item: any) => item.name)).toEqual(['Catalog system fixture']);
     expect(state.pinned).toEqual([fixture[0].id]);
     expect(state.recent).toEqual([fixture[0].id]);
     await page.locator('.launcher-input').fill('Dedup fixture');

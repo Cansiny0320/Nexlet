@@ -1,18 +1,19 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { app, nativeImage, shell } from 'electron';
 
-export async function loadCatalogIcon(file: string, platform = process.platform): Promise<string> {
+async function windowsIconSources(file: string, link?: Electron.ShortcutDetails): Promise<string[]> {
   const candidates: string[] = [];
-  if (platform === 'win32' && /\.lnk$/i.test(file)) {
+  if (/\.lnk$/i.test(file)) {
     try {
-      const shortcut = shell.readShortcutLink(file);
+      const shortcut = link || shell.readShortcutLink(file);
       // getFileIcon(.lnk) returns the generic link icon on current Electron/Windows.
       // Resolve the icon resource or executable instead; launching still uses the .lnk.
       if (shortcut.icon) candidates.push(shortcut.icon);
       if (shortcut.target) candidates.push(shortcut.target);
     } catch { /* Keep the shortcut's generic fallback when its target is unavailable. */ }
-  } else if (platform === 'win32' && /\.url$/i.test(file)) {
+  } else if (/\.url$/i.test(file)) {
     try {
       const content = await readFile(file, 'utf8');
       const icon = content.match(/^IconFile\s*=\s*(.+)$/mi)?.[1].trim();
@@ -20,9 +21,24 @@ export async function loadCatalogIcon(file: string, platform = process.platform)
     } catch { /* A missing URL icon must not hide the search result. */ }
   }
   candidates.push(file);
-  for (const source of new Set(candidates)) {
+  return [...new Set(candidates.map(source => source.replace(/%([^%]+)%/g, (whole, name: string) => process.env[name] || whole)))];
+}
+
+export async function windowsIconFingerprint(file: string, link?: Electron.ShortcutDetails): Promise<string> {
+  const sources = await windowsIconSources(file, link);
+  const resources = await Promise.all(sources.map(async source => {
     try {
-      const expanded = source.replace(/%([^%]+)%/g, (whole, name: string) => process.env[name] || whole);
+      const info = await stat(source);
+      return [path.win32.normalize(source).toLowerCase(), info.size, info.mtimeMs, info.ctimeMs];
+    } catch (error) { return [source, (error as NodeJS.ErrnoException).code || 'unavailable']; }
+  }));
+  return createHash('sha256').update(JSON.stringify([resources, link?.iconIndex])).digest('hex');
+}
+
+export async function loadCatalogIcon(file: string, platform = process.platform): Promise<string> {
+  const sources = platform === 'win32' ? await windowsIconSources(file) : [file];
+  for (const expanded of sources) {
+    try {
       const icon = /\.(png|jpe?g|bmp)$/i.test(expanded) || (platform === 'win32' && /\.ico$/i.test(expanded))
         ? nativeImage.createFromPath(expanded)
         : await app.getFileIcon(expanded, { size: 'normal' });

@@ -26,6 +26,7 @@ import path from 'node:path';
 import { isHostDocument } from './host-origin';
 import { Store } from './store';
 import { Catalog } from './catalog';
+import { CatalogCache } from './catalog-cache';
 import { release } from 'node:os';
 import { SystemActions } from './system-actions';
 import { createSystemExecutor } from './system-executor';
@@ -73,7 +74,8 @@ async function bootstrap() {
     return selectionPlatform.target();
   });
   const clips=new ClipboardService(store,platform,()=>notify('clips'));
-  const catalog=new Catalog(()=>notify());
+  const catalog=new Catalog(()=>notify(),process.platform==='win32'?new CatalogCache(store.directory):undefined);
+  catalog.restore(store.settings().searchPaths);
   const registry=new CommandRegistry(store,ids=>catalog.resolveIds(ids));
   const panelConfig=new PanelConfigStore(store,()=>registry.pinned());
   const selectionPlatform=new SelectionPlatform(platform,clips);
@@ -193,6 +195,7 @@ async function bootstrap() {
     else if(result.needsQuery){revealWindow(main);main.webContents.send('host-change','web-query:'+id);}
   }
   async function state():Promise<AppState> {
+    const catalogRevision=catalog.revision;
     const settings=store.settings();
     syncShortcuts();
     const config=registry.read();
@@ -201,8 +204,9 @@ async function bootstrap() {
     const recent=catalog.resolveIds(store.get<string[]>('recent',[]));
     const visibleIds=new Set([...pinned,...recent.slice(0,18)]);
     const decorated=await catalog.withIcons(commands.filter(c=>visibleIds.has(c.id)));
+    if(catalogRevision!==catalog.revision)return state();
     const icons=new Map(decorated.map(c=>[c.id,c.icon]));
-    return {panelConfig:panelConfig.read(),panelStatus:panelTrigger.read(),commandConfig:registry.read(),commandCatalog,shortcutStatuses:shortcuts.statuses(),update:updates.read(),version:app.getVersion(),platform:process.platform,settings,startup:startup.read(),pinned,recent,commands:commands.map(c=>({...c,icon:icons.get(c.id)||c.icon})),plugins:plugins.records(),shortcutError,catalogLoading:catalog.loading,nativeStatus:platform.status||clips.error,canPaste:!!platform.target};
+    return {panelConfig:panelConfig.read(),panelStatus:panelTrigger.read(),commandConfig:registry.read(),commandCatalog,shortcutStatuses:shortcuts.statuses(),update:updates.read(),version:app.getVersion(),platform:process.platform,settings,startup:startup.read(),pinned,recent,commands:commands.map(c=>({...c,icon:icons.get(c.id)||c.icon})),plugins:plugins.records(),shortcutError,catalogLoading:catalog.loading,catalogRevision,nativeStatus:platform.status||clips.error,canPaste:!!platform.target};
   }
   function searchState(){
     const settings=store.settings(),config=registry.read();
@@ -294,7 +298,8 @@ async function bootstrap() {
       case 'catalogIcons':{
         if(!Array.isArray(payload)||payload.length>64||payload.some(id=>typeof id!=='string'||id.length>250))throw new Error(t("应用列表无效"));
         const requested=new Set(payload);
-        return (await catalog.withIcons([...catalog.items,...systemActions.commands()].filter(item=>requested.has(item.id)))).map(({id,icon})=>({id,icon}));
+        const revision=catalog.revision;
+        return (await catalog.withIcons([...catalog.items,...systemActions.commands()].filter(item=>requested.has(item.id)))).map(({id,icon})=>({id,icon,revision}));
       }
       case 'pluginSession':return plugins.runtime.state(window);
       case 'updateReady':{const args=inputObject(payload);updateSaves.ready(event.sender.id,args.token,args.error);return true;}
@@ -378,7 +383,7 @@ async function bootstrap() {
         if('fileSearchPaths'in update){if(!Array.isArray(update.fileSearchPaths)||update.fileSearchPaths.length>26||update.fileSearchPaths.some((p:unknown)=>typeof p!=='string'||!path.isAbsolute(p)||/[\0\r\n]/.test(p)))throw new Error(t("索引目录无效"));next.fileSearchPaths=[...new Set(update.fileSearchPaths)] as string[];await files.reset();}
         if('webShortcuts'in update){if(!Array.isArray(update.webShortcuts)||update.webShortcuts.length>100)throw Error(t("网页快捷方式过多"));next.webShortcuts=update.webShortcuts.map(validateWebShortcut);if(new Set(next.webShortcuts.map(w=>w.id)).size!==next.webShortcuts.length)throw Error(t("网页 ID 重复"));}
         shortcuts.apply(bindings(registry.read(),next),()=>store.set('settings',next));if (next.language !== settings.language) { setLocale(resolveLocale(next.language, systemLocale)); for (const contents of webContents.getAllWebContents()) if (!contents.isDestroyed()) contents.send('app-locale', currentLocale()); for (const owner of hosts.values()) owner.webContents.send('host-change', 'plugin-changed'); refreshTray(); panelTrigger.refreshLocale(); desktopTools.refreshLocale(); for (const window of hosts.values()) { const view = views.get(window.id); if (view && view !== 'launcher' && view !== 'plugin') window.setTitle(view === 'superpanel' ? t('Nexlet · 超级面板') : 'Nexlet · ' + t(BUILTIN_COMMANDS.find(c => c.id === 'tool:' + view)?.name || '工具')); } }
-        updates.setAutomaticChecks(next.autoCheckUpdates);nativeTheme.themeSource=next.theme;if(JSON.stringify(next.searchPaths)!==JSON.stringify(settings.searchPaths))void catalog.scan(next.searchPaths);store.prune();notify();notify('clips');return next;
+        updates.setAutomaticChecks(next.autoCheckUpdates);nativeTheme.themeSource=next.theme;if(next.language!==settings.language||JSON.stringify(next.searchPaths)!==JSON.stringify(settings.searchPaths))void catalog.scan(next.searchPaths);store.prune();notify();notify('clips');return next;
       }
       case 'rescan':await catalog.scan(store.settings().searchPaths);return true;
       case 'startup':{if(typeof payload!=='boolean')throw new Error(t("自启动开关无效"));const result=startup.set(payload);notify();return result;}
@@ -457,13 +462,14 @@ async function bootstrap() {
   }
   syncShortcuts();panelTrigger.configure(panelConfig.read());
   const panelBusyTimer=setInterval(()=>panelTrigger.setBusy(Object.values(hotkeyState()).some(Boolean)||panel.busy,panelConfig.read()),100);panelBusyTimer.unref();
-  void catalog.scan(store.settings().searchPaths);
+  // Integration tests can hold the refresh to inspect the restored first frame.
+  if(!testMode||process.env.NEXLET_TEST_DEFER_CATALOG_SCAN!=='1')void catalog.scan(store.settings().searchPaths);
   app.on('second-instance',()=>void show()); app.on('activate',()=>void show());
   app.on('window-all-closed',()=>{});
   let cleanedUp=false;
   // Let AppKit finish canceling Cmd+Q before requesting the final quit on a new turn.
   app.on('before-quit',event=>{quitting=true;desktopTools.close();windowActions.close();clearInterval(panelBusyTimer);panelTrigger.close();panel.close();updates.setAutomaticChecks(false);clips.stop();shortcuts.close();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();setImmediate(()=>app.quit());});}});
-  app.once('will-quit',()=>store.close());
+  app.once('will-quit',()=>{catalog.close();store.close();});
   updates.setAutomaticChecks(store.settings().autoCheckUpdates);
   if(testMode)(globalThis as any).__nexlet={desktopTools,windowActions,panel,panelConfig,panelTrigger,selection,selectionPlatform,registry,shortcuts,hotkeyState,activateHotkey,executeCommand,updates,autoUpdater:updateTransport,store,clips,platform,catalog,systemActions,systemExecutor,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};
 }
