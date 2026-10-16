@@ -16,7 +16,7 @@ try{
   browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);page=browser.contexts()[0].pages().find(p=>p.url().includes('/renderer/index.html'));if(!page)throw Error('Nexlet renderer not found');
   page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
   await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).waitFor();const state=await page.evaluate(()=>window.nexlet.call('state'));if(state.nativeStatus)throw Error(state.nativeStatus);
-  await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).fill('128*3');await page.getByRole('button',{name:'384',exact:true}).click();if(await page.locator('output').first().innerText()!=='384')throw Error('Portable calculation failed');
+  await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).fill('128*3');await page.locator('[data-command-id="match:calc"]').click();if(await page.locator('output').first().innerText()!=='384')throw Error('Portable calculation failed');
   await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/portable-scratchpad.png'});console.log(JSON.stringify({portable:'passed',version:state.version,nativeBridge:'ready',calculation:'384',shortcutStatus:state.shortcutError||'registered'},null,2));
 }catch(error){
   await mkdir('test-results',{recursive:true});

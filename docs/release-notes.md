@@ -1,4 +1,4 @@
-Nexlet 0.2.28 优化唤起、搜索与剪贴板历史的响应速度，并修复计算稿纸与系统确认弹窗的交互。
+Nexlet 0.2.29 优化唤起、搜索与剪贴板历史的响应速度，并修复计算稿纸与系统确认弹窗的交互。
 
 ## 性能与交互
 
@@ -16,11 +16,11 @@ Improves macOS wake-up, shows search results before plugin regex matches and ico
 
 ## 下载
 
-- Windows x64：安装版 Nexlet-0.2.28-Windows-x64-Setup.exe；便携版 Nexlet-0.2.28-Windows-x64.exe。
-- Apple Silicon Mac：Nexlet-0.2.28-macOS-arm64.dmg。
-- Intel Mac：Nexlet-0.2.28-macOS-x64.dmg。
-- Linux x64：Nexlet-0.2.28-Linux-x86_64.AppImage、Nexlet-0.2.28-Linux-amd64.deb。
-- Linux arm64：Nexlet-0.2.28-Linux-arm64.AppImage、Nexlet-0.2.28-Linux-arm64.deb。
+- Windows x64：安装版 Nexlet-0.2.29-Windows-x64-Setup.exe；便携版 Nexlet-0.2.29-Windows-x64.exe。
+- Apple Silicon Mac：Nexlet-0.2.29-macOS-arm64.dmg。
+- Intel Mac：Nexlet-0.2.29-macOS-x64.dmg。
+- Linux x64：Nexlet-0.2.29-Linux-x86_64.AppImage、Nexlet-0.2.29-Linux-amd64.deb。
+- Linux arm64：Nexlet-0.2.29-Linux-arm64.AppImage、Nexlet-0.2.29-Linux-arm64.deb。
 - macOS ZIP、blockmap 与 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 
 手动安装前建议完整退出旧版。现有本地数据继续使用原用户目录。
