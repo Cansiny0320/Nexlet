@@ -96,7 +96,7 @@ jobs:
         run: npx playwright test
       - name: Package Windows installer and portable
         if: runner.os == 'Windows'
-        run: node scripts/package-windows.mjs
+        run: npx electron-builder --win portable nsis --x64 --publish never
       - name: Package macOS PR preview (ad-hoc signed)
         if: runner.os == 'macOS' && github.event_name == 'pull_request'
         run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.mac.identity=- -c.mac.entitlements=assets/entitlements.mac.plist -c.mac.entitlementsInherit=assets/entitlements.mac.plist
