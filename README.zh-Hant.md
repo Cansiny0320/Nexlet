@@ -105,6 +105,8 @@ Linux 使用指定目錄內的即時檔名搜尋，支援多關鍵詞、雙引�
 
 ## 外掛市場與開發
 
+離線 OCR 可在外掛市場安裝，需要 Nexlet 0.2.30 或更新版本。OCR 的原始碼、模型、建置與測試統一在 [外掛倉庫](https://github.com/Cansiny0320/Nexlet-plugins/tree/main/plugins/ocr) 維護，獨立發佈；宿主倉庫不再建置或分發 OCR 外掛。
+
 公開市場由 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) 託管，目錄來自版本化 JSON，安裝包來自 GitHub Releases。可用外掛包括便箋、字數統計和翻譯，具體版本以市場列表為準。點選安裝後直接安裝，不再彈出許可權確認。市場安裝的外掛重新開啟時自動檢查並安裝相容新版；檢查最多 2 秒，下載最多 10 秒，失敗繼續使用舊版，保留獨立資料和本次輸入。正在執行的外掛不重啟，關閉後下次開啟再更新；本地匯入和開發目錄不自動覆蓋。市場頁面仍支援手動重新整理和更新。
 
 外部外掛使用 Nexlet 自有 API，由 HTML、CSS、JavaScript 和 `plugin.json` 組成。支援開發目錄與 `.zip` / `.nexlet` 包匯入。外掛在獨立沙箱中執行，預設內嵌主視窗，也可分離為獨立視窗；沒有 Node.js、任意宿主 IPC 或直接 `fetch` 能力。需要聯網的外掛必須宣告 `network.request` 並透過宿主 API 請求；已安裝外掛按宣告使用該能力，不再逐地址彈窗確認。

@@ -25,7 +25,7 @@ Uninstall entries, help documents and release notes are filtered from the Window
 - Intel Mac：Nexlet-0.2.31-macOS-x64.dmg。
 - Linux x64：Nexlet-0.2.31-Linux-x86_64.AppImage、Nexlet-0.2.31-Linux-amd64.deb。
 - Linux arm64：Nexlet-0.2.31-Linux-arm64.AppImage、Nexlet-0.2.31-Linux-arm64.deb。
-- 可选离线 OCR：nexlet-ocr.nexlet，可在 Nexlet 插件页选择「安装插件」导入；需要 Nexlet 0.2.30 或更新版本。
+- 可选离线 OCR 在插件市场安装，需要 Nexlet 0.2.30 或更新版本。源码、构建和独立版本发布统一由 [插件仓库](https://github.com/Cansiny0320/Nexlet-plugins/tree/main/plugins/ocr) 维护，不再随宿主 Release 提供附件。
 - macOS ZIP、blockmap 和 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 
 手动安装前请先完全退出旧版。现有本地数据继续使用原用户目录。

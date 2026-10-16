@@ -105,6 +105,8 @@ Detach to a separate window preserves work. External plugins keep the same page 
 
 ## Marketplace and plugin development
 
+Offline OCR is available from the marketplace and requires Nexlet 0.2.30 or later. Its source, models, build, and tests are maintained in the [plugin repository](https://github.com/Cansiny0320/Nexlet-plugins/tree/main/plugins/ocr) and released independently. The host repository no longer builds or distributes the OCR plugin.
+
 The public [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins) marketplace uses a versioned JSON catalog and GitHub Release packages. Available plugins include Notes, Word count, and Translate; consult the catalog for versions. Install runs directly after clicking, without another permission confirmation. Marketplace plugins check for compatible updates when opening a new session: up to two seconds for the index and ten seconds for download. Failure keeps the old version, data, and input. Running plugins are not restarted; they check after closing and reopening. Imported packages and development directories are not automatically overwritten. Manual refresh and update remain available.
 
 Plugins use Nexlet's own API and consist of HTML, CSS, JavaScript, and `plugin.json`. Import development directories or `.zip` / `.nexlet` packages. Their frontends run in separate sandboxes, embedded by default or detached. They have no Node.js, arbitrary host IPC, or direct `fetch`; network access requires `network.request` and the host bridge. Installed plugins use their declared capability without per-address confirmation.

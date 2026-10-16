@@ -23,9 +23,7 @@
     "generate:mac-dmg": "node scripts/generate-mac-dmg-background.mjs",
     "smoke:package": "node scripts/smoke-package.mjs",
     "smoke:portable": "node scripts/smoke-portable.mjs",
-    "package:linux": "npm run build && node scripts/package-linux.mjs",
-    "package:ocr": "node scripts/package-ocr.mjs",
-    "typecheck:ocr": "tsc --noEmit -p plugins/ocr/tsconfig.json"
+    "package:linux": "npm run build && node scripts/package-linux.mjs"
   },
   "dependencies": {
     "adm-zip": "^0.6.1",
