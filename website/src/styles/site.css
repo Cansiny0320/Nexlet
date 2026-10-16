@@ -1183,6 +1183,39 @@ svg.icon {
   min-height: 42px;
   padding: 7px 27px;
 }
+.mac-first-open-hint {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.mac-first-open-hint a,
+.mac-first-open a {
+  color: var(--purple);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mac-first-open {
+  border: 1px solid #cecbff;
+  border-radius: 12px;
+  background: #f5f5ff;
+  padding: clamp(20px, 4vw, 32px);
+  scroll-margin-top: 100px;
+}
+.mac-first-open h2 {
+  font-size: 24px;
+  margin: 0 0 12px;
+}
+.mac-first-open p {
+  margin: 12px 0;
+}
+.mac-first-open ol {
+  padding-left: 24px;
+  margin: 16px 0;
+  list-style: decimal;
+}
+.mac-first-open li + li {
+  margin-top: 10px;
+}
 .release-meta {
   height: 105px;
   text-align: center;

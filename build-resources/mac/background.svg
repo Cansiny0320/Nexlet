@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="520" viewBox="0 0 680 520">
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#fcfdff"/>
+      <stop offset="1" stop-color="#eeebff"/>
+    </linearGradient>
+  </defs>
+  <rect width="680" height="520" fill="url(#background)"/>
+  <g font-family="Arial, Microsoft YaHei, PingFang SC, sans-serif" fill="#20213b">
+    <text x="340" y="45" text-anchor="middle" font-size="26" font-weight="700">安装 Nexlet / Install Nexlet</text>
+    <text x="340" y="78" text-anchor="middle" font-size="16">拖入「应用程序」，再从该文件夹打开</text>
+    <text x="340" y="102" text-anchor="middle" font-size="14" fill="#555875">Drag to Applications, then open Nexlet from there.</text>
+    <!-- Finder places the app and Applications icons at (180, 170) and (500, 170). -->
+    <path d="M294 170 H382 M365 153 L382 170 L365 187" fill="none" stroke="#6047ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="28" y="266" width="624" height="230" rx="16" fill="#fff" stroke="#d8d2ff"/>
+    <text x="48" y="298" font-size="18" font-weight="700">首次打开被拦截？ / Blocked on first open?</text>
+    <text x="48" y="326" font-size="14" fill="#555875">当前版本未经 Apple 公证，请确认来自 Nexlet 官方下载渠道。</text>
+    <text x="48" y="349" font-size="13" fill="#555875">Not notarized by Apple. Only proceed with an official Nexlet download.</text>
+    <text x="48" y="381" font-size="16">点击「完成」，前往「系统设置 → 隐私与安全性」</text>
+    <text x="48" y="407" font-size="16" fill="#6047ff" font-weight="700">找到 Nexlet，点击「仍要打开」，验证身份并确认打开。</text>
+    <text x="48" y="437" font-size="14">Click Done, then System Settings → Privacy &amp; Security.</text>
+    <text x="48" y="460" font-size="14">Find Nexlet → Open Anyway → authenticate and confirm Open.</text>
+    <text x="48" y="483" font-size="12" fill="#555875">没有该按钮？再尝试打开一次。 / No button? Try opening Nexlet again.</text>
+  </g>
+</svg>

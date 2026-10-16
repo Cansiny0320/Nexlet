@@ -96,7 +96,7 @@ jobs:
         run: npx playwright test
       - name: Package Windows installer and portable
         if: runner.os == 'Windows'
-        run: npx electron-builder --win portable nsis --x64 --publish never
+        run: node scripts/package-windows.mjs
       - name: Package macOS PR preview (ad-hoc signed)
         if: runner.os == 'macOS' && github.event_name == 'pull_request'
         run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.mac.identity=- -c.mac.entitlements=assets/entitlements.mac.plist -c.mac.entitlementsInherit=assets/entitlements.mac.plist
@@ -190,11 +190,14 @@ jobs:
           COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
+          printf 'Source commit: `%s`\n\n' "$COMMIT" > release-notes.md
+          cat docs/release-notes.md >> release-notes.md
+          printf '\n\n' >> release-notes.md
+          cat docs/mac-first-open.md >> release-notes.md
           if gh release view "$TAG" --json isDraft > release-state.json 2>/dev/null; then
             node -e 'if (!JSON.parse(require("fs").readFileSync("release-state.json")).isDraft) throw Error("Refusing to overwrite a published release")'
             gh release upload "$TAG" release-assets/* --clobber
+            gh release edit "$TAG" --notes-file release-notes.md
           else
-            printf 'Source commit: `%s`\n\n' "$COMMIT" > release-notes.md
-            cat docs/release-notes.md >> release-notes.md
             gh release create "$TAG" release-assets/* --verify-tag --draft --title "Nexlet $TAG" --notes-file release-notes.md
           fi

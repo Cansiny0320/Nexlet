@@ -60,6 +60,10 @@ export function DownloadPage() {
               {t('下载')}
             </DownloadLink>
           </div>
+          <p className="mac-first-open-hint">
+            {t('首次打开可能出现安全提示。')}{' '}
+            <a href="#mac-first-open">{t('查看 Mac 首次打开指引')}</a>
+          </p>
         </article>
       </section>
       {'\n '}
@@ -82,6 +86,30 @@ export function DownloadPage() {
         </p>
       </div>
       {'\n '}
+      <section
+        className="shell mac-first-open"
+        id="mac-first-open"
+        aria-labelledby="mac-first-open-title"
+      >
+        <h2 id="mac-first-open-title">{t('Mac 首次打开')}</h2>
+        <p>
+          {t(
+            '当前 macOS 版本尚未经过 Apple 公证。确认安装包来自 Nexlet 官方 GitHub Release 后，请按以下步骤打开。',
+          )}
+        </p>
+        <ol>
+          <li>{t('将 DMG 中的 Nexlet 拖入「应用程序」文件夹。')}</li>
+          <li>
+            {t('从「应用程序」打开 Nexlet；如出现「Apple 无法验证 Nexlet」提示，点击「完成」。')}
+          </li>
+          <li>
+            {t('打开「系统设置 → 隐私与安全性」，向下找到 Nexlet 的拦截提示，点击「仍要打开」。')}
+          </li>
+          <li>{t('按提示验证密码或 Touch ID，再确认「打开」。')}</li>
+        </ol>
+        <p>{t('没有看到「仍要打开」？请重新尝试打开 Nexlet，再回到该设置页面。')}</p>
+        <a href="https://support.apple.com/102445">{t('查看 Apple 官方说明')}</a>
+      </section>
       <section className="shell onboarding">
         <div>
           <h2>{t('快速开始')}</h2>
