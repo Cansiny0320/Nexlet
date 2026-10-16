@@ -49,3 +49,23 @@ for (const layout of ['grid', 'list'] as const) {
     await expect(page.locator('output').first()).toHaveText('2');
   });
 }
+
+test('列表刷新时静止的鼠标不覆盖键盘默认选中项，实际移动仍可选择', async () => {
+  const page = await app.firstWindow();
+  await page.evaluate(() => window.nexlet.call('commandConfig', { action: 'layout', value: 'list' }));
+  const input = page.locator('.launcher-input');
+  await input.fill('1+');
+  const translation = page.locator('[data-command-id="plugin:org.nexlet.text-match-fixture:translate"]');
+  const clipboard = page.locator('[data-command-id="match:clipboard"]');
+  await clipboard.hover();
+  await expect(clipboard).toHaveClass(/selected/);
+  await input.press('ArrowUp');
+  await expect(translation).toHaveClass(/selected/);
+  await input.fill('1+1');
+  const calculation = page.locator('[data-command-id="match:calc"]');
+  await expect(calculation).toBeVisible();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(calculation).toHaveClass(/selected/);
+  await clipboard.hover();
+  await expect(clipboard).toHaveClass(/selected/);
+});

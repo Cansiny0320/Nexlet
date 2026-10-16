@@ -71,4 +71,4 @@ node scripts/benchmark-interactions.mjs \
   --output=docs/validation/interaction-performance-2026-10-16.json
 ```
 
-本次改动保留在工作区，未 commit、push、发布或替换已安装应用。回退代码即可恢复原实现，无须回滚用户数据库。
+性能测量结束时，改动尚未提交或发布。随后用户授权 push 和发布，发布检查修正了打包 smoke 对旧计算按钮名称的定位，并通过先失败后成功的回归测试修复了搜索结果布局变化触发鼠标选中项变化的问题；该修复与相关 17 项 Electron 测试通过。上表保留性能测量时的原始构建数据，后续 CI 发布状态以 GitHub Release 为准。回退代码即可恢复原实现，无须回滚用户数据库。本次没有替换已安装应用。
