@@ -74,6 +74,7 @@ test('列表刷新时静止的鼠标不覆盖键盘默认选中项，实际移�
   await input.fill('1+');
   const translation = page.locator('[data-command-id="plugin:org.nexlet.text-match-fixture:translate"]');
   const clipboard = page.locator('[data-command-id="match:clipboard"]');
+  await input.hover();
   await clipboard.hover();
   await expect(clipboard).toHaveClass(/selected/);
   await input.press('ArrowUp');
@@ -83,6 +84,10 @@ test('列表刷新时静止的鼠标不覆盖键盘默认选中项，实际移�
   await expect(calculation).toBeVisible();
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(calculation).toHaveClass(/selected/);
+  // Windows can synthesize a zero-movement event after the window resizes.
+  await clipboard.dispatchEvent('mousemove',{movementX:0,movementY:0});
+  await expect(calculation).toHaveClass(/selected/);
+  await input.hover();
   await clipboard.hover();
   await expect(clipboard).toHaveClass(/selected/);
 });
