@@ -23,11 +23,13 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
     let valid=true;setResponse(null);
     if(capturing)return;
     if(!launchInput)void api('clearInput').catch(()=>{});
+    const requestId=crypto.randomUUID();
+    const unsubscribe=window.nexlet.onSearchProgress(event=>{if(valid&&event.requestId===requestId)setResponse({key:requestKey,value:event.response});});
     const timer=setTimeout(()=>{
       if(!searching)return;
-      void api<SearchResponse>('search',{query,inputId:launchInput?.id,from:source}).then(value=>{if(valid&&!value.cancelled)setResponse({key:requestKey,value});}).catch(e=>{if(valid)toast(errorText(e),true);});
+      void api<SearchResponse>('search',{query,inputId:launchInput?.id,from:source,requestId}).then(value=>{if(valid&&!value.cancelled)setResponse({key:requestKey,value});}).catch(e=>{if(valid)toast(errorText(e),true);});
     },60);
-    return()=>{valid=false;clearTimeout(timer);};
+    return()=>{valid=false;clearTimeout(timer);unsubscribe();};
   },[requestKey,capturing,state.commands,state.catalogLoading,toast]);
   const indexed=new Map(state.commands.map(c=>[c.id,c]));
   const pinned=state.pinned.map(id=>indexed.get(id)).filter((c):c is Command=>!!c);
@@ -38,7 +40,7 @@ export function Launcher({query,setQuery,input,launchInput,source,capturing}:{qu
   const visibleKey=visible.map(c=>c.id).join('\0');
   const activeId=visible.some(c=>c.id===selected)?selected:visible[0]?.id||'';
   useEffect(()=>{if(!searching||result)setSelected(current=>visible.some(c=>c.id===current)?current:visible[0]?.id||'');},[visibleKey,!!result,searching]);
-  const iconRequest=JSON.stringify([...new Set(visible.filter(c=>!c.icon&&(c.kind==='app'||c.kind==='shortcut'||c.kind==='system')).map(c=>c.id))]);
+  const iconRequest=JSON.stringify([...new Set(visible.filter(c=>!c.icon&&icons[c.id]===undefined&&(c.kind==='app'||c.kind==='shortcut'||c.kind==='system')).map(c=>c.id))]);
   useEffect(()=>{
     let valid=true;const ids=JSON.parse(iconRequest) as string[];
     void (async()=>{for(let offset=0;valid&&offset<ids.length;offset+=64){const loaded=await api<Pick<Command,'id'|'icon'>[]>('catalogIcons',ids.slice(offset,offset+64));if(valid)setIcons(current=>({...current,...Object.fromEntries(loaded.map(c=>[c.id,c.icon||'']))}));}})().catch(e=>{if(valid)toast(errorText(e),true);});

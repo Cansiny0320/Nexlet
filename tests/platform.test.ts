@@ -46,4 +46,25 @@ describe('macOS 自动回贴权限', () => {
     expect(accessibility).not.toHaveBeenCalled();
     expect(runCommand).not.toHaveBeenCalled();
   });
+
+  it('唤起优先使用原生目标，并在 Nexlet 已处于前台时保留原目标', async () => {
+    const target = vi.fn().mockResolvedValueOnce({ pid: 321 }).mockResolvedValueOnce(null);
+    const platform = new Platform(() => undefined, target);
+    await platform.rememberTarget();
+    expect(platform.target).toEqual({ pid: 321 });
+    await platform.rememberTarget();
+    expect(platform.target).toEqual({ pid: 321 });
+    expect(runCommand).not.toHaveBeenCalled();
+    expect(accessibility).not.toHaveBeenCalled();
+  });
+
+  it('原生读取失败后回退 JXA，并忽略本进程目标', async () => {
+    const platform = new Platform(() => undefined, async () => { throw Error('native unavailable'); });
+    runCommand.mockResolvedValueOnce({ stdout: '{"pid":123}' });
+    await platform.rememberTarget();
+    expect(platform.target).toEqual({ pid: 123 });
+    runCommand.mockResolvedValueOnce({ stdout: JSON.stringify({ pid: process.pid }) });
+    await platform.rememberTarget();
+    expect(platform.target).toEqual({ pid: 123 });
+  });
 });

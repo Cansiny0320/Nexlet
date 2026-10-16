@@ -10,7 +10,7 @@ import { PanelTrigger } from './panel-trigger';
 import { SelectionService } from './selection';
 import { SelectionPlatform } from './selection-platform';
 import { SuperPanelController } from './super-panel';
-import type { LaunchInput } from '../shared/launch';
+import type { LaunchInput, SearchResponse } from '../shared/launch';
 import { ShortcutManager, type ShortcutBinding } from './shortcut-manager';
 import { validateWebShortcut, resolveWebShortcut, webSearchCommands } from '../shared/web-shortcuts';
 import { ToolHandoffs } from './tool-handoff';
@@ -68,7 +68,10 @@ async function bootstrap() {
   const nativeDrags=new WeakMap<BrowserWindow,()=>boolean>();
   const html=path.join(__dirname,'../renderer/index.html');
   const notify=(event='state')=>{for(const window of hosts.values())if(!window.isDestroyed())window.webContents.send('host-change',event);if(event==='state')panel?.refresh();};
-  const platform=new Platform(()=>main?.getNativeWindowHandle());
+  const platform:Platform=new Platform(()=>main?.getNativeWindowHandle(),async()=>{
+    if(selectionPlatform.error)throw Error(selectionPlatform.error);
+    return selectionPlatform.target();
+  });
   const clips=new ClipboardService(store,platform,()=>notify('clips'));
   const catalog=new Catalog(()=>notify());
   const registry=new CommandRegistry(store,ids=>catalog.resolveIds(ids));
@@ -109,7 +112,7 @@ async function bootstrap() {
     const window=new BrowserWindow({width:420,height:430,minWidth:300,minHeight:220,show:false,frame:false,resizable:false,skipTaskbar:true,alwaysOnTop:true,backgroundColor:'#f4f4f4',title:t("Nexlet · 超级面板"),icon:appIcon,webPreferences:{preload:path.join(__dirname,'../preload/host.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,spellcheck:false}});
     const owner=window.webContents.id;hosts.set(owner,window);views.set(window.id,'superpanel');
     window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',e=>e.preventDefault());window.webContents.on('will-attach-webview',e=>e.preventDefault());
-    window.on('closed',()=>{hosts.delete(owner);views.delete(window.id);rendererBusy.delete(window.id);inputs.forget(owner);matcher.cancel(owner);});
+    window.on('closed',()=>{hosts.delete(owner);views.delete(window.id);rendererBusy.delete(window.id);inputs.forget(owner);matcher.forget(owner);});
     await window.loadFile(html,{query:{panel:'1'}});return window;
   }
   panelTrigger=new PanelTrigger(message=>{
@@ -124,7 +127,7 @@ async function bootstrap() {
     beforeOpen:()=>windowActions.remember(),
     create:createPanelWindow,config:()=>panelConfig.read(),status:()=>panelTrigger.read(),commands:()=>registry.commands(sourceCommands()),theme:()=>store.settings().theme,
     busy:()=>Object.values(hotkeyState()).some(Boolean),changed:()=>{panelTrigger.setPanel(panel.window?.isVisible()?panel.window.getBounds():null);notify();},
-    matches:async(owner,input)=>{const current=await state();const result=await matcher.search(owner,current.commands,input,'',current.recent);const web=input.type==='text'?current.settings.webShortcuts.filter(w=>w.type==='search'&&registry.enabled('web:'+w.id)).map(w=>({id:'web:'+w.id,name:w.name,subtitle:t("搜索当前选区"),kind:'web' as const,keywords:[],color:'#3188ef',inputId:input.id})):[];return [...result.matches.filter(c=>registry.enabled(c.id)),...web];},
+    matches:async(owner,input)=>{const current=searchState();const result=await matcher.search(owner,current.commands,input,'',current.recent);const web=input.type==='text'?current.settings.webShortcuts.filter(w=>w.type==='search'&&registry.enabled('web:'+w.id,current.config)).map(w=>({id:'web:'+w.id,name:w.name,subtitle:t("搜索当前选区"),kind:'web' as const,keywords:[],color:'#3188ef',inputId:input.id})):[];return [...result.matches.filter(c=>registry.enabled(c.id,current.config)),...web];},
     execute:async(owner,id,input)=>{
       if(Object.values(hotkeyState()).some(Boolean))throw Error(t("正在处理其他操作，请稍后重试"));
       if(input)inputs.transfer(owner.webContents.id,main.webContents.id,input.id);
@@ -149,7 +152,7 @@ async function bootstrap() {
     focusOnRestore(window);
     window.once('ready-to-show',()=>{if(!initiallyHidden)revealWindow(window);});
     window.on('close',event=>{if(!detached && !quitting){event.preventDefault();window.hide();}});
-    window.on('closed',()=>{toolHandoffs.forget(contentsId);hosts.delete(contentsId);rendererBusy.delete(windowId);views.delete(windowId);boards.delete(contentsId);files.forget(contentsId);inputs.forget(contentsId);matcher.cancel(contentsId);});
+    window.on('closed',()=>{toolHandoffs.forget(contentsId);hosts.delete(contentsId);rendererBusy.delete(windowId);views.delete(windowId);boards.delete(contentsId);files.forget(contentsId);inputs.forget(contentsId);matcher.forget(contentsId);});
     window.on('blur',()=>{if(!detached && !testMode && !modalCount && store.settings().hideOnBlur && views.get(window.id)==='launcher')window.hide();});
     window.on('unresponsive',()=>notify('error:'+t("界面暂时无响应，请等待或从托盘重新打开")));
     void window.loadFile(html,{query:{view,detached:detached?'1':'0',board:ids.length?'1':'0',transfer}});
@@ -191,13 +194,18 @@ async function bootstrap() {
   async function state():Promise<AppState> {
     const settings=store.settings();
     syncShortcuts();
-    const commandCatalog=registry.commands(sourceCommands(settings),true),commands=commandCatalog.filter(c=>registry.enabled(c.id));
+    const config=registry.read();
+    const commandCatalog=registry.commands(sourceCommands(settings),true,config),commands=commandCatalog.filter(c=>registry.enabled(c.id,config));
     const pinned=catalog.resolveIds(registry.pinned());
     const recent=catalog.resolveIds(store.get<string[]>('recent',[]));
     const visibleIds=new Set([...pinned,...recent.slice(0,18)]);
     const decorated=await catalog.withIcons(commands.filter(c=>visibleIds.has(c.id)));
     const icons=new Map(decorated.map(c=>[c.id,c.icon]));
     return {panelConfig:panelConfig.read(),panelStatus:panelTrigger.read(),commandConfig:registry.read(),commandCatalog,shortcutStatuses:shortcuts.statuses(),update:updates.read(),version:app.getVersion(),platform:process.platform,settings,startup:startup.read(),pinned,recent,commands:commands.map(c=>({...c,icon:icons.get(c.id)||c.icon})),plugins:plugins.records(),shortcutError,catalogLoading:catalog.loading,nativeStatus:platform.status||clips.error,canPaste:!!platform.target};
+  }
+  function searchState(){
+    const settings=store.settings(),config=registry.read();
+    return {settings,config,commands:registry.commands(sourceCommands(settings),false,config),recent:catalog.resolveIds(store.get<string[]>('recent',[]))};
   }
   function recordRecent(id:string) {store.set('recent',[id,...catalog.resolveIds(store.get<string[]>('recent',[])).filter(v=>v!==id)].slice(0,60));notify();}
   async function withDialog<T>(callback:()=>Promise<T>):Promise<T>{modalCount++;plugins.runtime.suspend(true);try{return await callback();}finally{modalCount--;plugins.runtime.suspend(modalCount>0);}}
@@ -294,15 +302,20 @@ async function bootstrap() {
       case 'updateInstall':await updates.install();return true;
       case 'updatePortable':await shell.openExternal(updates.downloadUrl());return true;
       case 'search':{
-        if(typeof payload==='string'){const current=await state();return catalog.withIcons(searchCommands(current.commands,text(payload,1024),current.recent));}
+        if(typeof payload==='string'){const current=searchState();return catalog.withIcons(searchCommands(current.commands,text(payload,1024),current.recent));}
         const args=inputObject(payload),query=text(args.query,INPUT_TEXT_LIMIT);
         const input=args.inputId?inputs.get(event.sender.id,args.inputId).input:inputs.setText(event.sender.id,query,args.from==='paste'?'paste':'input');
-        const current=await state();
+        const current=searchState();
         inputs.get(event.sender.id,input.id);
-        const result=await matcher.search(event.sender.id,current.commands,input,query,current.recent);
-        result.matches=result.matches.filter(c=>registry.enabled(c.id));
-        if(!args.inputId){const aliases=Object.fromEntries(Object.entries(registry.read().commands).map(([id,p])=>[id,p.aliases||[]]));const web=webSearchCommands(current.settings.webShortcuts,query,aliases).filter(c=>registry.enabled(c.id));const webIds=new Set(web.map(c=>c.id));result.results=[...web,...result.results.filter(c=>!webIds.has(c.id))];}
-        result.results=await catalog.withIcons(result.results);return result;
+        const aliases=Object.fromEntries(Object.entries(current.config.commands).map(([id,p])=>[id,p.aliases||[]]));
+        const web=args.inputId?[]:webSearchCommands(current.settings.webShortcuts,query,aliases).filter(c=>registry.enabled(c.id,current.config));
+        const webIds=new Set(web.map(c=>c.id));
+        const decorate=(result:SearchResponse):SearchResponse=>({...result,matches:result.matches.filter(c=>registry.enabled(c.id,current.config)),results:[...web,...result.results.filter(c=>!webIds.has(c.id))]});
+        const requestId=typeof args.requestId==='string'?text(args.requestId,100):undefined;
+        const result=await matcher.search(event.sender.id,current.commands,input,query,current.recent,requestId?response=>{
+          if(!event.sender.isDestroyed())event.sender.send('search-progress',{requestId,response:decorate(response)});
+        }:undefined);
+        return result.cancelled?result:decorate(result);
       }
       case 'launchInput':matcher.cancel(event.sender.id);return inputs.capture(event.sender.id,payload);
       case 'clearInput':matcher.cancel(event.sender.id);inputs.clear(event.sender.id);return true;
@@ -370,6 +383,20 @@ async function bootstrap() {
       case 'startup':{if(typeof payload!=='boolean')throw new Error(t("自启动开关无效"));const result=startup.set(payload);notify();return result;}
       case 'pickSearchPath':return withDialog(async()=>{const result=await dialog.showOpenDialog(window,{properties:['openDirectory'],title:t("选择应用或快捷方式目录")});return result.canceled?null:result.filePaths[0];});
       case 'clips':{const args=payload?inputObject(payload):{};const query=typeof args.query==='string'?args.query.slice(0,1024):'';const kind=typeof args.kind==='string'?args.kind:'all';const board=boards.get(event.sender.id);return store.clips(query,kind).filter(i=>!board||board.includes(i.id));}
+      case 'clipIndex':{
+        const args=payload?inputObject(payload):{};
+        return store.clipIndex(typeof args.query==='string'?args.query.slice(0,1024):'',typeof args.kind==='string'?args.kind:'all',boards.get(event.sender.id));
+      }
+      case 'clipPage':{
+        const args=inputObject(payload),selected=ids(args.ids),board=boards.get(event.sender.id);
+        if(!Number.isSafeInteger(args.revision)||args.revision<0||board&&selected.some(id=>!board.includes(id)))throw Error(t("参数无效"));
+        return store.clipPage(selected,args.revision);
+      }
+      case 'clipDetail':{
+        const id=text(payload,150),board=boards.get(event.sender.id);
+        if(board&&!board.includes(id))throw Error(t("参数无效"));
+        return store.clip(id);
+      }
       case 'clipAction':{
         const args=inputObject(payload), operation=text(args.action,30);
         if(operation==='writeText'){await clipboard.writeText(text(args.text,2*1024*1024));return true;}

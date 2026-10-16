@@ -17,7 +17,7 @@ export class Platform {
   private linux = process.platform === 'linux' ? new LinuxPaste() : null;
   private win: Record<string, (...args: any[]) => any> | null = null;
   private macSequence: (() => number) | null | undefined;
-  constructor(private ownerHandle: () => Buffer | undefined) {
+  constructor(private ownerHandle: () => Buffer | undefined, private nativeTarget?: () => Promise<{pid:number}|null>) {
     if (process.platform === 'win32') {
       try {
         const user = koffi.load('user32.dll'), shell = koffi.load('shell32.dll'), kernel = koffi.load('kernel32.dll'), crt = koffi.load('msvcrt.dll');
@@ -65,6 +65,13 @@ export class Platform {
       const handle = this.win.foreground(); const pid = [0]; this.win.getPid(handle, pid);
       if (pid[0] && pid[0] !== process.pid) this.target = { handle, pid: pid[0] };
     } else if (process.platform === 'darwin') {
+      if (this.nativeTarget) {
+        try {
+          const target = await this.nativeTarget();
+          if (target?.pid && target.pid !== process.pid) this.target = { pid: target.pid };
+          return;
+        } catch { /* Keep the existing JXA fallback when the native bridge fails. */ }
+      }
       try {
         const result = await this.jxa('ObjC.import("AppKit"); var app=$.NSWorkspace.sharedWorkspace.frontmostApplication; JSON.stringify({pid:Number(app.processIdentifier)});');
         const target = JSON.parse(result) as PasteTarget;

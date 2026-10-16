@@ -8,13 +8,20 @@ import { searchCommands } from '../shared/search';
 import { calculate } from '../shared/calculator';
 
 interface RegexResult { matched:string[]; timedOut?:boolean; cancelled?:boolean; }
+interface RegexWorker { worker:Worker; idle?:NodeJS.Timeout; }
 export class ContentMatcher {
   private pending=new Map<number,()=>void>();
+  private workers=new Map<number,RegexWorker>();
   cancel(owner:number){this.pending.get(owner)?.();}
-  close(){for(const cancel of this.pending.values())cancel();this.pending.clear();}
-  async search(owner:number,commands:Command[],input:LaunchInput,query:string,recent:string[]):Promise<SearchResponse>{
+  private dispose(owner:number,slot:RegexWorker){
+    clearTimeout(slot.idle);
+    if(this.workers.get(owner)===slot)this.workers.delete(owner);
+    void slot.worker.terminate();
+  }
+  forget(owner:number){this.cancel(owner);const slot=this.workers.get(owner);if(slot)this.dispose(owner,slot);}
+  close(){for(const owner of new Set([...this.pending.keys(),...this.workers.keys()]))this.forget(owner);}
+  async search(owner:number,commands:Command[],input:LaunchInput,query:string,recent:string[],progress?:(value:SearchResponse)=>void):Promise<SearchResponse>{
     this.cancel(owner);
-    const response:SearchResponse={input,results:[],matches:[]};
     const content=new Set<string>(),regex:{id:string;pattern:string;flags?:string}[]=[];
     let capped=false;
     for(const command of commands)for(const rule of command.matches||[]){
@@ -22,40 +29,61 @@ export class ContentMatcher {
       if(rule.type==='regex'){if(regex.length<128)regex.push({id:command.id,pattern:rule.pattern,flags:rule.flags});else capped=true;}
       else content.add(command.id);
     }
-    if(input.type==='text'&&regex.length){
-      const result=await this.regex(owner,regex,input.text);
-      if(result.cancelled)return {...response,cancelled:true};
-      result.matched.forEach(id=>content.add(id));
-      if(result.timedOut)response.warning=t("部分内容匹配规则超时，已跳过；普通搜索仍可使用");
-    }
-    if(capped)response.warning=t("内容匹配规则较多，本次仅检查前 128 条正则规则");
     const attach=(c:Command):Command=>({...c,inputId:input.id});
-    const candidates=input.type==='text'?commands:commands.filter(c=>content.has(c.id));
-    response.results=input.type==='text'&&query.length<=1024?searchCommands(commands,query,recent).map(attach):[];
-    const ids=new Set(response.results.map(c=>c.id));
-    const matching=candidates.filter(c=>content.has(c.id)&&!ids.has(c.id));
-    const ordered=input.type!=='text'&&query.trim()?searchCommands(matching,query,recent):matching.sort((a,b)=>{
-      const ai=recent.indexOf(a.id),bi=recent.indexOf(b.id);
-      return (ai<0?Infinity:ai)-(bi<0?Infinity:bi)||a.name.localeCompare(b.name,formatLocale());
-    });
-    response.matches=ordered.slice(0,60).map(attach);
-    const builtins=builtinMatches(input);
-    response.matches.push(...(input.type!=='text'&&query.trim()?searchCommands(builtins,query):builtins).map(attach));
-    const calculationIndex=response.matches.findIndex(c=>c.id==='match:calc');
-    if(calculationIndex>0)response.matches.unshift(...response.matches.splice(calculationIndex,1));
-    return response;
+    const results=input.type==='text'&&query.length<=1024?searchCommands(commands,query,recent).map(attach):[];
+    const ids=new Set(results.map(c=>c.id)),builtins=builtinMatches(input);
+    const response=(warning?:string):SearchResponse=>{
+      const matching=commands.filter(c=>content.has(c.id)&&!ids.has(c.id));
+      const ordered=input.type!=='text'&&query.trim()?searchCommands(matching,query,recent):matching.sort((a,b)=>{
+        const ai=recent.indexOf(a.id),bi=recent.indexOf(b.id);
+        return (ai<0?Infinity:ai)-(bi<0?Infinity:bi)||a.name.localeCompare(b.name,formatLocale());
+      });
+      const matches=ordered.slice(0,60).map(attach);
+      matches.push(...(input.type!=='text'&&query.trim()?searchCommands(builtins,query):builtins).map(attach));
+      const calculationIndex=matches.findIndex(c=>c.id==='match:calc');
+      if(calculationIndex>0)matches.unshift(...matches.splice(calculationIndex,1));
+      return {input,results,matches,...(warning?{warning}:{})};
+    };
+    let warning=capped?t("内容匹配规则较多，本次仅检查前 128 条正则规则"):undefined;
+    if(input.type==='text'&&regex.length){
+      progress?.(response(warning));
+      const result=await this.regex(owner,regex,input.text);
+      if(result.cancelled)return {input,results:[],matches:[],cancelled:true};
+      result.matched.forEach(id=>content.add(id));
+      if(result.timedOut)warning=t("部分内容匹配规则超时，已跳过；普通搜索仍可使用");
+    }
+    return response(warning);
   }
   private regex(owner:number,rules:{id:string;pattern:string;flags?:string}[],text:string):Promise<RegexResult>{
     return new Promise(resolve=>{
-      const worker=new Worker(path.join(__dirname,'match-worker.cjs'),{workerData:{rules,text},resourceLimits:{maxOldGenerationSizeMb:32}});
+      let slot=this.workers.get(owner);
+      if(!slot){
+        slot={worker:new Worker(path.join(__dirname,'match-worker.cjs'),{resourceLimits:{maxOldGenerationSizeMb:32}})};
+        this.workers.set(owner,slot);
+        const current=slot;
+        // An idle worker may exit too; always retain an error listener.
+        slot.worker.on('error',()=>{if(this.workers.get(owner)===current)this.workers.delete(owner);clearTimeout(current.idle);});
+        slot.worker.on('exit',()=>{if(this.workers.get(owner)===current)this.workers.delete(owner);clearTimeout(current.idle);});
+      }
+      const current=slot,worker=slot.worker;
+      clearTimeout(slot.idle);worker.ref();
       let done=false;
-      const finish=(value:RegexResult)=>{if(done)return;done=true;clearTimeout(timer);if(this.pending.get(owner)===cancel)this.pending.delete(owner);void worker.terminate();resolve(value);};
+      const message=(value:RegexResult)=>finish(value,!value.timedOut);
+      const failed=()=>finish({matched:[],timedOut:true});
+      const finish=(value:RegexResult,reuse=false)=>{
+        if(done)return;done=true;clearTimeout(timer);
+        worker.removeListener('message',message);worker.removeListener('error',failed);worker.removeListener('exit',failed);
+        if(this.pending.get(owner)===cancel)this.pending.delete(owner);
+        if(reuse&&this.workers.get(owner)===current){
+          worker.unref();current.idle=setTimeout(()=>this.dispose(owner,current),30_000);current.idle.unref();
+        }else this.dispose(owner,current);
+        resolve(value);
+      };
       const cancel=()=>finish({matched:[],cancelled:true});
-      const timer=setTimeout(()=>finish({matched:[],timedOut:true}),1000);
+      const timer=setTimeout(failed,1000);
       this.pending.set(owner,cancel);
-      worker.once('message',result=>finish(result));
-      worker.once('error',()=>finish({matched:[],timedOut:true}));
-      worker.once('exit',()=>finish({matched:[],timedOut:true}));
+      worker.once('message',message);worker.once('error',failed);worker.once('exit',failed);
+      worker.postMessage({rules,text});
     });
   }
 }

@@ -1,26 +1,26 @@
-Nexlet 0.2.24 新增简体中文、繁体中文与 English 界面，并同步官网、文档和自有插件。
+Nexlet 0.2.25 优化唤起、搜索与剪贴板历史的响应速度，并修复计算稿纸与系统确认弹窗的交互。
 
-## 语言与交互
+## 性能与交互
 
-- 默认跟随系统，可在设置中选择语言并持久保存；主窗口、独立工具、超级面板、托盘和插件同步更新。
-- 切换语言保留输入、JSON 编辑器状态和插件会话；搜索继续支持中英文、繁体和拼音别名。
-- 本地化系统提示、日期与数字展示；保留用户内容、命令 ID 和协议值。
-- 插件 SDK 新增应用语言读取和变化通知，以及可选的本地化显示字段；旧插件保持兼容。
-- 便笺、字数统计和翻译插件提供三语版本。Ctool 跟随上游中英文，繁体回退简体；插件通过插件市场独立更新。
-- README 默认中文，公开 SDK、Linux 和插件文档提供英文、繁体版本。官网新增 /en/ 和 /zh-Hant/ 路径。
-- 包含此前已合入的更新交互修复：点击重启更新后直接进入已选择的安装流程。
+- macOS 唤起优先通过原生接口记录前台应用，减少等待；失败时保留原有回退路径。
+- 搜索先显示普通结果和内置匹配，再补充插件正则结果与图标；减少重复配置读取和 Worker 创建，旧查询的延迟结果不会覆盖新查询。
+- 剪贴板历史按页读取摘要，只渲染可见记录；展开时加载全文，保留全文搜索、完整复制、跨页多选、收藏、中转和独立窗口恢复。
+- 浏览历史时新增记录保持当前可见位置；图片展开、收起后重新计算行高。
+- 输入计算公式时优先选择计算稿纸，打开后带入原公式；调整系统操作确认弹窗的按钮顺序。
+
+同一台 Apple M3 Pro、固定合成数据、5 轮交替测试中：唤起流程中位数 67.5 → 4.0 ms，输入到搜索界面结果（含防抖）110.6 → 74.3 ms，500 条长文本历史打开 207.1 → 56.1 ms。结果依赖硬件与数据规模，不代表所有场景；启动和滚动帧间隔未显示稳定改善。完整口径见仓库 `docs/validation/interaction-performance-2026-10-16.md`。
 
 ## English
 
-Adds Simplified Chinese, Traditional Chinese and English across the desktop UI, website, public documentation and owned plugins. Language changes preserve input and plugin sessions. Ctool uses upstream English or Simplified Chinese, with Traditional Chinese falling back to Simplified Chinese. Existing plugins remain compatible.
+Improves macOS wake-up, shows search results before plugin regex matches and icons finish loading, and pages clipboard summaries with virtual scrolling. Full-text search, complete copying, multi-selection, favorites and detached-window restoration are preserved. Also prioritizes the scratchpad for formulas and carries the original expression into it.
 
 ## 下载
 
-- Windows x64：安装版 Nexlet-0.2.24-Windows-x64-Setup.exe；便携版 Nexlet-0.2.24-Windows-x64.exe。
-- Apple Silicon Mac：Nexlet-0.2.24-macOS-arm64.dmg。
-- Intel Mac：Nexlet-0.2.24-macOS-x64.dmg。
-- Linux x64：Nexlet-0.2.24-Linux-x86_64.AppImage、Nexlet-0.2.24-Linux-amd64.deb。
-- Linux arm64：Nexlet-0.2.24-Linux-arm64.AppImage、Nexlet-0.2.24-Linux-arm64.deb。
+- Windows x64：安装版 Nexlet-0.2.25-Windows-x64-Setup.exe；便携版 Nexlet-0.2.25-Windows-x64.exe。
+- Apple Silicon Mac：Nexlet-0.2.25-macOS-arm64.dmg。
+- Intel Mac：Nexlet-0.2.25-macOS-x64.dmg。
+- Linux x64：Nexlet-0.2.25-Linux-x86_64.AppImage、Nexlet-0.2.25-Linux-amd64.deb。
+- Linux arm64：Nexlet-0.2.25-Linux-arm64.AppImage、Nexlet-0.2.25-Linux-arm64.deb。
 - macOS ZIP、blockmap 与 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 
 手动安装前建议完整退出旧版。现有本地数据继续使用原用户目录。

@@ -14,6 +14,7 @@ export type ContentMatch =
   | { type:'image' }
   | { type:'files'; extensions?:string[]; fileType?:'file'|'directory'; minCount?:number; maxCount?:number };
 export interface SearchResponse { input:LaunchInput; results:Command[]; matches:Command[]; warning?:string; cancelled?:boolean; }
+export interface SearchProgress { requestId:string; response:SearchResponse; }
 export type PluginContext = { id:string; code:string; from:InputSource } & (
   { type:'text'; payload:string } |
   { type:'files'; payload:InputResource[] } |

@@ -69,4 +69,28 @@ describe('内容匹配合同',()=>{
     expect((await old).cancelled).toBe(true);
     expect((await next).matches.find(c=>c.id==='good')?.inputId).toBe('new');
   });
+
+  it('先提供普通搜索和内置匹配，再补充正则结果，复用 worker 后不会残留旧命中',async()=>{
+    const m=matcher(),updates:any[]=[];
+    const commands=[plugin('json',[{type:'regex',pattern:'^json$'}],'json'),plugin('regex-only',[{type:'regex',pattern:'^json$'}],'handler')];
+    let completed=false;
+    const first=m.search(1,commands,text('json'),'json',[],value=>{expect(completed).toBe(false);updates.push(value);});
+    expect(updates[0].results.map((c:Command)=>c.id)).toEqual(['json']);
+    expect(updates[0].matches.map((c:Command)=>c.id)).not.toContain('regex-only');
+    const result=await first;completed=true;
+    expect(result.matches.map(c=>c.id)).toContain('regex-only');
+    const next=await m.search(1,commands,text('other'),'other',[]);
+    expect(next.matches.map(c=>c.id)).not.toContain('regex-only');
+    expect(next.matches.find(c=>c.id==='match:clipboard')?.payload).toBe('other');
+  });
+
+  it('一个窗口取消查询不影响另一窗口，关闭后没有待处理 worker',async()=>{
+    const m=matcher(),commands=[plugin('slow',[{type:'regex',pattern:'^(a+)+$'}])];
+    const old=m.search(1,commands,text('a'.repeat(1000)+'!'),'a',[]);
+    const other=m.search(2,commands,text('ok'),'ok',[]);
+    m.cancel(1);
+    expect((await old).cancelled).toBe(true);
+    expect((await other).cancelled).not.toBe(true);
+    m.close();
+  });
 });
