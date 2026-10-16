@@ -6,7 +6,7 @@ import { BUILTIN_COMMANDS } from '../shared/types';
 import { MarketPanel } from './Marketplace';
 import { api,useApp,errorText,ToolIcon,IconButton } from './common';
 
-const permissionNames=():Record<string,string>=>({'clipboard.read':t("读取剪贴板"),'clipboard.write':t("写入剪贴板"),'shell.openExternal':t("打开外部链接"),'network.request':t("网络请求"),'secrets':t("插件独立加密密钥"),'files':t("读写本机文件"),'process':t("执行本机进程"),'backend':t("独立 Node.js 后台（完整本机权限）"),'browser':t("浏览器自动化"),'screen':t("屏幕采集与取色"),'input.simulate':t("模拟键盘鼠标及回贴"),'windows':t("管理插件窗口"),'notifications':t("系统通知"),'ai':t("配置和调用 AI 服务"),'services':t("账号、购买与云同步服务"),'tools':t("注册及执行后台工具"),'mcp':t("启动本机 MCP 服务"),'media':t("图像与音视频处理")});
+const permissionNames=():Record<string,string>=>({'clipboard.read':t("读取剪贴板"),'clipboard.write':t("写入剪贴板"),'shell.openExternal':t("打开外部链接"),'network.request':t("网络请求"),'secrets':t("插件独立加密密钥"),'files':t("读写本机文件"),'process':t("执行本机进程"),'backend':t("独立 Node.js 后台（完整本机权限）"),'browser':t("浏览器自动化"),'screen':t("屏幕采集与取色"),'input.simulate':t("模拟键盘鼠标及回贴"),'windows':t("管理插件窗口"),'notifications':t("系统通知"),'ai':t("配置和调用 AI 服务"),'services':t("账号、购买与云同步服务"),'tools':t("注册及执行后台工具"),'mcp':t("启动本机 MCP 服务"),'runtime.compute':t("本地计算（动态代码与 WASM）"),'media':t("图像与音视频处理")});
 export function PluginsPanel(){
   const {state,toast,dialog,navigate}=useApp();const [busy,setBusy]=useState(false),[detail,setDetail]=useState<string|null>(null),[tab,setTab]=useState<'market'|'installed'>('market');
   const install=async(development:boolean)=>{setBusy(true);try{if(await api('pluginInstall',{development}))toast(t("插件已安装，可在主搜索框中搜索指令"));}catch(e){toast(errorText(e),true);}finally{setBusy(false);}};

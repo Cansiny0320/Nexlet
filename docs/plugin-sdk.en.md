@@ -176,3 +176,5 @@ await nexlet.secrets.set('apiKey', null); // 删除
 ```
 
 `persistent: true` means system safeStorage encryption was used before writing to disk. Without system encryption, or with Linux `basic_text`, data remains only in the current session and returns `false`; clearly inform users. Detaching retains temporary secrets; exit clears them. Failure to decrypt old data rejects, so allow reentry. Never put keys in ordinary storage, logs, or URLs. Keeping data on uninstall keeps ciphertext; deleting data removes ciphertext and legacy origin grants. This protects local data at rest, but cannot stop an authorized plugin from reading its own keys.
+
+Plugin archives allow 64 MiB compressed, 128 MiB expanded and 32 MiB per file/runtime resource. Marketplace downloads and local installs share these limits. `runtime.compute` permits same-origin fetch, dynamic code, WASM and local Workers without Node, arbitrary files or direct external network access. Other plugins retain their strict CSP.

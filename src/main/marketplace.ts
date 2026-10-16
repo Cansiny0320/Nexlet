@@ -1,4 +1,5 @@
 import { t } from '../shared/i18n';
+import { PLUGIN_ARCHIVE_LIMIT } from '../shared/plugin-policy';
 import { app, net } from 'electron';
 import type { Store } from './store';
 import type { PluginManager } from './plugins';
@@ -45,7 +46,7 @@ export class Marketplace {
       this.store.set('market-index',{index,fetchedAt:Date.now()});
       const entry=index.plugins.find(e=>e.id===record.manifest.id);
       if(!entry||marketAvailability(entry,process.platform,app.getVersion(),{development:false,version:record.manifest.version}))return null;
-      const bundle=readPluginZip(await this.download(entry.download,25*1024*1024,{timeoutMs:10000,signal}));
+      const bundle=readPluginZip(await this.download(entry.download,PLUGIN_ARCHIVE_LIMIT,{timeoutMs:10000,signal}));
       if(signal.aborted||bundle.manifest.id!==entry.id||bundle.manifest.version!==entry.version||!bundle.manifest.features.some(f=>f.code===code))return null;
       return bundle;
     }catch{return null;}finally{this.pending=false;}
@@ -62,7 +63,7 @@ export class Marketplace {
       const index=await this.list(),entry=index.entries.find(e=>e.id===id);if(!entry)throw new Error(t("插件条目不存在，请刷新市场"));
       const existing=this.plugins.records().find(p=>p.manifest.id===id);
       const unavailable=marketAvailability(entry,process.platform,app.getVersion(),existing?{development:existing.development,version:existing.manifest.version}:undefined);if(unavailable)throw new Error(unavailable);
-      const bundle=readPluginZip(await this.download(entry.download,25*1024*1024));
+      const bundle=readPluginZip(await this.download(entry.download,PLUGIN_ARCHIVE_LIMIT));
       if(bundle.manifest.id!==id||bundle.manifest.version!==entry.version)throw new Error(t("插件包的 ID 或版本与市场条目不一致"));
       return this.plugins.installBundle(bundle,{source:'marketplace'});
     } finally {this.pending=false;}

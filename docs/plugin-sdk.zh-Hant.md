@@ -179,3 +179,5 @@ await nexlet.secrets.set('apiKey', null); // 删除
 ```
 
 `persistent: true` 表示經系統 safeStorage 加密後落盤；無可用系統加密或 Linux 使用 `basic_text` 時，僅在當前外掛會話內儲存並返回 `false`，外掛應明確提示使用者。分離視窗保留臨時金鑰，退出會清除；無法解密舊資料會 reject，外掛應允許重新填寫。不要把金鑰放入普通 `storage`、日誌或 URL。解除安裝保留資料時也保留密文，選擇清理資料則同時清除密文與舊版遺留的 origin 授權。此能力是本機靜態儲存保護，不能阻止已獲授權的外掛讀取自己的金鑰。
+
+外掛壓縮檔最多 64 MiB，解壓合計 128 MiB，單個檔案/執行資源 32 MiB；市集下載與本機安裝遵循相同限制。`runtime.compute` 允許同源資源 fetch、動態程式碼、WASM 與本機 Worker，不開放 Node、任意檔案或直接外網存取。普通外掛維持原有嚴格 CSP。

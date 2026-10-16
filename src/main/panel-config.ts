@@ -1,3 +1,4 @@
+import {migrateCommandId} from './command-migrations';
 import { t } from '../shared/i18n';
 import {randomUUID} from 'node:crypto';
 import {panelCommands,type PanelConfig,type PanelItem} from '../shared/super-panel';
@@ -5,7 +6,7 @@ interface Storage {get<T>(key:string,fallback:T):T;set(key:string,value:unknown)
 const label=(v:unknown,max=250)=>{if(typeof v!=='string'||!v.trim()||v.length>max||/[\0\r\n]/.test(v))throw Error(t("面板参数无效"));return v.trim();};
 export class PanelConfigStore {
  constructor(private store:Storage,private initial:()=>string[]){}
- read():PanelConfig{const saved=this.store.get<PanelConfig|null>('panel-config',null);if(saved)return saved;const config:PanelConfig={version:1,revision:0,enabled:true,mouse:'right',holdMs:200,shortcut:'',excludedApps:[],items:[...new Set(this.initial())].map(commandId=>({kind:'command',id:randomUUID(),commandId}))};this.store.set('panel-config',config);return config;}
+ read():PanelConfig{const saved=this.store.get<PanelConfig|null>('panel-config',null);if(saved){let changed=false;for(const item of panelCommands(saved.items)){const id=migrateCommandId(item.commandId);if(id!==item.commandId){item.commandId=id;changed=true;}}if(changed){saved.revision++;this.store.set('panel-config',saved);}return saved;}const config:PanelConfig={version:1,revision:0,enabled:true,mouse:'right',holdMs:200,shortcut:'',excludedApps:[],items:[...new Set(this.initial())].map(commandId=>({kind:'command',id:randomUUID(),commandId}))};this.store.set('panel-config',config);return config;}
  prepare(args:Record<string,any>):PanelConfig{
   const old=this.read();if(args.revision!==old.revision)throw Error(t("面板已在其他窗口修改，请刷新后重试"));const next=structuredClone(old);
   const find=(id:string)=>next.items.find(i=>i.id===id)||panelCommands(next.items).find(i=>i.id===id);

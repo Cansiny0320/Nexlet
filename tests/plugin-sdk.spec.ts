@@ -120,8 +120,7 @@ test('SDK capabilities operate through the sandbox bridge and clean up with thei
     const png = await sharp({ create: { width: 10, height: 8, channels: 3, background: 'red' } }).png().toBuffer();
     const image = await read(`nexlet.media.image({id:"image",data:new Uint8Array(${JSON.stringify([...png])}),operations:[{op:"resize",args:[5,4]}]}).then(x=>({width:x.info.width,height:x.info.height,bytes:x.data.byteLength}))`);
     expect(image.width).toBe(5); expect(image.height).toBe(4); expect(image.bytes).toBeGreaterThan(10);
-    const wav = path.join(directory, 'sound.wav');
-    expect(await read(`nexlet.media.ffmpeg({id:"ffmpeg",args:${JSON.stringify(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.1', '-y', wav])}}).then(x=>x.code)`)).toBe(0); expect((await readFile(wav)).length).toBeGreaterThan(100);
+    expect(await read('nexlet.media.ffmpeg({id:"ffmpeg",args:[]}).then(()=>false,e=>e.message.includes("executable"))')).toBe(true);
     await read(`nexlet.ai.configure({baseUrl:${JSON.stringify(baseUrl + '/v1')},apiKey:"fixture"})`);
     expect(await read('nexlet.ai.models({id:"models"}).then(x=>x[0].id)')).toBe('fixture');
     expect(await read('nexlet.ai.chat({id:"chat",stream:true,request:{model:"fixture",messages:[{role:"user",content:"hi"}]}}).then(x=>x.content)')).toBe('hello');

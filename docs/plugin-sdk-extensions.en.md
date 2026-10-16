@@ -16,11 +16,12 @@ These extensions retain `apiVersion: 1` and existing interfaces, adding desktop 
 | `browser` | Isolated browser, evaluation/input, cookies, proxy, cache; download/file input also needs `files` |
 | `screen` | Displays, sources, capture, region selection, color picking, coordinates |
 | `input.simulate` | Keyboard, mouse, paste-back; clipboard permissions remain separate |
-| `media` | Sharp worker, FFmpeg; FFmpeg files also need `files`, custom executable needs `process` |
+| `media` | Sharp / FFmpeg; FFmpeg: `media` + `files` + `process`, explicit `executable` |
 | `ai` | Model provider configuration, models, chat, streaming and tool-call chunks |
 | `services` | Account/license/checkout/sync provider configuration |
 | `tools` | JSON Schema validated tools backed by methods; also needs `backend` |
 | `mcp` | Explicit local MCP HTTP server; also needs `tools` and `backend` |
+| `runtime.compute` | Local computation (dynamic code, WASM and local Workers); sandboxed, without Node or direct external network access |
 
 Existing `clipboard.read`, `clipboard.write`, `shell.openExternal`, `network.request`, and `secrets` remain valid. Isolated KV, documents, dynamic commands, search UI, and application-language APIs require no additional permission. See [language integration](i18n.en.md).
 
@@ -136,10 +137,10 @@ Each frontend session allows eight browsers, navigating HTTP(S) only. Popups and
 ```ts
 const resized = await nexlet.media.image({ id: 'resize', data: pngBytes, operations: [{ op: 'resize', args: [320, 200] }], format: 'webp' });
 const metadata = await nexlet.media.image({ id: 'metadata', data: pngBytes, metadata: true });
-await nexlet.media.ffmpeg({ id: 'convert', args: ['-i', sourceFile, '-n', targetFile] });
+await nexlet.media.ffmpeg({ id: 'convert', executable: ffmpegPath, args: ['-i', sourceFile, '-n', targetFile] });
 ```
 
-Sharp runs in a utility process and supports resize, rotate, crop, borders, flip, background, blur, sharpen, threshold, color/channels, and PNG/JPEG/WebP/AVIF/TIFF/GIF output. Input/output are limited to 32 MB and input to 100 million pixels. `operations[].args` follows [Sharp parameters](https://sharp.pixelplumbing.com/api-operation/). FFmpeg runs separately; `tasks.onProgress` returns stdout/stderr, with progress enabled by `-progress pipe:1`. Bundled `ffmpeg-static` needs its executable and licenses preserved, with matching dependencies installed on the target platform. Official cross-platform packages remain unverified.
+Sharp runs in a utility process and supports resize, rotate, crop, borders, flip, background, blur, sharpen, threshold, color/channels, and PNG/JPEG/WebP/AVIF/TIFF/GIF output. Input/output are limited to 32 MB and input to 100 million pixels. `operations[].args` follows [Sharp parameters](https://sharp.pixelplumbing.com/api-operation/). FFmpeg runs separately; `tasks.onProgress` returns stdout/stderr, with progress enabled by `-progress pipe:1`. The host no longer bundles FFmpeg. Supply a local executable path explicitly and declare all three permissions: `media`, `files`, and `process`. Omitting `executable` produces an error.
 
 ## AI, tools, and MCP
 
@@ -182,3 +183,9 @@ await nexlet.services.syncPut({ id: 'save', key: 'settings', expectedVersion: cu
 ```
 
 These adapters are implemented and tested against local fixtures; they are not deployed Nexlet account, payment, licensing, or cloud-storage services. Providers must implement the contracts and enforce payments, order validity, business idempotency, and authorization. No service registration, real checkout, or transaction is part of this implementation. See the [SDK validation record](validation/plugin-sdk-2026-10-13.md).
+
+## Local compute and result handoff
+
+Plugin archives allow 64 MiB compressed, 128 MiB expanded and 32 MiB per file/runtime resource. Marketplace downloads and local installs share these limits. `runtime.compute` permits same-origin fetch, dynamic code, WASM and local Workers without Node, arbitrary files or direct external network access. Other plugins retain their strict CSP.
+
+`search.returnToLauncher(text)` closes the current plugin and passes non-empty text back to the launcher, up to 500000 characters, without additional permissions. `clipboard.snapshot()` requires `clipboard.read` and returns a session-bound, single-use token or `null`. `clipboard.writeTextIfUnchanged(token,text)` requires both clipboard permissions and writes only if the clipboard is unchanged and the token remains valid, returning a boolean. A new snapshot replaces the previous token; use or session closure invalidates it.

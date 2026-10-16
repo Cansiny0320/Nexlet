@@ -3,12 +3,16 @@ import {randomUUID} from 'node:crypto';
 import path from 'node:path';
 import {defaultCommandConfig,DEFAULT_PINNED,MATCH_TARGETS,type CommandConfig,type CommandPreference} from '../shared/command-config';
 import type {Command} from '../shared/types';
+import { migrateCommandConfig, migrateCommandIds } from './command-migrations';
 
 interface Storage {get<T>(key:string,fallback:T):T;set(key:string,value:unknown):void;}
 const string=(value:unknown,max:number)=>{if(typeof value!=='string'||value.length>max||/[\0\r\n]/.test(value))throw Error(t("文本参数无效"));return value.trim();};
 const idOf=(value:unknown)=>{const id=string(value,250);if(!id||['__proto__','constructor','prototype'].includes(id))throw Error(t("功能 ID 无效"));return id;};
 export class CommandRegistry {
-  constructor(private store:Storage,private resolveIds:(ids:string[])=>string[]=ids=>ids){}
+  constructor(private store:Storage,private resolveIds:(ids:string[])=>string[]=ids=>ids){
+    const previous=this.read(),next=migrateCommandConfig(previous);if(next!==previous)this.save(next);
+    for(const key of ['pinned','recent']){const old=this.store.get<string[]>(key,[]),mapped=migrateCommandIds(old);if(JSON.stringify(old)!==JSON.stringify(mapped))this.store.set(key,mapped);}
+  }
   read():CommandConfig{return this.store.get('command-config',defaultCommandConfig());}
   save(next:CommandConfig){this.store.set('command-config',next);}
   pinned(config=this.read()):string[]{return [...new Set(this.resolveIds(config.pinned??this.store.get('pinned',DEFAULT_PINNED)))];}

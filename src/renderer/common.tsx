@@ -1,6 +1,6 @@
 import { t } from '../shared/i18n';
 import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from 'react';
-import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Search, FileSearch, LockKeyhole, Moon, RotateCw, Power, LogOut, Monitor, SlidersHorizontal, Volume2, Wifi, Bluetooth, Battery, HardDrive, Bell, Palette, Image, Keyboard, Mouse, Printer, Accessibility, Shield, Users, Languages, ScanText } from 'lucide-react';
+import { ClipboardList, Calculator, Blocks, Globe, Braces, Clock3, Binary, Fingerprint, Settings, AppWindow, FileSymlink, Search, FileSearch, LockKeyhole, Moon, RotateCw, Power, LogOut, Monitor, SlidersHorizontal, Volume2, Wifi, Bluetooth, Battery, HardDrive, Bell, Palette, Image, Keyboard, Mouse, Printer, Accessibility, Shield, Users, Languages } from 'lucide-react';
 import type { AppState, Command, HostAction } from '../shared/types';
 import { builtInArtwork } from './tool-artwork';
 import { MATCH_TARGETS } from '../shared/command-config';
@@ -19,8 +19,7 @@ export function ToolIcon({command,size=32}:{command:Command;size?:number}){
   const icons:Record<string,typeof ClipboardList>={clipboard:ClipboardList,scratchpad:Calculator,plugins:Blocks,web:Globe,json:Braces,filesearch:FileSearch,timestamp:Clock3,encoding:Binary,uuid:Fingerprint,settings:Settings,plugin:Blocks,app:AppWindow,shortcut:FileSymlink,match:Search};
   const systemIcons:Record<string,typeof Settings>={lock:LockKeyhole,sleep:Moon,restart:RotateCw,shutdown:Power,logout:LogOut,desktop:Monitor};
   const settingIcons:Record<string,typeof Settings>={display:Monitor,sound:Volume2,network:Globe,wifi:Wifi,bluetooth:Bluetooth,power:Battery,storage:HardDrive,notifications:Bell,appearance:Palette,colors:Palette,themes:Palette,wallpaper:Image,desktop:Monitor,keyboard:Keyboard,mouse:Mouse,printers:Printer,accessibility:Accessibility,privacy:Shield,security:Shield,users:Users,account:Users,update:RotateCw,datetime:Clock3,language:Languages,focus:Moon,lockscreen:LockKeyhole,spotlight:Search};
-  const ocrIcons:Record<string,typeof ScanText>={'capture:ocr':ScanText,'capture:ocr-copy':ScanText,'tool:ocr':ScanText,'ocr:image-copy':ScanText};
-  const Icon=ocrIcons[command.id]||(command.kind==='system'?(command.id.startsWith('system:action:')?systemIcons[command.id.slice(14)]||SlidersHorizontal:settingIcons[command.id.slice('system:settings:'.length)]||SlidersHorizontal):icons[key]||AppWindow);
+  const Icon=(command.kind==='system'?(command.id.startsWith('system:action:')?systemIcons[command.id.slice(14)]||SlidersHorizontal:settingIcons[command.id.slice('system:settings:'.length)]||SlidersHorizontal):icons[key]||AppWindow);
   return <span className="tool-icon" style={{background:command.color||'#648fe5',width:size,height:size}}><Icon size={size*.72} strokeWidth={1.9}/></span>;
 }
 export function IconButton({title,children,onClick,disabled=false,active=false,className=''}:{title:string;children:ReactNode;onClick?:()=>void;disabled?:boolean;active?:boolean;className?:string}){return <button type="button" aria-label={title} title={title} disabled={disabled} className={`icon-button ${active?'active':''} ${className}`} onClick={onClick}>{children}</button>;}

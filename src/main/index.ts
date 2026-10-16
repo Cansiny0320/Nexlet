@@ -45,7 +45,7 @@ import { searchCommands } from '../shared/search';
 
 const testMode = process.env.NEXLET_TEST_MODE === '1';
 if (process.env.NEXLET_USER_DATA) { const directory=path.resolve(process.env.NEXLET_USER_DATA); mkdirSync(directory,{recursive:true}); app.setPath('userData',directory); }
-protocol.registerSchemesAsPrivileged([{scheme:'nexlet-ocr',privileges:{standard:true,secure:true,supportFetchAPI:true}},{scheme:'nexlet-plugin',privileges:{standard:true,secure:true,supportFetchAPI:true}},{scheme:'nexlet-image',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
+protocol.registerSchemesAsPrivileged([{scheme:'nexlet-plugin',privileges:{standard:true,secure:true,supportFetchAPI:true}},{scheme:'nexlet-image',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
 if(testMode)app.commandLine.appendSwitch('force-device-scale-factor','1');
 app.setName('Nexlet');
 if(process.platform==='linux')app.setDesktopName(LINUX_DESKTOP_NAME);
@@ -85,11 +85,12 @@ async function bootstrap() {
   const inputs=new LaunchInputs(bytes=>{const image=nativeImage.createFromBuffer(bytes);return image.isEmpty()?{width:0,height:0}:image.getSize();});
   const matcher=new ContentMatcher();
   const plugins=new PluginManager(store,notify,inputs,platform);
-  const unpacked=(file:string)=>app.isPackaged?file.replace(/app\.asar([/\\])/,'app.asar.unpacked$1'):file;
-  const desktopTools=new DesktopTools(html,unpacked(path.join(__dirname,'../../assets/vendor/ocr')),{
-    sequence:()=>platform.sequence(),theme:()=>store.settings().theme,enabled:id=>registry.assertEnabled(id),
-    launcher:async value=>{await plugins.runtime.exitWindow(main);const input=typeof value==='string'?inputs.setText(main.webContents.id,value,'input'):await inputs.captureImage(main.webContents.id,value);revealWindow(main);main.webContents.send('host-change','selection-input:'+input.id);}
+  const returnToLauncher=async(value:Buffer|string)=>{await plugins.runtime.exitWindow(main);const input=typeof value==='string'?inputs.setText(main.webContents.id,value,'input'):await inputs.captureImage(main.webContents.id,value);revealWindow(main);main.webContents.send('host-change','selection-input:'+input.id);views.set(main.id,'launcher');main.webContents.send('host-change','plugin-changed');};
+  const desktopTools=new DesktopTools(html,{
+    theme:()=>store.settings().theme,enabled:id=>registry.assertEnabled(id),
+    launcher:value=>returnToLauncher(value)
   });
+  plugins.returnToLauncher=returnToLauncher;
   const marketplace=new Marketplace(store,plugins);
   plugins.updateOnLaunch=(record,code,signal)=>marketplace.prepareUpdate(record,code,signal);
   const files=new EverythingSearch(()=>store.settings().fileSearchPaths);
@@ -219,13 +220,13 @@ async function bootstrap() {
     if(id.startsWith('window:')){if(process.platform==='linux')throw Error(t("Linux 暂不支持外部窗口布局"));const result=windowActions.execute(id.slice(7));window.hide();if(result.warning)notify('error:'+result.warning);recordRecent(id);return {opened:true};}
     const snapshot=args.inputId?inputs.get(window.webContents.id,args.inputId):undefined;
     const content=snapshot?.input.type==='text'?snapshot.input.text:typeof args.payload==='string'?text(args.payload,INPUT_TEXT_LIMIT):'';
-    if(id.startsWith('capture:')){if(!['capture:region','capture:screen','capture:ocr','capture:ocr-copy'].includes(id))throw Error(t("截图功能不存在"));await desktopTools.screenshot(id==='capture:screen'?'screen':'region',id==='capture:ocr'?'ocr':id==='capture:ocr-copy'?'ocr-copy':'launcher');recordRecent(id);return {opened:true};}
-    if(['tool:ocr','ocr:image-copy','image:pin'].includes(id)){
+    if(id.startsWith('capture:')){if(!['capture:region','capture:screen'].includes(id))throw Error(t("截图功能不存在"));await desktopTools.screenshot(id==='capture:screen'?'screen':'region','launcher');recordRecent(id);return {opened:true};}
+    if(id==='image:pin'){
       let bytes:Buffer|undefined;
       if(snapshot?.input.type==='image')bytes=Buffer.from(await inputs.readResource(snapshot,snapshot.input.image.id));
       else if(snapshot?.input.type==='files'&&snapshot.input.files.length===1&&!snapshot.input.files[0].isDirectory)bytes=Buffer.from(await inputs.readResource(snapshot,snapshot.input.files[0].id));
-      else if(id!=='tool:ocr'){const image=(await clipboard.read()).find(item=>item.types.includes('image/png'));if(image){const blob=await image.getType('image/png');if(blob instanceof Blob)bytes=Buffer.from(await blob.arrayBuffer());}}
-      if(id==='image:pin'){if(!bytes)throw Error(t("请先粘贴或拖入图片，再选择贴图"));await desktopTools.pin(bytes);}else await desktopTools.openOcr(bytes,id==='ocr:image-copy');
+      else{const image=(await clipboard.read()).find(item=>item.types.includes('image/png'));if(image){const blob=await image.getType('image/png');if(blob instanceof Blob)bytes=Buffer.from(await blob.arrayBuffer());}}
+      if(!bytes)throw Error(t("请先粘贴或拖入图片，再选择贴图"));await desktopTools.pin(bytes);
       window.hide();recordRecent(id);return {opened:true};
     }
     if(id==='input:url'){const url=new URL(text(content.trim(),2048));if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error(t("链接无效"));await shell.openExternal(url.href);window.hide();return {opened:true};}

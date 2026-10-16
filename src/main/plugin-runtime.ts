@@ -1,17 +1,17 @@
 import { localizedLabels } from '../shared/plugin-locales';
 import { t } from '../shared/i18n';
 import { BrowserWindow, WebContentsView, session, type Session } from 'electron';
-import { realpath, readFile } from 'node:fs/promises';
+import { realpath, open } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { safeEntryPath } from '../shared/plugin-validation';
+import { pluginCsp, PLUGIN_FILE_LIMIT } from '../shared/plugin-policy';
 import { inputContext, type LaunchInput } from '../shared/launch';
 import type { PluginRecord, PluginSessionState } from '../shared/types';
 import type { InputSnapshot, LaunchInputs } from './launch-input';
 import { revealWindow } from './window-visibility';
 
-const MIME:Record<string,string>={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.jpg':'image/jpeg','.woff2':'font/woff2'};
-const CSP="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+const MIME:Record<string,string>={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.wasm':'application/wasm','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.jpg':'image/jpeg','.woff2':'font/woff2'};
 export interface PluginHost { main:()=>BrowserWindow; createDetached:()=>BrowserWindow; changed:(window:BrowserWindow)=>void; error:(message:string)=>void; }
 interface RunningPlugin {
   record:PluginRecord; view:WebContentsView; owner:BrowserWindow; detached:boolean; isolated:Session;
@@ -93,8 +93,9 @@ export class PluginRuntime {
         const url=new URL(request.url);if(url.hostname!==id)throw new Error(t("来源不符"));
         const directory=await root,relative=safeEntryPath(decodeURIComponent(url.pathname.slice(1))),file=await realpath(path.join(directory,relative)),relation=path.relative(directory,file);
         if(relation.startsWith('..')||path.isAbsolute(relation))throw new Error(t("资源不在插件目录中"));
-        const bytes=await readFile(file);if(bytes.length>10*1024*1024)throw new Error(t("文件过大"));
-        return new Response(bytes,{headers:{'Content-Type':MIME[path.extname(file)]||'application/octet-stream','Content-Security-Policy':CSP,'X-Content-Type-Options':'nosniff'}});
+        const handle=await open(file,'r');let bytes:Buffer<ArrayBuffer>;
+        try{const info=await handle.stat();if(!info.isFile()||info.size>PLUGIN_FILE_LIMIT)throw new Error(t("文件过大"));bytes=Buffer.alloc(info.size+1);let bytesRead=0;while(bytesRead<bytes.length){const part=await handle.read(bytes,bytesRead,bytes.length-bytesRead,bytesRead);if(!part.bytesRead)break;bytesRead+=part.bytesRead;}if(bytesRead!==info.size)throw new Error(t("文件过大"));bytes=bytes.subarray(0,bytesRead);}finally{await handle.close();}
+        return new Response(bytes,{headers:{'Content-Type':MIME[path.extname(file)]||'application/octet-stream','Content-Security-Policy':pluginCsp(record.manifest.permissions),'X-Content-Type-Options':'nosniff'}});
       }catch{return new Response(t("无法读取插件资源"),{status:403});}
     });
     const view=new WebContentsView({webPreferences:{preload:path.join(__dirname,'../preload/plugin.cjs'),partition,sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,spellcheck:false}});

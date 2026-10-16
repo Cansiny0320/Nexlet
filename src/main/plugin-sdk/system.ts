@@ -3,6 +3,8 @@ import { app, nativeTheme, shell, dialog, Notification, clipboard, ClipboardItem
 import { open, writeFile, stat, readdir, mkdir, rename, copyFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { createHash } from 'node:crypto';
+import { ClipboardGuard } from './clipboard-guard';
 import type { Platform } from '../platform';
 import { object, string, type SdkContext } from './context';
 import { runProcess, type ProcessRequest } from './process';
@@ -11,9 +13,25 @@ import type { PluginTasks } from './tasks';
 const PATHS = ['home', 'appData', 'userData', 'temp', 'exe', 'desktop', 'documents', 'downloads', 'music', 'pictures', 'videos', 'logs'] as const;
 export class PluginSystem {
   private notifications = new Map<number, Set<Notification>>();
+  private clipboardGuard = new ClipboardGuard(async () => {
+    const sequence = this.platform.sequence();
+    if (sequence !== null) return String(sequence);
+    const hash = createHash('sha256'); let total = 0;
+    for (const item of await clipboard.read()) for (const type of [...item.types].sort()) {
+      hash.update(type); const value = await item.getType(type);
+      if (value instanceof Blob) { total += value.size; if (total > 64 * 1024 * 1024) return null; hash.update(Buffer.from(await value.arrayBuffer())); }
+      else hash.update(JSON.stringify(value));
+    }
+    return hash.digest('hex');
+  }, text => clipboard.writeText(text));
   constructor(private tasks: PluginTasks, private platform: Platform) {}
   async invoke(context: SdkContext, method: string, value: unknown): Promise<unknown> {
     const args = () => object(value);
+    if (method === 'clipboard.snapshot') { context.require('clipboard.read'); return this.clipboardGuard.snapshot(context.contents.id); }
+    if (method === 'clipboard.writeTextIfUnchanged') {
+      context.require('clipboard.read'); context.require('clipboard.write'); const a = args();
+      return this.clipboardGuard.write(context.contents.id, string(a.token, 100), string(a.text, 500000));
+    }
     if (method === 'system.info') return { platform: process.platform, arch: process.arch, release: os.release(), version: app.getVersion(), electron: process.versions.electron, locale: app.getLocale(), dark: nativeTheme.shouldUseDarkColors, packaged: app.isPackaged };
     if (method === 'system.path') {
       context.require('files'); const name = string(value) as typeof PATHS[number];
@@ -96,6 +114,6 @@ export class PluginSystem {
     }
     throw new Error(t("不支持的系统 API"));
   }
-  closeSession(owner: number): void { for (const notification of this.notifications.get(owner) ?? []) notification.close(); this.notifications.delete(owner); }
+  closeSession(owner: number): void { this.clipboardGuard.close(owner); for (const notification of this.notifications.get(owner) ?? []) notification.close(); this.notifications.delete(owner); }
   close(): void { for (const owner of this.notifications.keys()) this.closeSession(owner); }
 }

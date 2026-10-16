@@ -1492,5 +1492,8 @@
   "{{v0}} 项_one": "{{v0}} item",
   "{{v0}} 项_other": "{{v0}} items",
   "原应用已关闭": "The original app has closed",
-  "在{{v0}}中打开": "Open in {{v0}}"
+  "在{{v0}}中打开": "Open in {{v0}}",
+  "Nexlet 不再内置 FFmpeg，请通过 executable 指定本机 FFmpeg 路径": "Nexlet no longer bundles FFmpeg. Specify a local FFmpeg path with executable.",
+  "本地计算（动态代码与 WASM）": "Local computation (dynamic code and WASM)",
+  "插件压缩包不能超过 64 MB": "Plugin archive must not exceed 64 MB"
 }

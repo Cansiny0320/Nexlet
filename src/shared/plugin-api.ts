@@ -1,5 +1,5 @@
 /** Public extension contract. No dependency on the host renderer API. */
-export const SDK_PERMISSIONS = ['files', 'process', 'backend', 'browser', 'screen', 'input.simulate', 'windows', 'notifications', 'ai', 'services', 'tools', 'mcp', 'media'] as const;
+export const SDK_PERMISSIONS = ['files', 'process', 'backend', 'browser', 'screen', 'input.simulate', 'windows', 'notifications', 'ai', 'services', 'tools', 'mcp', 'media', 'runtime.compute'] as const;
 export type SdkPermission = typeof SDK_PERMISSIONS[number];
 export type SdkJson = null | boolean | number | string | SdkJson[] | { [key: string]: SdkJson };
 export interface TaskOptions { id: string; timeoutMs?: number; }
@@ -29,6 +29,7 @@ export interface PluginSdkExtensions {
     redirect(options: { pluginId: string; code: string; payload?: string }): Promise<true>;
   };
   search: {
+    returnToLauncher(text: string): Promise<true>;
     set(options: { text?: string; placeholder?: string; visible?: boolean }): Promise<true>;
     results(results: { id: string; title: string; description?: string }[]): Promise<true>;
     onChange(callback: (event: { text: string }) => void): () => void;
@@ -118,6 +119,8 @@ export interface PluginInputExtensions {
   drag(options: { files: string[]; icon?: string }): Promise<true>;
 }
 export interface PluginClipboardExtensions {
+  snapshot(): Promise<string | null>;
+  writeTextIfUnchanged(token: string, text: string): Promise<boolean>;
   readImage(): Promise<Uint8Array | null>; writeImage(data: Uint8Array): Promise<true>;
   readFiles(): Promise<string[]>; writeFiles(files: string[]): Promise<true>;
 }

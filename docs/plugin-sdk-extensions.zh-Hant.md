@@ -16,11 +16,12 @@
 | `browser` | 獨立瀏覽器、頁面求值/輸入、cookie、代理、快取；下載與檔案輸入另需 `files` |
 | `screen` | 顯示器、截圖來源、截圖、區域選擇、取色、座標 |
 | `input.simulate` | 鍵盤、滑鼠、回貼；剪貼簿讀寫仍需原許可權 |
-| `media` | Sharp 影象 worker、FFmpeg；FFmpeg 檔案處理另需 `files`，自定義可執行檔案另需 `process` |
+| `media` | Sharp 影像 worker、FFmpeg；FFmpeg 需要 `media`、`files`、`process` 以及明確指定 `executable` |
 | `ai` | 配置模型 provider、模型列表、chat、流式輸出和工具呼叫片段 |
 | `services` | 配置賬號/授權/checkout/同步 provider |
 | `tools` | 註冊 JSON Schema 校驗的工具並呼叫後臺方法，另需 `backend` |
 | `mcp` | 顯式啟動本機 MCP HTTP 服務，另需 `tools`、`backend` |
+| `runtime.compute` | 本機運算（動態程式碼、WASM 與本機 Worker）；保留沙箱，無 Node 或直接外網存取 |
 
 舊的 `clipboard.read`、`clipboard.write`、`shell.openExternal`、`network.request`、`secrets` 繼續有效。獨立 KV、文件資料庫、當前外掛的動態功能和搜尋 UI 不需額外許可權。
 
@@ -136,10 +137,10 @@ await nexlet.browser.close(browser);
 ```ts
 const resized = await nexlet.media.image({ id: 'resize', data: pngBytes, operations: [{ op: 'resize', args: [320, 200] }], format: 'webp' });
 const metadata = await nexlet.media.image({ id: 'metadata', data: pngBytes, metadata: true });
-await nexlet.media.ffmpeg({ id: 'convert', args: ['-i', sourceFile, '-n', targetFile] });
+await nexlet.media.ffmpeg({ id: 'convert', executable: ffmpegPath, args: ['-i', sourceFile, '-n', targetFile] });
 ```
 
-Sharp 在 utility process 執行，支援縮放、旋轉、裁剪、邊框、翻轉、背景、模糊、銳化、閾值、色彩/通道操作及 PNG/JPEG/WebP/AVIF/TIFF/GIF 輸出。輸入/輸出最多 32 MB，輸入限制 1 億畫素。`operations[].args` 使用相應 [Sharp 官方引數](https://sharp.pixelplumbing.com/api-operation/)。FFmpeg 透過獨立程序執行，`tasks.onProgress` 返回 stdout/stderr；進度啟用 `-progress pipe:1`。自帶 `ffmpeg-static`，打包需保留其可執行檔案和許可檔案，必須在目標平臺安裝匹配的依賴；正式跨平臺產物尚未驗證。
+Sharp 在 utility process 執行，支援縮放、旋轉、裁剪、邊框、翻轉、背景、模糊、銳化、閾值、色彩/通道操作及 PNG/JPEG/WebP/AVIF/TIFF/GIF 輸出。輸入/輸出最多 32 MB，輸入限制 1 億畫素。`operations[].args` 使用相應 [Sharp 官方引數](https://sharp.pixelplumbing.com/api-operation/)。FFmpeg 透過獨立程序執行，`tasks.onProgress` 返回 stdout/stderr；進度啟用 `-progress pipe:1`。宿主不再內建 FFmpeg；必須透過 `executable` 提供本機路徑，並同時宣告 `media`、`files`、`process` 權限。省略路徑時明確報錯。
 
 ## AI、工具與 MCP
 
@@ -184,3 +185,9 @@ await nexlet.services.syncPut({ id: 'save', key: 'settings', expectedVersion: cu
 這些是已實現並經本地 fixture 驗證的適配協議，不是已經部署的 Nexlet 賬號、支付、授權或雲端儲存服務。實際供應商需要實現上述合同；付款、訂單真實性、業務冪等與授權最終判定由服務負責。本次沒有註冊服務、建立真實 checkout 或發生交易。
 
 驗證範圍見 [SDK 驗證記錄](validation/plugin-sdk-2026-10-13.md)。
+
+## 本機運算與結果返回
+
+外掛壓縮檔最多 64 MiB，解壓合計 128 MiB，單個檔案/執行資源 32 MiB；市集下載與本機安裝遵循相同限制。`runtime.compute` 允許同源資源 fetch、動態程式碼、WASM 與本機 Worker，不開放 Node、任意檔案或直接外網存取。普通外掛維持原有嚴格 CSP。
+
+`search.returnToLauncher(text)` 關閉目前外掛並將非空文字送回啟動器繼續處理，最多 500000 字元，不需額外權限。`clipboard.snapshot()` 需要 `clipboard.read`，返回繫結工作階段的一次性 token 或 `null`；`clipboard.writeTextIfUnchanged(token,text)` 需要讀寫兩項權限，僅在剪貼簿未改變且 token 仍有效時寫入，返回 boolean。新快照取代舊 token，使用或關閉工作階段後失效。

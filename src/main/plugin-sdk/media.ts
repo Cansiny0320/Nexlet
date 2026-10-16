@@ -1,7 +1,6 @@
 import { t, currentLocale } from '../../shared/i18n';
 import { utilityProcess } from 'electron';
 import path from 'node:path';
-import ffmpegPath from 'ffmpeg-static';
 import { object, string, type SdkContext } from './context';
 import type { PluginTasks } from './tasks';
 import { runProcess } from './process';
@@ -19,9 +18,9 @@ export class PluginMedia {
       });
       if (method === 'media.ffmpeg') {
         context.require('files');
-        if (args.executable !== undefined) context.require('process');
-        const executable = args.executable === undefined ? ffmpegPath : string(args.executable);
-        if (!executable) throw new Error(t("当前平台没有 FFmpeg 可执行文件"));
+        if (args.executable === undefined) throw new Error(t("Nexlet 不再内置 FFmpeg，请通过 executable 指定本机 FFmpeg 路径"));
+        context.require('process');
+        const executable = string(args.executable);
         if (!Array.isArray(args.args) || args.args.some(arg => typeof arg !== 'string')) throw new Error(t("FFmpeg 参数无效"));
         return runProcess({ executable: executable.replace(/app\.asar([/\\])/, 'app.asar.unpacked$1'), args: ['-nostdin', '-progress', 'pipe:1', '-nostats', ...args.args], cwd: typeof args.cwd === 'string' ? args.cwd : undefined }, signal, value => context.emit('progress', { id, value }));
       }

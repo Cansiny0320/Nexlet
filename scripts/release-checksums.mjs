@@ -22,7 +22,8 @@ const required = [
   'latest-linux-arm64.yml',
   'latest.yml',
   'latest-mac.yml',
-  'hello-nexlet.nexlet'
+  'hello-nexlet.nexlet',
+  'nexlet-ocr.nexlet'
 ].sort();
 const files = (await readdir(folder)).filter(name => name !== 'SHA256SUMS.txt').sort();
 if (JSON.stringify(files) !== JSON.stringify(required)) throw Error(`Unexpected release files: ${files.join(', ')}`);

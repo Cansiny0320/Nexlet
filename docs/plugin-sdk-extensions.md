@@ -16,11 +16,12 @@
 | `browser` | 独立浏览器、页面求值/输入、cookie、代理、缓存；下载与文件输入另需 `files` |
 | `screen` | 显示器、截图来源、截屏、区域选择、取色、坐标 |
 | `input.simulate` | 键盘、鼠标、回贴；剪贴板读写仍需原权限 |
-| `media` | Sharp 图像 worker、FFmpeg；FFmpeg 文件处理另需 `files`，自定义可执行文件另需 `process` |
+| `media` | Sharp 图像 worker、FFmpeg；FFmpeg 需要 `media`、`files`、`process` 以及显式 `executable` |
 | `ai` | 配置模型 provider、模型列表、chat、流式输出和工具调用片段 |
 | `services` | 配置账号/授权/checkout/同步 provider |
 | `tools` | 注册 JSON Schema 校验的工具并调用后台方法，另需 `backend` |
 | `mcp` | 显式启动本机 MCP HTTP 服务，另需 `tools`、`backend` |
+| `runtime.compute` | 本地计算（动态代码、WASM 和本地 Worker）；保留沙箱，无 Node 或直接外网访问 |
 
 旧的 `clipboard.read`、`clipboard.write`、`shell.openExternal`、`network.request`、`secrets` 继续有效。独立 KV、文档数据库、当前插件的动态功能和搜索 UI 不需额外权限。
 
@@ -136,10 +137,10 @@ await nexlet.browser.close(browser);
 ```ts
 const resized = await nexlet.media.image({ id: 'resize', data: pngBytes, operations: [{ op: 'resize', args: [320, 200] }], format: 'webp' });
 const metadata = await nexlet.media.image({ id: 'metadata', data: pngBytes, metadata: true });
-await nexlet.media.ffmpeg({ id: 'convert', args: ['-i', sourceFile, '-n', targetFile] });
+await nexlet.media.ffmpeg({ id: 'convert', executable: ffmpegPath, args: ['-i', sourceFile, '-n', targetFile] });
 ```
 
-Sharp 在 utility process 运行，支持缩放、旋转、裁剪、边框、翻转、背景、模糊、锐化、阈值、色彩/通道操作及 PNG/JPEG/WebP/AVIF/TIFF/GIF 输出。输入/输出最多 32 MB，输入限制 1 亿像素。`operations[].args` 使用相应 [Sharp 官方参数](https://sharp.pixelplumbing.com/api-operation/)。FFmpeg 通过独立进程执行，`tasks.onProgress` 返回 stdout/stderr；进度启用 `-progress pipe:1`。自带 `ffmpeg-static`，打包需保留其可执行文件和许可文件，必须在目标平台安装匹配的依赖；正式跨平台产物尚未验证。
+Sharp 在 utility process 运行，支持缩放、旋转、裁剪、边框、翻转、背景、模糊、锐化、阈值、色彩/通道操作及 PNG/JPEG/WebP/AVIF/TIFF/GIF 输出。输入/输出最多 32 MB，输入限制 1 亿像素。`operations[].args` 使用相应 [Sharp 官方参数](https://sharp.pixelplumbing.com/api-operation/)。FFmpeg 通过独立进程执行，`tasks.onProgress` 返回 stdout/stderr；进度启用 `-progress pipe:1`。宿主不再内置 FFmpeg；必须通过 `executable` 提供本机路径，并同时声明 `media`、`files`、`process` 权限。省略路径时明确报错。
 
 ## AI、工具与 MCP
 
@@ -184,3 +185,9 @@ await nexlet.services.syncPut({ id: 'save', key: 'settings', expectedVersion: cu
 这些是已实现并经本地 fixture 验证的适配协议，不是已经部署的 Nexlet 账号、支付、授权或云存储服务。实际供应商需要实现上述合同；付款、订单真实性、业务幂等与授权最终判定由服务负责。本次没有注册服务、创建真实 checkout 或发生交易。
 
 验证范围见 [SDK 验证记录](validation/plugin-sdk-2026-10-13.md)。
+
+## 本地计算与结果返回
+
+插件压缩包最多 64 MiB，解压合计 128 MiB，单个文件/运行时资源 32 MiB；市场下载与本地安装遵循相同限制。`runtime.compute` 允许同源资源 fetch、动态代码、WASM 和本地 Worker，不开放 Node、任意文件或直接外网访问。普通插件继续使用原有严格 CSP。
+
+`search.returnToLauncher(text)` 关闭当前插件并将非空文本送回启动器继续处理，最多 500000 字符，不需额外权限。`clipboard.snapshot()` 需要 `clipboard.read`，返回会话绑定的一次性 token 或 `null`；`clipboard.writeTextIfUnchanged(token,text)` 需要读写两项权限，仅在剪贴板未改变且 token 尚有效时写入，返回 boolean。新快照替换旧 token，使用或关闭会话后失效。

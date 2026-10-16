@@ -2,7 +2,7 @@ import { t } from './i18n';
 import type {WindowRect} from './window-layout';
 export interface CaptureFrame {id:string;bounds:WindowRect;pixels:{width:number;height:number};data?:string;}
 export interface CaptureState {bounds:WindowRect;frames:CaptureFrame[];mode:'region'|'screen';}
-export type CaptureDestination='launcher'|'copy'|'save'|'pin'|'ocr'|'ocr-copy';
+export type CaptureDestination='launcher'|'copy'|'save'|'pin';
 export function desktopBounds(frames:CaptureFrame[]):WindowRect{if(!frames.length)throw Error(t("没有可用的屏幕图像"));const x=Math.min(...frames.map(f=>f.bounds.x)),y=Math.min(...frames.map(f=>f.bounds.y));return {x,y,width:Math.max(...frames.map(f=>f.bounds.x+f.bounds.width))-x,height:Math.max(...frames.map(f=>f.bounds.y+f.bounds.height))-y};}
 export function capturePlan(rect:WindowRect,frames:CaptureFrame[]){
  if(!rect||![rect.x,rect.y,rect.width,rect.height].every(Number.isFinite)||rect.width<1||rect.height<1)throw Error(t("请选择有效截图区域"));

@@ -179,3 +179,5 @@ await nexlet.secrets.set('apiKey', null); // 删除
 ```
 
 `persistent: true` 表示经系统 safeStorage 加密后落盘；无可用系统加密或 Linux 使用 `basic_text` 时，仅在当前插件会话内保存并返回 `false`，插件应明确提示用户。分离窗口保留临时密钥，退出会清除；无法解密旧数据会 reject，插件应允许重新填写。不要把密钥放入普通 `storage`、日志或 URL。卸载保留数据时也保留密文，选择清理数据则同时清除密文与旧版遗留的 origin 授权。此能力是本机静态存储保护，不能阻止已获授权的插件读取自己的密钥。
+
+插件压缩包最多 64 MiB，解压合计 128 MiB，单个文件/运行时资源 32 MiB；市场下载与本地安装遵循相同限制。`runtime.compute` 允许同源资源 fetch、动态代码、WASM 和本地 Worker，不开放 Node、任意文件或直接外网访问。普通插件继续使用原有严格 CSP。

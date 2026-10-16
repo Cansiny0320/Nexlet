@@ -24,6 +24,7 @@ export class PluginManager {
   readonly runtime:PluginRuntime;
   readonly sdk:PluginSdk;
   updateOnLaunch:((record:PluginRecord,code:string,signal:AbortSignal)=>Promise<PluginBundle|null>)|null=null;
+  returnToLauncher: ((text: string) => Promise<void>) | null = null;
   private root: string;
   constructor(private store: Store, private changed: (event?: string) => void,private inputs:LaunchInputs,platform?:Platform) {
     this.root = path.join(store.directory, 'plugins');
@@ -47,6 +48,12 @@ export class PluginManager {
       const requirePermission = (permission: PluginPermission) => { if (!record.manifest.permissions.includes(permission)) throw new Error(t("未授权：{{v0}}", { v0: permission })); };
       const key = () => { if (typeof args !== 'object' || !args) throw new Error(t("参数无效")); const value = (args as {key?:unknown}).key; if (typeof value !== 'string' || !/^[a-zA-Z0-9_.-]{1,100}$/.test(value) || ['__proto__','constructor','prototype'].includes(value)) throw new Error(t("存储键无效")); return value; };
       switch (method) {
+        case 'search.returnToLauncher': {
+          if (typeof args !== 'string' || !args.trim() || args.length > 500000 || !this.returnToLauncher) throw new Error(t("搜索文本无效"));
+          // Reply before stopping the calling view; only a still-live caller may return.
+          setImmediate(() => { if (!caller.closing && !caller.disposed) void this.runtime.stop(caller.record.manifest.id,false).then(() => this.returnToLauncher!(args)).catch(error => this.changed('error:' + String(error.message || error))); });
+          return true;
+        }
         case 'network.request': {
           requirePermission('network.request');
           return this.network.request(event.sender.id,args);

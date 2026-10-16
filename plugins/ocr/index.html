@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OCR</title></head><body>
+<header><strong>OCR</strong><span>PP-OCRv6</span><button id="detach" data-t="detach"></button></header>
+<nav><button id="pick" data-t="pick"></button><button id="capture" data-t="capture"></button><button id="rotate" data-t="rotate" disabled></button><span></span><button id="run" data-t="run" disabled></button><button id="stop" data-t="stop" hidden></button></nav>
+<main><section><label data-t="original"></label><div id="preview"><img id="image" hidden><button id="drop" data-t="drop"></button></div></section><section><label for="result" data-t="result"></label><textarea id="result" spellcheck="false"></textarea><div class="actions"><button id="search" data-t="search" disabled></button><button id="copy" data-t="copy" disabled></button></div></section></main>
+<footer><progress id="progress" max="1" value="0" hidden></progress><span id="status" role="status"></span></footer><input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
+<script type="module" src="./main.ts"></script></body></html>

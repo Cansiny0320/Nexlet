@@ -1,0 +1,147 @@
+{
+  "id": "org.nexlet.ocr",
+  "name": "离线 OCR",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "main": "index.html",
+  "description": "本机识别图片和截图中的中英文文字。模型随插件提供，无需联网。",
+  "permissions": [
+    "runtime.compute",
+    "screen",
+    "windows",
+    "clipboard.read",
+    "clipboard.write"
+  ],
+  "features": [
+    {
+      "code": "recognize",
+      "name": "OCR 文字识别",
+      "keywords": [
+        "ocr",
+        "文字识别",
+        "截图识别",
+        "recognize",
+        "capture",
+        "辨識",
+        "截圖"
+      ],
+      "locales": {
+        "en": {
+          "name": "OCR text recognition"
+        },
+        "zh-Hant": {
+          "name": "OCR 文字辨識"
+        }
+      },
+      "matches": [
+        {
+          "type": "image"
+        },
+        {
+          "type": "files",
+          "extensions": [
+            "png",
+            "jpg",
+            "jpeg",
+            "webp",
+            "bmp"
+          ],
+          "minCount": 1,
+          "maxCount": 1,
+          "fileType": "file"
+        }
+      ]
+    },
+    {
+      "code": "copy",
+      "name": "OCR 识别复制",
+      "keywords": [
+        "ocr",
+        "文字识别",
+        "截图识别",
+        "recognize",
+        "capture",
+        "辨識",
+        "截圖"
+      ],
+      "locales": {
+        "en": {
+          "name": "OCR recognize and copy"
+        },
+        "zh-Hant": {
+          "name": "OCR 辨識並複製"
+        }
+      },
+      "matches": [
+        {
+          "type": "image"
+        },
+        {
+          "type": "files",
+          "extensions": [
+            "png",
+            "jpg",
+            "jpeg",
+            "webp",
+            "bmp"
+          ],
+          "minCount": 1,
+          "maxCount": 1,
+          "fileType": "file"
+        }
+      ]
+    },
+    {
+      "code": "capture",
+      "name": "截图 OCR 识别",
+      "keywords": [
+        "ocr",
+        "文字识别",
+        "截图识别",
+        "recognize",
+        "capture",
+        "辨識",
+        "截圖"
+      ],
+      "locales": {
+        "en": {
+          "name": "Capture and recognize"
+        },
+        "zh-Hant": {
+          "name": "截圖 OCR 辨識"
+        }
+      }
+    },
+    {
+      "code": "capture-copy",
+      "name": "截图 OCR 识别复制",
+      "keywords": [
+        "ocr",
+        "文字识别",
+        "截图识别",
+        "recognize",
+        "capture",
+        "辨識",
+        "截圖"
+      ],
+      "locales": {
+        "en": {
+          "name": "Capture, recognize and copy"
+        },
+        "zh-Hant": {
+          "name": "截圖 OCR 辨識並複製"
+        }
+      }
+    }
+  ],
+  "locales": {
+    "en": {
+      "name": "Offline OCR",
+      "description": "Recognize Chinese and English text locally. Models are included; no network required."
+    },
+    "zh-Hant": {
+      "name": "離線 OCR",
+      "description": "在本機辨識圖片與截圖中的中英文文字，無需連線。"
+    }
+  }
+}

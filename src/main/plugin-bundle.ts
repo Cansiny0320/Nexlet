@@ -6,9 +6,9 @@ import { safeEntryPath, validateManifest } from '../shared/plugin-validation';
 import type { PluginManifest } from '../shared/types';
 
 export interface PluginBundle { manifest: PluginManifest; files: Map<string, Buffer>; }
-const MAX_TOTAL = 50 * 1024 * 1024;
+import { PLUGIN_ARCHIVE_LIMIT, PLUGIN_TOTAL_LIMIT, PLUGIN_FILE_LIMIT } from '../shared/plugin-policy';
 export function readPluginZip(buffer: Buffer): PluginBundle {
-  if (buffer.length > 25 * 1024 * 1024) throw new Error(t("插件压缩包不能超过 25 MB"));
+  if (buffer.length > PLUGIN_ARCHIVE_LIMIT) throw new Error(t("插件压缩包不能超过 64 MB"));
   const archive = new AdmZip(buffer);
   const entries = archive.getEntries();
   if (entries.length > 2000) throw new Error(t("插件文件数量过多"));
@@ -21,7 +21,7 @@ export function readPluginZip(buffer: Buffer): PluginBundle {
     seen.add(key);
     if (((entry.attr >>> 16) & 0xf000) === 0xa000) throw new Error(t("插件不能包含符号链接"));
     if (entry.isDirectory) continue;
-    if (entry.header.size > 10 * 1024 * 1024 || (total += entry.header.size) > MAX_TOTAL) throw new Error(t("插件解压大小超过限制"));
+    if (entry.header.size > PLUGIN_FILE_LIMIT || (total += entry.header.size) > PLUGIN_TOTAL_LIMIT) throw new Error(t("插件解压大小超过限制"));
     const data = entry.getData();
     if (data.length !== entry.header.size) throw new Error(t("插件文件长度与声明不符"));
     files.set(name, data);
@@ -40,7 +40,7 @@ export async function readPluginDirectory(directory: string): Promise<PluginBund
       if (!entry.isFile()) throw new Error(t("插件包含非普通文件"));
       if (files.size >= 2000) throw new Error(t("插件文件数量过多"));
       const file = path.join(root, name), info = await lstat(file);
-      if (info.size > 10 * 1024 * 1024 || (total += info.size) > MAX_TOTAL) throw new Error(t("插件大小超过限制"));
+      if (info.size > PLUGIN_FILE_LIMIT || (total += info.size) > PLUGIN_TOTAL_LIMIT) throw new Error(t("插件大小超过限制"));
       files.set(name, await readFile(file));
     }
   };

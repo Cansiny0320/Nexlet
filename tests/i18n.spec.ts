@@ -8,7 +8,8 @@ const errors: string[] = [];
 async function launch(system = 'zh-CN') {
   const env: Record<string, string> = { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), NEXLET_TEST_MODE: '1', NEXLET_TEST_LOCALE: system, NEXLET_USER_DATA: path.join(directory, 'data') };
   delete env.ELECTRON_RUN_AS_NODE;
-  app = await electron.launch({ args: [process.cwd()], env });
+  const executablePath = process.env.NEXLET_E2E_EXECUTABLE;
+  app = await electron.launch({ executablePath, args: executablePath ? [] : [process.cwd()], env });
   page = await app.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
   await expect(page.locator('.launcher-input')).toBeVisible();

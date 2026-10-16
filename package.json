@@ -1,6 +1,6 @@
 {
   "name": "nexlet",
-  "version": "0.2.29",
+  "version": "0.2.30",
   "private": true,
   "description": "Nexlet 跨平台桌面工具箱",
   "author": "Nexlet",
@@ -17,40 +17,32 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "npm run build && playwright test",
-    "package:win": "npm run build && electron-builder --win portable nsis --x64 --publish never",
+    "package:win": "npm run build && node scripts/package-windows.mjs",
     "package:mac": "node scripts/package-mac-local.mjs --arch universal",
     "package:mac:local": "node scripts/package-mac-local.mjs",
     "generate:mac-dmg": "node scripts/generate-mac-dmg-background.mjs",
     "smoke:package": "node scripts/smoke-package.mjs",
     "smoke:portable": "node scripts/smoke-portable.mjs",
-    "package:linux": "npm run build && node scripts/package-linux.mjs"
+    "package:linux": "npm run build && node scripts/package-linux.mjs",
+    "package:ocr": "node scripts/package-ocr.mjs",
+    "typecheck:ocr": "tsc --noEmit -p plugins/ocr/tsconfig.json"
   },
   "dependencies": {
-    "@base-ui/react": "^1.9.0",
-    "@codemirror/lang-json": "^6.0.2",
-    "@codemirror/merge": "^6.12.2",
     "adm-zip": "^0.6.1",
     "ajv": "^8.20.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "codemirror": "^6.0.2",
     "decimal.js": "^10.6.0",
     "electron-updater": "6.8.10",
-    "ffmpeg-static": "^5.3.0",
     "i18next": "^26.4.5",
     "jsonc-parser": "^3.3.1",
     "koffi": "^3.3.3",
-    "lucide-react": "^0.468.0",
     "pinyin-pro": "^3.29.5",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "react-i18next": "^17.0.16",
     "semver": "^7.8.5",
-    "sharp": "^0.35.5",
-    "tailwind-merge": "^3.7.0"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "@paddleocr/paddleocr-js": "0.4.2",
+    "@base-ui/react": "^1.9.0",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/merge": "^6.12.2",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/adm-zip": "^0.5.7",
@@ -59,10 +51,18 @@
     "@types/react-dom": "^19.0.0",
     "@types/semver": "^7.8.0",
     "@vitejs/plugin-react": "^6.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "codemirror": "^6.0.2",
     "electron": "^44.7.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
     "js-yaml": "4.3.2",
+    "lucide-react": "^0.468.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.16",
+    "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.3",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.9.0",
@@ -72,6 +72,11 @@
   "build": {
     "appId": "app.nexlet.desktop",
     "productName": "Nexlet",
+    "electronLanguages": [
+      "en-US",
+      "zh-CN",
+      "zh-TW"
+    ],
     "directories": {
       "output": "release"
     },
@@ -79,26 +84,30 @@
       "dist/**/*",
       "assets/**/*",
       "!assets/artwork/**/*",
+      "!**/*.map",
       "package.json"
     ],
     "asarUnpack": [
       "node_modules/koffi/**/*",
       "assets/vendor/everything/**/*",
-      "assets/vendor/ocr/**/*",
       "node_modules/sharp/**/*",
-      "node_modules/@img/**/*",
-      "node_modules/ffmpeg-static/**/*"
+      "node_modules/@img/**/*"
     ],
     "win": {
       "icon": "assets/icon.ico",
       "target": [
-        "portable",
-        "nsis"
+        "nsis",
+        "portable"
       ],
       "artifactName": "Nexlet-${version}-Windows-${arch}.${ext}"
     },
     "mac": {
       "icon": "assets/icon.png",
+      "electronLanguages": [
+        "en",
+        "zh_CN",
+        "zh_TW"
+      ],
       "target": [
         "dmg",
         "zip"
@@ -108,12 +117,24 @@
     },
     "dmg": {
       "background": "build-resources/mac/background.png",
-      "window": { "width": 680, "height": 520 },
+      "window": {
+        "width": 680,
+        "height": 520
+      },
       "iconSize": 96,
       "iconTextSize": 14,
       "contents": [
-        { "x": 180, "y": 170, "type": "file" },
-        { "x": 500, "y": 170, "type": "link", "path": "/Applications" }
+        {
+          "x": 180,
+          "y": 170,
+          "type": "file"
+        },
+        {
+          "x": 500,
+          "y": 170,
+          "type": "link",
+          "path": "/Applications"
+        }
       ]
     },
     "publish": [
