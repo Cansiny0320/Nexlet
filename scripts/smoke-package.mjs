@@ -30,7 +30,7 @@ try{
   const deadline=Date.now()+8000;let captured=false;
   while(Date.now()<deadline){const clips=await page.evaluate(()=>window.nexlet.call('clips',{query:'Nexlet packaged clipboard monitor'}));if(clips.length){captured=true;break;}await new Promise(r=>setTimeout(r,250));}
   if(!captured)throw Error('Packaged background clipboard capture failed');
-  await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).fill('128*3');await page.getByRole('button',{name:'384',exact:true}).click();
+  await page.getByRole('textbox',{name:'搜索功能、应用或快捷方式'}).fill('128*3');await page.locator('[data-command-id="match:calc"]').click();
   if(await page.locator('output').first().innerText()!=='384')throw Error('Packaged calculation failed');
   await page.getByRole('button',{name:'固定窗口',exact:true}).waitFor();
   await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/packaged-scratchpad.png'});
