@@ -77,12 +77,12 @@ test.describe('系统搜索与执行结果', () => {
     }
   });
 
-  test('取消睡眠保留搜索和最近使用；默认选中取消', async () => {
+  test('取消睡眠保留搜索和最近使用；默认选中确认，取消仍独立生效', async () => {
     const recent = (await call('state')).recent;
     await page.locator('.launcher-input').fill('睡眠');
     await page.getByRole('button', { name: '睡眠', exact: true }).click();
     await expect.poll(() => app.evaluate(() => (globalThis as any).lastSystemDialog?.message)).toContain('睡眠');
-    expect(await app.evaluate(() => (globalThis as any).lastSystemDialog)).toMatchObject({ buttons: ['确认', '取消'], defaultId: 1, cancelId: 1 });
+    expect(await app.evaluate(() => (globalThis as any).lastSystemDialog)).toMatchObject({ buttons: ['确认', '取消'], defaultId: 0, cancelId: 1 });
     await expect(page.locator('.launcher-input')).toHaveValue('睡眠');
     expect(await app.evaluate(() => (globalThis as any).systemCalls)).toEqual([]);
     expect((await call('state')).recent).toEqual(recent); expect(await visible()).toBe(true);

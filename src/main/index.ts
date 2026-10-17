@@ -249,7 +249,7 @@ async function bootstrap() {
     if(command.kind==='system'){
       try {
         const opened=await systemActions.launch(id,c=>withDialog(async()=>{
-          const {response}=await dialog.showMessageBox(window,{type:'question',buttons:[t("确认"),t("取消")],defaultId:1,cancelId:1,noLink:true,title:t("系统操作"),message:t("确定要执行「{{v0}}」吗？", { v0: c.name }),detail:c.id==='system:action:sleep'?t("电脑将进入睡眠状态。"):t("请先保存正在编辑的内容。")});
+          const {response}=await dialog.showMessageBox(window,{type:'question',buttons:[t("确认"),t("取消")],defaultId:0,cancelId:1,noLink:true,title:t("系统操作"),message:t("确定要执行「{{v0}}」吗？", { v0: c.name }),detail:c.id==='system:action:sleep'?t("电脑将进入睡眠状态。"):t("请先保存正在编辑的内容。")});
           return response===0;
         }));
         if(opened){recordRecent(id);window.hide();}
