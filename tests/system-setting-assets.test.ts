@@ -4,15 +4,17 @@ import sharp from 'sharp';
 import { expect, it } from 'vitest';
 import { systemCommands } from '../src/main/system-commands';
 
-it('全部系统设置图片可解码、内容不重复，并保留透明边缘供深浅主题显示', async () => {
+it('all system artwork is distinct, decodable and transparent at the edges', async () => {
   const ids = new Set([
     ...systemCommands('win32', '10.0.19045'),
     ...systemCommands('win32', '10.0.22631'),
     ...systemCommands('darwin', '22.0.0')
-  ].filter(c => c.id.startsWith('system:settings:')).map(c => c.id.slice('system:settings:'.length)));
+  ].filter(c => c.kind === 'system').map(c => c.id));
   const hashes = new Set<string>();
   for (const id of ids) {
-    const file = await readFile(new URL(`../assets/system-settings/${id}.png`, import.meta.url));
+    const [, group, name] = id.split(':');
+    const directory = group === 'action' ? 'system-actions' : 'system-settings';
+    const file = await readFile(new URL(`../assets/${directory}/${name}.png`, import.meta.url));
     const hash = createHash('sha256').update(file).digest('hex');
     expect(hashes.has(hash), id).toBe(false);
     hashes.add(hash);

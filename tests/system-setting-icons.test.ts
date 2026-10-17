@@ -33,12 +33,10 @@ describe('系统设置图标', () => {
     expect(markup).not.toContain('<svg');
   });
 
-  it('未来未知设置可显示兜底，系统操作继续使用原有颜色', () => {
+  it('unknown future settings retain a visible fallback', () => {
     const command = settings('win32', '10.0.22631')[0];
     expect(render({ ...command, id: 'system:settings:future' })).toContain('<svg');
     expect(render({ ...command, id: 'system:settings:future', icon: 'data:image/png;base64,native' })).toContain('data:image/png;base64,native');
-    const action = systemCommands('win32', '10.0.22631').find(c => c.id === 'system:action:shutdown')!;
-    expect(render(action)).toContain(`background:${action.color}`);
   });
 
   it('其他应用的原生图像不受生成图优先级影响', () => {

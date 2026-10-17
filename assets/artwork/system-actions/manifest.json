@@ -1,0 +1,30 @@
+{
+  "size": 128,
+  "padding": 4,
+  "icons": [
+    {
+      "id": "lock",
+      "source": "lock.png"
+    },
+    {
+      "id": "sleep",
+      "source": "sleep.png"
+    },
+    {
+      "id": "restart",
+      "source": "restart.png"
+    },
+    {
+      "id": "shutdown",
+      "source": "shutdown.png"
+    },
+    {
+      "id": "logout",
+      "source": "logout.png"
+    },
+    {
+      "id": "desktop",
+      "source": "desktop.png"
+    }
+  ]
+}

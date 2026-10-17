@@ -43,5 +43,27 @@ test('系统设置生成图覆盖最近、固定和搜索，目录原生图不�
     await call('settings', { theme: 'dark', hideOnBlur: false });
     await expect(display).toHaveAttribute('src', generatedDisplay!);
     await page.screenshot({ path: 'test-results/system-icons-search.png' });
+
+    // Only render power/session actions; never execute them during visual checks.
+    await page.locator('.launcher-input').fill('');
+    const actions = ['lock', 'sleep', 'restart', 'shutdown', 'logout', 'desktop'];
+    await app.evaluate((_, ids) => {
+      const n = (globalThis as any).__nexlet;
+      n.store.set('pinned', ids.map(id => `system:action:${id}`));
+      n.store.set('recent', []);
+      n.main.webContents.send('host-change', 'state');
+    }, actions);
+    const actionImages = page.locator('[data-command-id^="system:action:"] .tool-image');
+    await expect(actionImages).toHaveCount(6);
+    for (let index = 0; index < actions.length; index++) {
+      await expect.poll(() => actionImages.nth(index).evaluate(el => (el as HTMLImageElement).naturalWidth)).toBe(128);
+    }
+    const actionSources = await actionImages.evaluateAll(images => images.map(image => (image as HTMLImageElement).src));
+    expect(new Set(actionSources).size).toBe(6);
+    await page.screenshot({ path: 'test-results/system-actions-dark.png' });
+    await call('settings', { theme: 'light', hideOnBlur: false });
+    await expect(actionImages).toHaveCount(6);
+    expect(await actionImages.evaluateAll(images => images.map(image => (image as HTMLImageElement).src))).toEqual(actionSources);
+    await page.screenshot({ path: 'test-results/system-actions-light.png' });
   } finally { await app.close(); }
 });

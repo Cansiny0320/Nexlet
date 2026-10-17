@@ -5,6 +5,7 @@ import type { AppState, Command, HostAction } from '../shared/types';
 import { builtInArtwork } from './tool-artwork';
 import { MATCH_TARGETS } from '../shared/command-config';
 import { systemSettingIcons } from './system-setting-icons';
+import { systemActionIcons } from './system-action-icons';
 
 export const api=<T,>(action:HostAction,payload?:unknown)=>window.nexlet.call<T>(action,payload);
 export const errorText=(error:unknown)=>error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': Error: /,'') : String(error);
@@ -14,7 +15,9 @@ export const AppContext=createContext<AppContextValue|null>(null);
 export function useApp(){const ctx=useContext(AppContext);if(!ctx)throw new Error('App context missing');return ctx;}
 export function ToolIcon({command,size=32}:{command:Command;size?:number}){
   const setting=command.kind==='system'&&command.id.startsWith('system:settings:')?systemSettingIcons[command.id.slice('system:settings:'.length)]:undefined;
-  if(setting)return <img className="tool-image" src={setting} width={size} height={size} alt="" draggable={false}/>;
+  const action=command.kind==='system'&&command.id.startsWith('system:action:')?systemActionIcons[command.id.slice('system:action:'.length)]:undefined;
+  const systemArtwork=setting||action;
+  if(systemArtwork)return <img className="tool-image" src={systemArtwork} width={size} height={size} alt="" draggable={false}/>;
   if(command.icon?.startsWith('data:image/'))return <img className="tool-image" src={command.icon} width={size} height={size} alt="" draggable={false}/>;
   const artwork=builtInArtwork[MATCH_TARGETS[command.id]||command.id];
   if(artwork)return <img className="tool-image" src={artwork} width={size} height={size} alt="" draggable={false}/>;

@@ -1,0 +1,36 @@
+{
+  "reference": "../system-settings/design-board.png",
+  "transparentBackground": true,
+  "icons": [
+    {
+      "id": "lock",
+      "prompt": "Create ONE isolated transparent-background desktop launcher icon, square image, centered with generous transparent margins. Match the attached approved icon sheet's soft sculpted colorful 3D Fluent-like style, rounded beveled forms, clean polished highlights, slight dimensional depth, crisp strong readable silhouette at 24px. Not a tile, not a square app background. No text, labels, border, floor, checkerboard or scenery. Preserve real transparent alpha. Subject: a standalone closed cobalt blue padlock with a polished silver shackle and a small keyhole, no monitor",
+      "generatedFile": "C:\\Users\\11368\\.codex\\generated_images\\01a14b75-8028-7a70-baab-29da41b091ea\\exec-cea97c5a-35ba-4f37-9c16-8a023edd45a0.png"
+    },
+    {
+      "id": "sleep",
+      "prompt": "Create ONE isolated transparent-background desktop launcher icon, square image, centered with generous transparent margins. Match the attached approved icon sheet's soft sculpted colorful 3D Fluent-like style, rounded beveled forms, clean polished highlights, slight dimensional depth, crisp strong readable silhouette at 24px. Not a tile, not a square app background. No text, labels, border, floor, checkerboard or scenery. Preserve real transparent alpha. Subject: a warm golden crescent moon with a subtle lavender rim and one small blue star, absolutely no glow outside the silhouette",
+      "generatedFile": "C:\\Users\\11368\\.codex\\generated_images\\01a14b75-8028-7a70-baab-29da41b091ea\\exec-9b5bb206-1bd9-4473-9ce6-c5d8508e1563.png"
+    },
+    {
+      "id": "restart",
+      "prompt": "Create ONE isolated transparent-background desktop launcher icon, square image, centered with generous transparent margins. Match the attached approved icon sheet's soft sculpted colorful 3D Fluent-like style, rounded beveled forms, clean polished highlights, slight dimensional depth, crisp strong readable silhouette at 24px. Not a tile, not a square app background. No text, labels, border, floor, checkerboard or scenery. Preserve real transparent alpha. Subject: two chunky cobalt blue and turquoise curved arrows forming a clear circular restart loop, no other object",
+      "generatedFile": "C:\\Users\\11368\\.codex\\generated_images\\01a14b75-8028-7a70-baab-29da41b091ea\\exec-78eaced9-957e-41a6-b69c-c3c61d6dee5f.png"
+    },
+    {
+      "id": "shutdown",
+      "prompt": "Create ONE isolated transparent-background desktop launcher icon, square image, centered with generous transparent margins. Match the attached approved icon sheet's soft sculpted colorful 3D Fluent-like style, rounded beveled forms, clean polished highlights, slight dimensional depth, crisp strong readable silhouette at 24px. Not a tile, not a square app background. No text, labels, border, floor, checkerboard or scenery. Preserve real transparent alpha. Subject: a bold red power symbol made from a thick red open circular arc and a straight vertical red bar at top, familiar unambiguous power-off sign",
+      "generatedFile": "C:\\Users\\11368\\.codex\\generated_images\\01a14b75-8028-7a70-baab-29da41b091ea\\exec-9b4d922d-6137-4509-99e2-7651b8efe17b.png"
+    },
+    {
+      "id": "logout",
+      "prompt": "Create ONE isolated transparent-background desktop launcher icon, square image, centered with generous transparent margins. Match the attached approved icon sheet's soft sculpted colorful 3D Fluent-like style, rounded beveled forms, clean polished highlights, slight dimensional depth, crisp strong readable silhouette at 24px. Not a tile, not a square app background. No text, labels, border, floor, checkerboard or scenery. Preserve real transparent alpha. Subject: a small rounded pale silver doorway with a bold orange arrow pointing right and out of the doorway, simple unmistakable sign-out symbol",
+      "generatedFile": "C:\\Users\\11368\\.codex\\generated_images\\01a14b75-8028-7a70-baab-29da41b091ea\\exec-dcebdb61-3ea4-40d5-8df1-b3d59c83261e.png"
+    },
+    {
+      "id": "desktop",
+      "prompt": "Create ONE isolated transparent-background desktop launcher icon, square image, centered with generous transparent margins. Match the attached approved icon sheet's soft sculpted colorful 3D Fluent-like style, rounded beveled forms, clean polished highlights, slight dimensional depth, crisp strong readable silhouette at 24px. Not a tile, not a square app background. No text, labels, border, floor, checkerboard or scenery. Preserve real transparent alpha. Subject: one modern blue desktop monitor with a silver stand, showing a simple blue gradient desktop and a tiny colorful taskbar at the bottom, front-facing",
+      "generatedFile": "C:\\Users\\11368\\.codex\\generated_images\\01a14b75-8028-7a70-baab-29da41b091ea\\exec-9ee3891a-1888-41bb-922e-509199eb89bd.png"
+    }
+  ]
+}
