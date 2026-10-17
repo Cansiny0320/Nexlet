@@ -1,10 +1,13 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const mocks = vi.hoisted(() => ({ readdir: vi.fn(), readShortcutLink: vi.fn(), apps: vi.fn() }));
 vi.mock('node:fs/promises', () => ({ readdir: mocks.readdir }));
-vi.mock('electron', () => ({ app: { getPath: () => 'C:/Desktop' }, shell: { readShortcutLink: mocks.readShortcutLink } }));
+vi.mock('electron', () => ({
+  app: { getPath: () => 'C:/Desktop' },
+  shell: { readShortcutLink: mocks.readShortcutLink },
+}));
 vi.mock('../src/main/catalog-icons', () => ({ loadCatalogIcon: vi.fn() }));
 vi.mock('../src/main/catalog-mac', () => ({ loadMacCatalogIcons: vi.fn() }));
 vi.mock('../src/main/catalog-windows', () => ({ readWindowsApplications: mocks.apps }));
@@ -13,7 +16,8 @@ import { Catalog } from '../src/main/catalog';
 const menu = path.join('C:/ProgramData', 'Microsoft/Windows/Start Menu/Programs');
 const desktop = 'C:/Desktop';
 const publicDesktop = path.join('C:/Public', 'Desktop');
-const idFor = (file: string) => 'app:' + createHash('sha256').update(file.toLowerCase()).digest('hex').slice(0, 20);
+const idFor = (file: string) =>
+  'app:' + createHash('sha256').update(file.toLowerCase()).digest('hex').slice(0, 20);
 let files: Map<string, string[]>;
 let links: Map<string, { target: string; args?: string; cwd?: string }>;
 function shortcut(directory: string, name: string, target: string, args = '', cwd = '') {
@@ -29,16 +33,26 @@ beforeEach(() => {
   vi.stubEnv('APPDATA', 'C:/UserData');
   vi.stubEnv('PROGRAMDATA', 'C:/ProgramData');
   vi.stubEnv('PUBLIC', 'C:/Public');
-  files = new Map(); links = new Map();
-  mocks.readdir.mockImplementation(async directory => (files.get(directory) || []).map(name => ({ name, isDirectory: () => false, isSymbolicLink: () => false })));
-  mocks.readShortcutLink.mockImplementation(file => {
+  files = new Map();
+  links = new Map();
+  mocks.readdir.mockImplementation(async (directory) =>
+    (files.get(directory) || []).map((name) => ({
+      name,
+      isDirectory: () => false,
+      isSymbolicLink: () => false,
+    })),
+  );
+  mocks.readShortcutLink.mockImplementation((file) => {
     const link = links.get(file);
     if (!link) throw new Error('Unreadable shortcut');
     return link;
   });
   mocks.apps.mockResolvedValue([]);
 });
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 describe('Windows catalog shortcut deduplication', () => {
   it('filters uninstallers, documentation and release notes before merging shortcuts', async () => {
@@ -68,7 +82,7 @@ describe('Windows catalog shortcut deduplication', () => {
     const kept = shortcut(desktop, 'Example.lnk', 'C:/Apps/app.exe');
     const catalog = new Catalog(() => {});
     await catalog.scan();
-    expect(catalog.items.map(item => item.path)).toEqual([kept]);
+    expect(catalog.items.map((item) => item.path)).toEqual([kept]);
   });
 
   it('retains applications, system tools, ordinary files and URLs without broad keyword matches', async () => {
@@ -94,9 +108,9 @@ describe('Windows catalog shortcut deduplication', () => {
     mocks.apps.mockResolvedValue([{ Name: 'Get Help', AppID: 'Microsoft.Help!App' }]);
     const catalog = new Catalog(() => {});
     await catalog.scan();
-    expect(catalog.items.map(item => item.name).sort()).toEqual([
-      ...retained.map(([name]) => name.replace(/\.(lnk|url)$/, '')), 'Editor', 'Get Help'
-    ].sort());
+    expect(catalog.items.map((item) => item.name).sort()).toEqual(
+      [...retained.map(([name]) => name.replace(/\.(lnk|url)$/, '')), 'Editor', 'Get Help'].sort(),
+    );
   });
 
   it('merges menu and desktop copies by normalized target, keeping the original launch link and name aliases', async () => {
@@ -106,7 +120,12 @@ describe('Windows catalog shortcut deduplication', () => {
     const catalog = new Catalog(() => {});
     await catalog.scan();
     expect(catalog.items).toHaveLength(1);
-    expect(catalog.items[0]).toMatchObject({ id: idFor(kept), path: kept, name: 'QQ', keywords: ['QQ desktop'] });
+    expect(catalog.items[0]).toMatchObject({
+      id: idFor(kept),
+      path: kept,
+      name: 'QQ',
+      keywords: ['QQ desktop'],
+    });
   });
 
   it('preserves distinct targets, argument values and working directories', async () => {
@@ -145,8 +164,10 @@ describe('Windows catalog shortcut deduplication', () => {
     const duplicate = shortcut(desktop, 'QQ.lnk', 'C:/Apps/QQ.exe');
     const catalog = new Catalog(() => {});
     await catalog.scan();
-    expect(catalog.resolveIds([idFor(duplicate), 'tool:clipboard', idFor(kept)]))
-      .toEqual([idFor(kept), 'tool:clipboard']);
+    expect(catalog.resolveIds([idFor(duplicate), 'tool:clipboard', idFor(kept)])).toEqual([
+      idFor(kept),
+      'tool:clipboard',
+    ]);
   });
 
   it('rebuilds deduplication and ID mappings on each scan', async () => {
@@ -157,7 +178,10 @@ describe('Windows catalog shortcut deduplication', () => {
     expect(catalog.items).toHaveLength(1);
     files.delete(menu);
     await catalog.scan();
-    expect(catalog.items.map(item => item.path)).toEqual([duplicate]);
-    expect(catalog.resolveIds([idFor(duplicate), idFor(kept)])).toEqual([idFor(duplicate), idFor(kept)]);
+    expect(catalog.items.map((item) => item.path)).toEqual([duplicate]);
+    expect(catalog.resolveIds([idFor(duplicate), idFor(kept)])).toEqual([
+      idFor(duplicate),
+      idFor(kept),
+    ]);
   });
 });

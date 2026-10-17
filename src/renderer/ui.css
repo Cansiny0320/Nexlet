@@ -1,9 +1,9 @@
 @layer theme, base, legacy, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "./styles.css" layer(legacy);
-@import "./desktop-tools.css" layer(legacy);
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
-@import "tw-animate-css";
+@import 'tailwindcss/theme.css' layer(theme);
+@import './styles.css' layer(legacy);
+@import './desktop-tools.css' layer(legacy);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@import 'tw-animate-css';
 @source "./components";
 @source "./Settings.tsx";
 @source "./PanelSettings.tsx";
@@ -42,30 +42,67 @@
 
 /* Scoped reset only: Tailwind Preflight must not reset the rest of the app. */
 @layer base {
-  :root { --secondary: var(--selected); --foreground: var(--text); }
-  [data-slot], [data-slot]::before, [data-slot]::after {
+  :root {
+    --secondary: var(--selected);
+    --foreground: var(--text);
+  }
+  [data-slot],
+  [data-slot]::before,
+  [data-slot]::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
     border: 0 solid;
   }
-  [data-slot] { -webkit-app-region: no-drag; }
-  [data-slot] svg { display: block; vertical-align: middle; }
+  [data-slot] {
+    -webkit-app-region: no-drag;
+  }
+  [data-slot] svg {
+    display: block;
+    vertical-align: middle;
+  }
 }
 
 @layer components {
-  .settings-panel .setting-row > :first-child { min-width: 0; }
-  .settings-panel .shortcut-control { flex-shrink: 0; align-items: center; gap: 6px; }
-  .settings-panel .shortcut-control input { font-size: 13px; }
-  .settings-panel [data-slot=select-trigger] { min-width: 144px; flex-shrink: 0; }
-  .settings-panel .setting-row > .tool-buttons { margin-bottom: 0; }
-  .settings-panel .tool-buttons { flex-wrap: wrap; }
-  .settings-panel .command-disabled { gap: 8px; }
-  [data-slot=select-content] { max-width: calc(100vw - 16px); }
+  .settings-panel .setting-row > :first-child {
+    min-width: 0;
+  }
+  .settings-panel .shortcut-control {
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+  }
+  .settings-panel .shortcut-control input {
+    font-size: 13px;
+  }
+  .settings-panel [data-slot='select-trigger'] {
+    min-width: 144px;
+    flex-shrink: 0;
+  }
+  .settings-panel .setting-row > .tool-buttons {
+    margin-bottom: 0;
+  }
+  .settings-panel .tool-buttons {
+    flex-wrap: wrap;
+  }
+  .settings-panel .command-disabled {
+    gap: 8px;
+  }
+  [data-slot='select-content'] {
+    max-width: calc(100vw - 16px);
+  }
   @media (max-width: 700px) {
-    .settings-panel .setting-row { flex-wrap: wrap; }
-    .settings-panel .setting-row > :first-child { flex: 1 1 240px; }
-    .settings-panel .shortcut-control { max-width: 100%; }
-    .settings-panel .shortcut-control input { width: 145px; }
+    .settings-panel .setting-row {
+      flex-wrap: wrap;
+    }
+    .settings-panel .setting-row > :first-child {
+      flex: 1 1 240px;
+    }
+    .settings-panel .shortcut-control {
+      max-width: 100%;
+    }
+    .settings-panel .shortcut-control input {
+      width: 145px;
+    }
   }
 }

@@ -1,26 +1,54 @@
-import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-import {EventEmitter} from 'node:events';
-const {request}=vi.hoisted(()=>({request:vi.fn()}));
-vi.mock('electron',()=>({app:{getVersion:()=> '0.2.11'},net:{request}}));
-import {downloadBounded} from '../src/main/marketplace';
+import { afterEach, beforeEach, expect, it, vi } from 'vite-plus/test';
+import { EventEmitter } from 'node:events';
+const { request } = vi.hoisted(() => ({ request: vi.fn() }));
+vi.mock('electron', () => ({ app: { getVersion: () => '0.2.11' }, net: { request } }));
+import { downloadBounded } from '../src/main/marketplace';
 
-let pending:EventEmitter&{end:ReturnType<typeof vi.fn>;abort:ReturnType<typeof vi.fn>};
-beforeEach(()=>{vi.useFakeTimers();pending=Object.assign(new EventEmitter(),{end:vi.fn(),abort:vi.fn()});request.mockReturnValue(pending);});
-afterEach(()=>{vi.useRealTimers();vi.clearAllMocks();});
-
-it.each([2000,10000])('aborts the network at the %i ms deadline without accepting late data',async timeoutMs=>{
- const result=downloadBounded('https://github.com/example',1024,{timeoutMs}).catch(e=>e.message);
- await vi.advanceTimersByTimeAsync(timeoutMs-1);expect(pending.abort).not.toHaveBeenCalled();
- await vi.advanceTimersByTimeAsync(1);expect(pending.abort).toHaveBeenCalledOnce();expect(await result).toContain('超时');
- pending.emit('response',Object.assign(new EventEmitter(),{statusCode:200,headers:{}}));expect(pending.abort).toHaveBeenCalledOnce();
+let pending: EventEmitter & { end: ReturnType<typeof vi.fn>; abort: ReturnType<typeof vi.fn> };
+beforeEach(() => {
+  vi.useFakeTimers();
+  pending = Object.assign(new EventEmitter(), { end: vi.fn(), abort: vi.fn() });
+  request.mockReturnValue(pending);
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
 });
 
-it('aborts promptly when the pending plugin launch is cancelled',async()=>{
- const controller=new AbortController(),result=downloadBounded('https://github.com/example',1024,{timeoutMs:10000,signal:controller.signal}).catch(e=>e.message);
- controller.abort();await Promise.resolve();expect(pending.abort).toHaveBeenCalledOnce();expect(await result).toContain('取消');expect(vi.getTimerCount()).toBe(0);
+it.each([2000, 10000])(
+  'aborts the network at the %i ms deadline without accepting late data',
+  async (timeoutMs) => {
+    const result = downloadBounded('https://github.com/example', 1024, { timeoutMs }).catch(
+      (e) => e.message,
+    );
+    await vi.advanceTimersByTimeAsync(timeoutMs - 1);
+    expect(pending.abort).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(pending.abort).toHaveBeenCalledOnce();
+    expect(await result).toContain('超时');
+    pending.emit('response', Object.assign(new EventEmitter(), { statusCode: 200, headers: {} }));
+    expect(pending.abort).toHaveBeenCalledOnce();
+  },
+);
+
+it('aborts promptly when the pending plugin launch is cancelled', async () => {
+  const controller = new AbortController(),
+    result = downloadBounded('https://github.com/example', 1024, {
+      timeoutMs: 10000,
+      signal: controller.signal,
+    }).catch((e) => e.message);
+  controller.abort();
+  await Promise.resolve();
+  expect(pending.abort).toHaveBeenCalledOnce();
+  expect(await result).toContain('取消');
+  expect(vi.getTimerCount()).toBe(0);
 });
 
-it('does not start an already-cancelled request',async()=>{
- const controller=new AbortController();controller.abort();
- await expect(downloadBounded('https://github.com/example',1024,{signal:controller.signal})).rejects.toThrow('取消');expect(request).not.toHaveBeenCalled();
+it('does not start an already-cancelled request', async () => {
+  const controller = new AbortController();
+  controller.abort();
+  await expect(
+    downloadBounded('https://github.com/example', 1024, { signal: controller.signal }),
+  ).rejects.toThrow('取消');
+  expect(request).not.toHaveBeenCalled();
 });

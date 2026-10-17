@@ -17,15 +17,19 @@ const required = [
   `Nexlet-${version}-macOS-x64.zip.blockmap`,
   `Nexlet-${version}-macOS-arm64.zip`,
   `Nexlet-${version}-macOS-arm64.zip.blockmap`,
-  ...['x64','arm64'].flatMap(arch=>[`Nexlet-${version}-Linux-${arch==='x64'?'x86_64':arch}.AppImage`,`Nexlet-${version}-Linux-${arch==='x64'?'amd64':arch}.deb`]),
+  ...['x64', 'arm64'].flatMap((arch) => [
+    `Nexlet-${version}-Linux-${arch === 'x64' ? 'x86_64' : arch}.AppImage`,
+    `Nexlet-${version}-Linux-${arch === 'x64' ? 'amd64' : arch}.deb`,
+  ]),
   'latest-linux.yml',
   'latest-linux-arm64.yml',
   'latest.yml',
   'latest-mac.yml',
-  'hello-nexlet.nexlet'
+  'hello-nexlet.nexlet',
 ].sort();
-const files = (await readdir(folder)).filter(name => name !== 'SHA256SUMS.txt').sort();
-if (JSON.stringify(files) !== JSON.stringify(required)) throw Error(`Unexpected release files: ${files.join(', ')}`);
+const files = (await readdir(folder)).filter((name) => name !== 'SHA256SUMS.txt').sort();
+if (JSON.stringify(files) !== JSON.stringify(required))
+  throw Error(`Unexpected release files: ${files.join(', ')}`);
 const lines = [];
 for (const name of files) {
   const hash = createHash('sha256');

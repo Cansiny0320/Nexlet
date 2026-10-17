@@ -12,7 +12,9 @@ class MacUpdates extends MacUpdater {
     this.sampleDownload = true;
     return super.executeDownload(withDownloadProgress(options, () => this.sampleDownload));
   }
-  protected override async differentialDownloadInstaller(...args: Parameters<MacUpdater['differentialDownloadInstaller']>) {
+  protected override async differentialDownloadInstaller(
+    ...args: Parameters<MacUpdater['differentialDownloadInstaller']>
+  ) {
     // Differential progress is emitted directly by the updater; file growth also
     // includes copied blocks and must never be reported as downloaded bytes.
     this.sampleDownload = false;
@@ -27,8 +29,11 @@ class WindowsUpdates extends NsisUpdater {
   override async quitAndInstall(isSilent = false, isForceRunAfter = false): Promise<void> {
     if (this.quitAndInstallCalled) return;
     this.installerLaunch = null;
-    const installing = this.install(isSilent, isSilent ? isForceRunAfter : this.autoRunAppAfterInstall);
-    if (!installing || !await this.installerLaunch) {
+    const installing = this.install(
+      isSilent,
+      isSilent ? isForceRunAfter : this.autoRunAppAfterInstall,
+    );
+    if (!installing || !(await this.installerLaunch)) {
       this.quitAndInstallCalled = false;
       return;
     }
@@ -36,12 +41,16 @@ class WindowsUpdates extends NsisUpdater {
     this.app.quit();
   }
   protected override spawnLog(command: string, args: string[] = []): Promise<boolean> {
-    this.installerLaunch = launchWindowsUpdate(command, args, path.join(process.resourcesPath, 'elevate.exe')).then(
+    this.installerLaunch = launchWindowsUpdate(
+      command,
+      args,
+      path.join(process.resourcesPath, 'elevate.exe'),
+    ).then(
       () => true,
-      error => {
+      (error) => {
         this.dispatchError(error instanceof Error ? error : Error(String(error)));
         return false;
-      }
+      },
     );
     // Handle failures here so NsisUpdater cannot open a stale path with Shell.
     // quitAndInstall waits for the same result and only quits on success.
@@ -57,7 +66,9 @@ class WindowsUpdates extends NsisUpdater {
     this.sampleDownload = true;
     return super.executeDownload(withDownloadProgress(options, () => this.sampleDownload));
   }
-  protected override async differentialDownloadInstaller(...args: Parameters<NsisUpdater['differentialDownloadInstaller']>) {
+  protected override async differentialDownloadInstaller(
+    ...args: Parameters<NsisUpdater['differentialDownloadInstaller']>
+  ) {
     this.sampleDownload = false;
     const needsFullDownload = await super.differentialDownloadInstaller(...args);
     this.sampleDownload = needsFullDownload;
@@ -65,9 +76,11 @@ class WindowsUpdates extends NsisUpdater {
   }
 }
 class LinuxUpdates extends AppImageUpdater {
-  protected override executeDownload(options: DownloadExecutorTask) { return super.executeDownload(withDownloadProgress(options)); }
+  protected override executeDownload(options: DownloadExecutorTask) {
+    return super.executeDownload(withDownloadProgress(options));
+  }
 }
 export function createUpdateTransport() {
-  if(process.platform==='linux')return new LinuxUpdates();
+  if (process.platform === 'linux') return new LinuxUpdates();
   return process.platform === 'darwin' ? new MacUpdates() : new WindowsUpdates();
 }

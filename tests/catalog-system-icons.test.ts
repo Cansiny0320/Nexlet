@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vite-plus/test';
 import type { Command } from '../src/shared/types';
 
 const mocks = vi.hoisted(() => ({ load: vi.fn() }));
@@ -6,14 +6,26 @@ vi.mock('../src/main/system-icons-mac', () => ({ loadMacSystemIcons: mocks.load 
 vi.mock('electron', () => ({ app: {}, shell: {} }));
 import { Catalog } from '../src/main/catalog';
 
-const display: Command = { id: 'system:settings:display', name: '显示器设置', kind: 'system', subtitle: '', keywords: [] };
-beforeEach(() => { vi.resetAllMocks(); vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin'); });
+const display: Command = {
+  id: 'system:settings:display',
+  name: '显示器设置',
+  kind: 'system',
+  subtitle: '',
+  keywords: [],
+};
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin');
+});
 afterEach(() => vi.restoreAllMocks());
 
 it('系统设置在搜索、最近和固定共用的图标链路中加载，并合并并发请求', async () => {
   mocks.load.mockResolvedValue(new Map([[display.id, 'data:image/png;base64,native']]));
   const catalog = new Catalog(() => {});
-  const [first, second] = await Promise.all([catalog.withIcons([display]), catalog.withIcons([display])]);
+  const [first, second] = await Promise.all([
+    catalog.withIcons([display]),
+    catalog.withIcons([display]),
+  ]);
   expect(first[0].icon).toBe('data:image/png;base64,native');
   expect(second[0].icon).toBe(first[0].icon);
   await catalog.withIcons([display]);

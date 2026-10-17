@@ -1,24 +1,51 @@
 import { EventEmitter } from 'node:events';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'vite-plus/test';
 import type { BrowserWindow } from 'electron';
 
 const native = vi.hoisted(() => ({ release: vi.fn(), drag: vi.fn() }));
-vi.mock('koffi', () => ({ default: { load: () => ({ func: (name: string, result?: string) => {
-  if (name.includes('objc_getClass') || name.includes('sel_registerName')) return (value: string) => value;
-  if (result === 'void *') return (receiver: unknown, selector: string) => selector === 'currentEvent' ? 2n : selector === 'window' ? 3n : receiver;
-  if (result === 'uintptr_t') return () => 1;
-  return (receiver: unknown, selector: string, event?: unknown) => selector === 'release' ? native.release(receiver) : native.drag(receiver, event);
-} }) } }));
+vi.mock('koffi', () => ({
+  default: {
+    load: () => ({
+      func: (name: string, result?: string) => {
+        if (name.includes('objc_getClass') || name.includes('sel_registerName'))
+          return (value: string) => value;
+        if (result === 'void *')
+          return (receiver: unknown, selector: string) =>
+            selector === 'currentEvent' ? 2n : selector === 'window' ? 3n : receiver;
+        if (result === 'uintptr_t') return () => 1;
+        return (receiver: unknown, selector: string, event?: unknown) =>
+          selector === 'release' ? native.release(receiver) : native.drag(receiver, event);
+      },
+    }),
+  },
+}));
 import { nativeWindowDrag } from '../src/main/window-drag';
 
-afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 function setup() {
   vi.stubGlobal('process', { ...process, platform: 'darwin' });
-  const window = new EventEmitter(), contents = new EventEmitter();
+  const window = new EventEmitter(),
+    contents = new EventEmitter();
   let destroyed = false;
-  Object.defineProperty(window, 'webContents', { get() { if (destroyed) throw Error('Object has been destroyed'); return contents; } });
+  Object.defineProperty(window, 'webContents', {
+    get() {
+      if (destroyed) throw Error('Object has been destroyed');
+      return contents;
+    },
+  });
   Object.assign(window, { getNativeWindowHandle: () => Buffer.from([1, 0, 0, 0, 0, 0, 0, 0]) });
-  return { window, contents, start: nativeWindowDrag(window as BrowserWindow), destroy() { destroyed = true; window.emit('closed'); } };
+  return {
+    window,
+    contents,
+    start: nativeWindowDrag(window as BrowserWindow),
+    destroy() {
+      destroyed = true;
+      window.emit('closed');
+    },
+  };
 }
 test('关闭窗口后用已保存的 webContents 清理，不访问销毁后的 BrowserWindow', () => {
   const probe = setup();

@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const { accessibility, runCommand } = vi.hoisted(() => ({
   accessibility: vi.fn(),
-  runCommand: vi.fn()
+  runCommand: vi.fn(),
 }));
 vi.mock('electron', () => ({ systemPreferences: { isTrustedAccessibilityClient: accessibility } }));
 vi.mock('node:util', () => ({ promisify: () => runCommand }));
@@ -16,7 +16,9 @@ describe('macOS 自动回贴权限', () => {
     accessibility.mockReset().mockReturnValue(false);
     runCommand.mockReset().mockResolvedValue({ stdout: '42' });
   });
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('缺少权限时请求系统授权引导，并停止回贴、保留手动粘贴提示', async () => {
     const platform = new Platform(() => undefined);
@@ -35,8 +37,11 @@ describe('macOS 自动回贴权限', () => {
     accessibility.mockReturnValue(true);
     await expect(platform.paste()).resolves.toBeUndefined();
     expect(accessibility).toHaveBeenCalledTimes(2);
-    expect(runCommand).toHaveBeenLastCalledWith('/usr/bin/osascript',
-      ['-e', 'tell application "System Events" to keystroke "v" using command down'], { timeout: 5000 });
+    expect(runCommand).toHaveBeenLastCalledWith(
+      '/usr/bin/osascript',
+      ['-e', 'tell application "System Events" to keystroke "v" using command down'],
+      { timeout: 5000 },
+    );
   });
 
   it('初始化和没有目标窗口时不会请求权限', async () => {
@@ -59,7 +64,12 @@ describe('macOS 自动回贴权限', () => {
   });
 
   it('原生读取失败后回退 JXA，并忽略本进程目标', async () => {
-    const platform = new Platform(() => undefined, async () => { throw Error('native unavailable'); });
+    const platform = new Platform(
+      () => undefined,
+      async () => {
+        throw Error('native unavailable');
+      },
+    );
     runCommand.mockResolvedValueOnce({ stdout: '{"pid":123}' });
     await platform.rememberTarget();
     expect(platform.target).toEqual({ pid: 123 });

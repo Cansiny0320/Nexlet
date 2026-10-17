@@ -2,7 +2,11 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
-export interface WindowsApplication { Name: string; AppID: string; IconPath?: string; }
+export interface WindowsApplication {
+  Name: string;
+  AppID: string;
+  IconPath?: string;
+}
 const INDEX_SCRIPT = String.raw`
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new()
 $apps = @(Get-StartApps | Where-Object { $_.AppID -match '^[a-zA-Z0-9_.-]+![a-zA-Z0-9_.-]+$' })
@@ -45,8 +49,17 @@ try {
 `;
 
 export async function readWindowsApplications(): Promise<WindowsApplication[]> {
-  const { stdout } = await exec('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', INDEX_SCRIPT], { windowsHide: true, timeout: 20000, maxBuffer: 2 * 1024 * 1024 });
+  const { stdout } = await exec(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-Command', INDEX_SCRIPT],
+    { windowsHide: true, timeout: 20000, maxBuffer: 2 * 1024 * 1024 },
+  );
   const result = JSON.parse(stdout || '[]');
-  return (Array.isArray(result) ? result : [result]).filter(item =>
-    item && typeof item.Name === 'string' && typeof item.AppID === 'string' && /^[a-zA-Z0-9_.-]+![a-zA-Z0-9_.-]+$/.test(item.AppID));
+  return (Array.isArray(result) ? result : [result]).filter(
+    (item) =>
+      item &&
+      typeof item.Name === 'string' &&
+      typeof item.AppID === 'string' &&
+      /^[a-zA-Z0-9_.-]+![a-zA-Z0-9_.-]+$/.test(item.AppID),
+  );
 }

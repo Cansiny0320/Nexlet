@@ -1,12 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const { createReader, reader, read, readText } = vi.hoisted(() => ({
-  createReader: vi.fn(), reader: vi.fn(), read: vi.fn(), readText: vi.fn()
+  createReader: vi.fn(),
+  reader: vi.fn(),
+  read: vi.fn(),
+  readText: vi.fn(),
 }));
 vi.mock('../src/main/mac-pasteboard', () => ({ createMacPasteboardReader: createReader }));
 vi.mock('electron', () => ({
-  systemPreferences: {}, clipboard: { read, readText }, ClipboardItem: class {},
-  nativeImage: { createEmpty: () => ({ isEmpty: () => true }) }
+  systemPreferences: {},
+  clipboard: { read, readText },
+  ClipboardItem: class {},
+  nativeImage: { createEmpty: () => ({ isEmpty: () => true }) },
 }));
 vi.mock('koffi', () => ({ default: {} }));
 import { Platform } from '../src/main/platform';
@@ -31,10 +36,16 @@ describe('macOS change counter', () => {
     expect(createReader).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['initialization', 'read'])('falls back to content polling on %s failure', stage => {
+  it.each(['initialization', 'read'])('falls back to content polling on %s failure', (stage) => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    if (stage === 'initialization') createReader.mockImplementation(() => { throw Error('unavailable'); });
-    else reader.mockImplementation(() => { throw Error('unavailable'); });
+    if (stage === 'initialization')
+      createReader.mockImplementation(() => {
+        throw Error('unavailable');
+      });
+    else
+      reader.mockImplementation(() => {
+        throw Error('unavailable');
+      });
     const platform = new Platform(() => undefined);
     expect(platform.sequence()).toBeNull();
     expect(platform.sequence()).toBeNull();
@@ -45,8 +56,17 @@ describe('macOS change counter', () => {
 
 function captureFixture(sequence: () => number | null) {
   const addClip = vi.fn();
-  const store = { settings: () => ({ clipboardEnabled: true }), addClip, prune: vi.fn(), hasClipHash: () => true };
-  const service = new ClipboardService(store as any, { sequence, readFiles: async () => [] } as any, vi.fn());
+  const store = {
+    settings: () => ({ clipboardEnabled: true }),
+    addClip,
+    prune: vi.fn(),
+    hasClipHash: () => true,
+  };
+  const service = new ClipboardService(
+    store as any,
+    { sequence, readFiles: async () => [] } as any,
+    vi.fn(),
+  );
   return { service, addClip };
 }
 
@@ -61,8 +81,14 @@ describe('capture with a change counter', () => {
   });
 
   it('observes a change that happens while the prior read is pending', async () => {
-    let sequence = 3, release!: (value: unknown[]) => void;
-    read.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+    let sequence = 3,
+      release!: (value: unknown[]) => void;
+    read.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
     const { service, addClip } = captureFixture(() => sequence);
     readText.mockResolvedValueOnce('first').mockResolvedValueOnce('second');
     const first = service.capture();

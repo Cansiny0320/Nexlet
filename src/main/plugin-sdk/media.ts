@@ -7,24 +7,53 @@ import { runProcess } from './process';
 export class PluginMedia {
   constructor(private tasks: PluginTasks) {}
   async invoke(context: SdkContext, method: string, value: unknown): Promise<unknown> {
-    context.require('media'); const args = object(value), id = string(args.id, 100);
-    return this.tasks.run(context.contents.id, id, Number(args.timeoutMs ?? 60000), async signal => {
-      if (method === 'media.image') return new Promise((resolve, reject) => {
-        const child = utilityProcess.fork(path.join(__dirname, 'plugin-image-worker.cjs'), [], { serviceName: 'Nexlet image processing', stdio: 'ignore' });
-        const abort = () => child.kill(); signal.addEventListener('abort', abort, { once: true });
-        child.once('message', message => { if (message.error) reject(new Error(message.error)); else resolve(message.value); child.kill(); });
-        child.once('exit', () => { signal.removeEventListener('abort', abort); reject(new Error(t("图像进程已退出"))); });
-        child.postMessage({ ...args, locale: currentLocale() });
-      });
-      if (method === 'media.ffmpeg') {
-        context.require('files');
-        if (args.executable === undefined) throw new Error(t("Nexlet 不再内置 FFmpeg，请通过 executable 指定本机 FFmpeg 路径"));
-        context.require('process');
-        const executable = string(args.executable);
-        if (!Array.isArray(args.args) || args.args.some(arg => typeof arg !== 'string')) throw new Error(t("FFmpeg 参数无效"));
-        return runProcess({ executable: executable.replace(/app\.asar([/\\])/, 'app.asar.unpacked$1'), args: ['-nostdin', '-progress', 'pipe:1', '-nostats', ...args.args], cwd: typeof args.cwd === 'string' ? args.cwd : undefined }, signal, value => context.emit('progress', { id, value }));
-      }
-      throw new Error(t("不支持的媒体 API"));
-    });
+    context.require('media');
+    const args = object(value),
+      id = string(args.id, 100);
+    return this.tasks.run(
+      context.contents.id,
+      id,
+      Number(args.timeoutMs ?? 60000),
+      async (signal) => {
+        if (method === 'media.image')
+          return new Promise((resolve, reject) => {
+            const child = utilityProcess.fork(path.join(__dirname, 'plugin-image-worker.cjs'), [], {
+              serviceName: 'Nexlet image processing',
+              stdio: 'ignore',
+            });
+            const abort = () => child.kill();
+            signal.addEventListener('abort', abort, { once: true });
+            child.once('message', (message) => {
+              if (message.error) reject(new Error(message.error));
+              else resolve(message.value);
+              child.kill();
+            });
+            child.once('exit', () => {
+              signal.removeEventListener('abort', abort);
+              reject(new Error(t('图像进程已退出')));
+            });
+            child.postMessage({ ...args, locale: currentLocale() });
+          });
+        if (method === 'media.ffmpeg') {
+          context.require('files');
+          if (args.executable === undefined)
+            throw new Error(t('Nexlet 不再内置 FFmpeg，请通过 executable 指定本机 FFmpeg 路径'));
+          context.require('process');
+          const executable = string(args.executable);
+          if (!Array.isArray(args.args) || args.args.some((arg) => typeof arg !== 'string'))
+            throw new Error(t('FFmpeg 参数无效'));
+          return runProcess(
+            {
+              executable: executable.replace(/app\.asar([/\\])/, 'app.asar.unpacked$1'),
+              args: ['-nostdin', '-progress', 'pipe:1', '-nostats', ...args.args],
+              cwd: typeof args.cwd === 'string' ? args.cwd : undefined,
+            },
+            signal,
+            (value) => context.emit('progress', { id, value }),
+          );
+        }
+        throw new Error(t('不支持的媒体 API'));
+      },
+    );
   }
 }

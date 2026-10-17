@@ -6,41 +6,79 @@ import type { UpdateStatus } from '../shared/types';
 const repository = 'https://github.com/Cansiny0320/Nexlet';
 const automaticCheckDelay = 30_000;
 const automaticCheckInterval = 6 * 60 * 60 * 1000;
-interface ReleaseInfo { version: string; releaseNotes?: string | { note: string }[] | null; }
+interface ReleaseInfo {
+  version: string;
+  releaseNotes?: string | { note: string }[] | null;
+}
 export interface UpdateTransport {
   on(event: string, listener: (...args: any[]) => void): unknown;
   checkForUpdates(): Promise<unknown>;
   downloadUpdate(): Promise<unknown>;
   quitAndInstall(silent?: boolean, relaunch?: boolean): void | Promise<void>;
 }
-const newer = (version: string, current: string) => !!semver.valid(version) && !semver.prerelease(version) && semver.gt(version, current);
+const newer = (version: string, current: string) =>
+  !!semver.valid(version) && !semver.prerelease(version) && semver.gt(version, current);
 
-export function portableRelease(value: unknown, current: string, platform: string = 'win32', arch: string = 'x64'): { version: string; notes: string; url: string } | null {
-  const data = value as { tag_name?: string; draft?: boolean; prerelease?: boolean; body?: string; assets?: { name: string }[] } | null;
-  if (!data || data.draft !== false || data.prerelease !== false || typeof data.tag_name !== 'string') return null;
+export function portableRelease(
+  value: unknown,
+  current: string,
+  platform: string = 'win32',
+  arch: string = 'x64',
+): { version: string; notes: string; url: string } | null {
+  const data = value as {
+    tag_name?: string;
+    draft?: boolean;
+    prerelease?: boolean;
+    body?: string;
+    assets?: { name: string }[];
+  } | null;
+  if (
+    !data ||
+    data.draft !== false ||
+    data.prerelease !== false ||
+    typeof data.tag_name !== 'string'
+  )
+    return null;
   const version = data.tag_name.replace(/^v/, '');
   if (!newer(version, current)) return null;
-  if(!['x64','arm64'].includes(arch)||!['linux','win32'].includes(platform)||platform==='win32'&&arch!=='x64')return null;
-  const name = platform==='linux'?`Nexlet-${version}-Linux-${arch==='x64'?'amd64':arch}.deb`:`Nexlet-${version}-Windows-x64.exe`;
-  if (!Array.isArray(data.assets) || !data.assets.some(asset => asset.name === name)) return null;
-  return { version, notes: typeof data.body === 'string' ? data.body.slice(0, 8000) : '', url: `${repository}/releases/download/${encodeURIComponent(data.tag_name)}/${name}` };
+  if (
+    !['x64', 'arm64'].includes(arch) ||
+    !['linux', 'win32'].includes(platform) ||
+    (platform === 'win32' && arch !== 'x64')
+  )
+    return null;
+  const name =
+    platform === 'linux'
+      ? `Nexlet-${version}-Linux-${arch === 'x64' ? 'amd64' : arch}.deb`
+      : `Nexlet-${version}-Windows-x64.exe`;
+  if (!Array.isArray(data.assets) || !data.assets.some((asset) => asset.name === name)) return null;
+  return {
+    version,
+    notes: typeof data.body === 'string' ? data.body.slice(0, 8000) : '',
+    url: `${repository}/releases/download/${encodeURIComponent(data.tag_name)}/${name}`,
+  };
 }
 
 async function latestPortable(current: string) {
   const response = await fetch('https://api.github.com/repos/Cansiny0320/Nexlet/releases/latest', {
-    headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(20000)
+    headers: { Accept: 'application/vnd.github+json' },
+    signal: AbortSignal.timeout(20000),
   });
   if (response.status === 404) return null;
-  if (!response.ok) throw Error(t("检查更新失败（HTTP {{v0}}），请稍后重试", { v0: response.status }));
+  if (!response.ok)
+    throw Error(t('检查更新失败（HTTP {{v0}}），请稍后重试', { v0: response.status }));
   return portableRelease(await response.json(), current, process.platform, process.arch);
 }
 
 function updateError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  if (/signature|sha512|checksum|code.?sign|digest/i.test(message)) return t("更新包校验失败，未安装；请重试或从正式发布页下载");
-  if (/net::|ENOTFOUND|ECONN|ETIMEDOUT|timeout|fetch failed|network/i.test(message)) return t("网络连接失败，请检查网络后重试");
-  if (/404|latest.*yml|No published versions/i.test(message)) return t("当前发布尚未提供可用更新，请稍后重试");
-  return t("更新失败：{{v0}}", { v0: message.slice(0, 500) });
+  if (/signature|sha512|checksum|code.?sign|digest/i.test(message))
+    return t('更新包校验失败，未安装；请重试或从正式发布页下载');
+  if (/net::|ENOTFOUND|ECONN|ETIMEDOUT|timeout|fetch failed|network/i.test(message))
+    return t('网络连接失败，请检查网络后重试');
+  if (/404|latest.*yml|No published versions/i.test(message))
+    return t('当前发布尚未提供可用更新，请稍后重试');
+  return t('更新失败：{{v0}}', { v0: message.slice(0, 500) });
 }
 
 export class AppUpdates {
@@ -56,34 +94,70 @@ export class AppUpdates {
     private readonly transport: UpdateTransport | null,
     private readonly changed: () => void,
     private readonly prepareInstall: () => Promise<void>,
-    private readonly checkPortable = latestPortable
+    private readonly checkPortable = latestPortable,
   ) {
     this.status = { mode, phase: 'idle', version: null, notes: '', percent: null, error: null };
     transport?.on('update-available', (info: ReleaseInfo) => {
       if (this.status.phase !== 'checking') return;
-      if (!newer(info.version, current)) { this.set({ phase: 'latest' }); return; }
-      const notes = typeof info.releaseNotes === 'string' ? info.releaseNotes : info.releaseNotes?.map(item => item.note).join('\n') || '';
+      if (!newer(info.version, current)) {
+        this.set({ phase: 'latest' });
+        return;
+      }
+      const notes =
+        typeof info.releaseNotes === 'string'
+          ? info.releaseNotes
+          : info.releaseNotes?.map((item) => item.note).join('\n') || '';
       this.set({ phase: 'available', version: info.version, notes: notes.slice(0, 8000) });
     });
-    transport?.on('update-not-available', () => { if (this.status.phase === 'checking') this.set({ phase: 'latest' }); });
-    transport?.on('download-progress', ({ percent, transferred, total, bytesPerSecond }: { percent: number; transferred?: number; total?: number; bytesPerSecond?: number }) => {
-      const valid = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
-      if (this.status.phase === 'downloading') this.set({
-        percent: Number.isFinite(percent) ? Math.max(0, Math.min(100, Math.floor(percent))) : null,
-        transferred: valid(transferred), total: valid(total), bytesPerSecond: valid(bytesPerSecond)
-      });
+    transport?.on('update-not-available', () => {
+      if (this.status.phase === 'checking') this.set({ phase: 'latest' });
     });
+    transport?.on(
+      'download-progress',
+      ({
+        percent,
+        transferred,
+        total,
+        bytesPerSecond,
+      }: {
+        percent: number;
+        transferred?: number;
+        total?: number;
+        bytesPerSecond?: number;
+      }) => {
+        const valid = (value: number | undefined) =>
+          typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+        if (this.status.phase === 'downloading')
+          this.set({
+            percent: Number.isFinite(percent)
+              ? Math.max(0, Math.min(100, Math.floor(percent)))
+              : null,
+            transferred: valid(transferred),
+            total: valid(total),
+            bytesPerSecond: valid(bytesPerSecond),
+          });
+      },
+    );
     transport?.on('update-downloaded', (info: ReleaseInfo) => {
-      if (this.status.phase === 'downloading' && info.version === this.status.version) this.set({ phase: 'downloaded', percent: 100 });
+      if (this.status.phase === 'downloading' && info.version === this.status.version)
+        this.set({ phase: 'downloaded', percent: 100 });
     });
     transport?.on('error', (error: Error) => {
       if (['checking', 'downloading', 'installing'].includes(this.status.phase)) this.fail(error);
     });
   }
-  read(): UpdateStatus { return { ...this.status }; }
-  private set(patch: Partial<UpdateStatus>) { this.status = { ...this.status, ...patch }; this.changed(); }
+  read(): UpdateStatus {
+    return { ...this.status };
+  }
+  private set(patch: Partial<UpdateStatus>) {
+    this.status = { ...this.status, ...patch };
+    this.changed();
+  }
   private fail(error: unknown) {
-    if (this.automaticCheckSnapshot) { this.set(this.automaticCheckSnapshot); return; }
+    if (this.automaticCheckSnapshot) {
+      this.set(this.automaticCheckSnapshot);
+      return;
+    }
     this.set({ phase: 'error', error: updateError(error), percent: null });
   }
   setAutomaticChecks(enabled: boolean): void {
@@ -98,65 +172,122 @@ export class AppUpdates {
     this.automaticCheckTimer = setTimeout(() => {
       this.automaticCheckTimer = null;
       void this.check('automatic').finally(() => {
-        if (this.automaticChecksEnabled && !this.automaticCheckTimer) this.scheduleAutomaticCheck(automaticCheckInterval);
+        if (this.automaticChecksEnabled && !this.automaticCheckTimer)
+          this.scheduleAutomaticCheck(automaticCheckInterval);
       });
     }, delay);
     this.automaticCheckTimer.unref();
   }
   async check(source: 'manual' | 'automatic' = 'manual'): Promise<void> {
-    if (this.checking || this.status.mode === 'unsupported' || ['checking', 'downloading', 'downloaded', 'installing'].includes(this.status.phase)) return;
+    if (
+      this.checking ||
+      this.status.mode === 'unsupported' ||
+      ['checking', 'downloading', 'downloaded', 'installing'].includes(this.status.phase)
+    )
+      return;
     if (source === 'automatic' && this.status.phase === 'available') return;
     this.checking = true;
     this.automaticCheckSnapshot = source === 'automatic' ? this.read() : null;
     this.portableUrl = null;
-    this.set({ phase: 'checking', version: null, notes: '', percent: null, transferred: null, total: null, bytesPerSecond: null, error: null });
+    this.set({
+      phase: 'checking',
+      version: null,
+      notes: '',
+      percent: null,
+      transferred: null,
+      total: null,
+      bytesPerSecond: null,
+      error: null,
+    });
     try {
       if (this.status.mode === 'portable') {
         const info = await this.checkPortable(this.current);
         this.portableUrl = info?.url || null;
-        this.set(info ? { phase: 'available', version: info.version, notes: info.notes } : { phase: 'latest' });
+        this.set(
+          info
+            ? { phase: 'available', version: info.version, notes: info.notes }
+            : { phase: 'latest' },
+        );
       } else {
         await this.transport!.checkForUpdates();
         if (this.status.phase === 'checking') this.set({ phase: 'latest' });
       }
-    } catch (error) { this.fail(error); }
-    finally { this.checking = false; this.automaticCheckSnapshot = null; }
+    } catch (error) {
+      this.fail(error);
+    } finally {
+      this.checking = false;
+      this.automaticCheckSnapshot = null;
+    }
   }
   async download(): Promise<void> {
-    if (this.status.mode !== 'automatic' || this.status.phase !== 'available') throw Error(t("请先检查可用更新"));
-    this.set({ phase: 'downloading', percent: null, transferred: null, total: null, bytesPerSecond: null, error: null });
-    try { await this.transport!.downloadUpdate(); } catch (error) { this.fail(error); }
+    if (this.status.mode !== 'automatic' || this.status.phase !== 'available')
+      throw Error(t('请先检查可用更新'));
+    this.set({
+      phase: 'downloading',
+      percent: null,
+      transferred: null,
+      total: null,
+      bytesPerSecond: null,
+      error: null,
+    });
+    try {
+      await this.transport!.downloadUpdate();
+    } catch (error) {
+      this.fail(error);
+    }
   }
   async install(): Promise<void> {
-    if (this.status.mode !== 'automatic' || this.status.phase !== 'downloaded') throw Error(t("更新尚未下载完成"));
+    if (this.status.mode !== 'automatic' || this.status.phase !== 'downloaded')
+      throw Error(t('更新尚未下载完成'));
     this.set({ phase: 'installing' });
-    try { await this.prepareInstall(); await this.transport!.quitAndInstall(true, true); } catch (error) { this.fail(error); }
+    try {
+      await this.prepareInstall();
+      await this.transport!.quitAndInstall(true, true);
+    } catch (error) {
+      this.fail(error);
+    }
   }
   downloadUrl(): string {
-    if (this.status.mode !== 'portable' || this.status.phase !== 'available' || !this.portableUrl) throw Error(t("请先检查可手动下载的更新"));
+    if (this.status.mode !== 'portable' || this.status.phase !== 'available' || !this.portableUrl)
+      throw Error(t('请先检查可手动下载的更新'));
     return this.portableUrl;
   }
 }
 
-
 export class UpdateSaveBarrier {
-  private pending = new Map<string, { windows: Set<number>; resolve: () => void; reject: (error: Error) => void }>();
-  async prepare(windows: number[], send: (id: number, token: string) => void, timeout = 10000): Promise<void> {
+  private pending = new Map<
+    string,
+    { windows: Set<number>; resolve: () => void; reject: (error: Error) => void }
+  >();
+  async prepare(
+    windows: number[],
+    send: (id: number, token: string) => void,
+    timeout = 10000,
+  ): Promise<void> {
     if (!windows.length) return;
     const token = randomUUID();
     let timer: ReturnType<typeof setTimeout>;
     try {
       await new Promise<void>((resolve, reject) => {
         this.pending.set(token, { windows: new Set(windows), resolve, reject });
-        timer = setTimeout(() => reject(Error(t("等待窗口保存超时，请确认所有稿纸已保存后重试"))), timeout);
+        timer = setTimeout(
+          () => reject(Error(t('等待窗口保存超时，请确认所有稿纸已保存后重试'))),
+          timeout,
+        );
         for (const id of windows) send(id, token);
       });
-    } finally { clearTimeout(timer!); this.pending.delete(token); }
+    } finally {
+      clearTimeout(timer!);
+      this.pending.delete(token);
+    }
   }
   ready(id: number, token: unknown, error: unknown): void {
     const pending = typeof token === 'string' ? this.pending.get(token) : undefined;
     if (!pending || !pending.windows.has(id)) return;
-    if (typeof error === 'string' && error) { pending.reject(Error(error.slice(0, 500))); return; }
+    if (typeof error === 'string' && error) {
+      pending.reject(Error(error.slice(0, 500)));
+      return;
+    }
     pending.windows.delete(id);
     if (!pending.windows.size) pending.resolve();
   }

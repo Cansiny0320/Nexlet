@@ -1,13 +1,22 @@
 import path from 'node:path';
 
-interface ShortcutTarget { target: string; args?: string; }
+interface ShortcutTarget {
+  target: string;
+  args?: string;
+}
 
 // Match entry names and target basenames, never parent folders: a normal app
 // can live inside a folder named Help or Documentation.
 function isDocumentationName(name: string): boolean {
   const words = name.replace(/([a-z])([A-Z])/g, '$1 $2');
-  return /(?:^|[\s._-])(?:read[\s._-]*me|change[\s._-]*log|release[\s._-]*notes?|documentation|module[\s._-]+docs|faqs?)(?=$|[\s._()\d-])/i.test(words)
-    || /帮助文档|幫助文件|使用说明|使用說明|用户手册|用戶手冊|更新日志|更新日誌|发行说明|發行說明/.test(name);
+  return (
+    /(?:^|[\s._-])(?:read[\s._-]*me|change[\s._-]*log|release[\s._-]*notes?|documentation|module[\s._-]+docs|faqs?)(?=$|[\s._()\d-])/i.test(
+      words,
+    ) ||
+    /帮助文档|幫助文件|使用说明|使用說明|用户手册|用戶手冊|更新日志|更新日誌|发行说明|發行說明/.test(
+      name,
+    )
+  );
 }
 
 export function isAuxiliaryWindowsShortcut(name: string, link?: ShortcutTarget): boolean {
@@ -21,6 +30,8 @@ export function isAuxiliaryWindowsShortcut(name: string, link?: ShortcutTarget):
   if (/\.(chm|hlp)$/i.test(target)) return true;
   if (/\.(txt|md|rtf|pdf|html?|url)$/i.test(target) && isDocumentationName(target)) return true;
   // Help viewers and assistance applications are useful apps, not documents.
-  return !/\.(exe|msc|cpl)$/i.test(target)
-    && /(?:^|[\s._-])(?:help|manual|user[\s._-]+guide)(?:\s*\([^)]*\))?$/i.test(name);
+  return (
+    !/\.(exe|msc|cpl)$/i.test(target) &&
+    /(?:^|[\s._-])(?:help|manual|user[\s._-]+guide)(?:\s*\([^)]*\))?$/i.test(name)
+  );
 }

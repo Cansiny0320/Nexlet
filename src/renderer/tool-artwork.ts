@@ -9,7 +9,11 @@ import json from '../../assets/tools/json.png';
 
 export const brandIcon = logo;
 export const builtInArtwork: Readonly<Record<string, string>> = {
-  'tool:filesearch': filesearch, 'tool:clipboard': clipboard,
-  'tool:timestamp': timestamp, 'tool:web': web, 'tool:scratchpad': scratchpad,
-  'tool:plugins': plugins, 'tool:json': json
+  'tool:filesearch': filesearch,
+  'tool:clipboard': clipboard,
+  'tool:timestamp': timestamp,
+  'tool:web': web,
+  'tool:scratchpad': scratchpad,
+  'tool:plugins': plugins,
+  'tool:json': json,
 };

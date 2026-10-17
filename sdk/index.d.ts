@@ -1,9 +1,26 @@
-import type { PluginSdkExtensions, PluginInputExtensions, PluginClipboardExtensions, SdkPermission } from './extensions';
+import type {
+  PluginSdkExtensions,
+  PluginInputExtensions,
+  PluginClipboardExtensions,
+  SdkPermission,
+} from './extensions';
 export * from './extensions';
 /** Type declarations for the public plugin bridge, not Nexlet's internal HostApi. */
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 export type Unsubscribe = () => void;
-export type PluginPermission = 'clipboard.read' | 'clipboard.write' | 'shell.openExternal' | 'network.request' | 'secrets' | SdkPermission;
+export type PluginPermission =
+  | 'clipboard.read'
+  | 'clipboard.write'
+  | 'shell.openExternal'
+  | 'network.request'
+  | 'secrets'
+  | SdkPermission;
 export type InputSource = 'input' | 'paste' | 'drop' | 'selection';
 
 export interface InputResource {
@@ -25,10 +42,18 @@ export type ContentMatch =
   | { type: 'text'; minLength?: number; maxLength?: number }
   | { type: 'regex'; pattern: string; flags?: string; minLength?: number; maxLength?: number }
   | { type: 'image' }
-  | { type: 'files'; extensions?: string[]; fileType?: 'file' | 'directory'; minCount?: number; maxCount?: number };
+  | {
+      type: 'files';
+      extensions?: string[];
+      fileType?: 'file' | 'directory';
+      minCount?: number;
+      maxCount?: number;
+    };
 
 export type AppLocale = 'zh-CN' | 'zh-Hant' | 'en';
-export type PluginLocales = Partial<Record<AppLocale, { name?: string; description?: string; category?: string }>>;
+export type PluginLocales = Partial<
+  Record<AppLocale, { name?: string; description?: string; category?: string }>
+>;
 
 export interface PluginFeature {
   locales?: PluginLocales;
@@ -127,5 +152,7 @@ export interface PluginApi extends PluginSdkExtensions {
 
 declare global {
   const nexlet: PluginApi;
-  interface Window { nexlet: PluginApi; }
+  interface Window {
+    nexlet: PluginApi;
+  }
 }

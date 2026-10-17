@@ -14,10 +14,14 @@ export function createMacPasteboardReader(): () => number {
   const objectMessage = objc.func('objc_msgSend', 'void *', ['void *', 'void *']);
   const integerMessage = objc.func('objc_msgSend', 'intptr_t', ['void *', 'void *']);
   const voidMessage = objc.func('objc_msgSend', 'void', ['void *', 'void *']);
-  const pasteboardClass = getClass('NSPasteboard'), poolClass = getClass('NSAutoreleasePool');
+  const pasteboardClass = getClass('NSPasteboard'),
+    poolClass = getClass('NSAutoreleasePool');
   if (!pasteboardClass || !poolClass) throw Error('AppKit pasteboard classes unavailable');
-  const general = selector('generalPasteboard'), changeCount = selector('changeCount');
-  const alloc = selector('alloc'), init = selector('init'), drain = selector('drain');
+  const general = selector('generalPasteboard'),
+    changeCount = selector('changeCount');
+  const alloc = selector('alloc'),
+    init = selector('init'),
+    drain = selector('drain');
   return () => {
     const pool = objectMessage(objectMessage(poolClass, alloc), init);
     if (!pool) throw Error('Could not create pasteboard autorelease pool');

@@ -8,15 +8,30 @@ type Props = Omit<ComponentProps<typeof Input>, 'value' | 'onChange'> & {
   onValueChange: (value: string) => void;
 };
 
-export function ShortcutInput({ value, platform, onValueChange, onBlur, readOnly, ...props }: Props) {
+export function ShortcutInput({
+  value,
+  platform,
+  onValueChange,
+  onBlur,
+  readOnly,
+  ...props
+}: Props) {
   const [draft, setDraft] = useState<{ raw: string; display: string } | null>(null);
-  return <Input {...props} readOnly={readOnly}
-    value={!readOnly && draft?.raw === value ? draft.display : formatShortcut(value, platform)}
-    onChange={event => {
-      const display = event.target.value, raw = parseShortcutInput(display);
-      setDraft({ raw, display });
-      onValueChange(raw);
-    }}
-    onBlur={event => { setDraft(null); onBlur?.(event); }}
-  />;
+  return (
+    <Input
+      {...props}
+      readOnly={readOnly}
+      value={!readOnly && draft?.raw === value ? draft.display : formatShortcut(value, platform)}
+      onChange={(event) => {
+        const display = event.target.value,
+          raw = parseShortcutInput(display);
+        setDraft({ raw, display });
+        onValueChange(raw);
+      }}
+      onBlur={(event) => {
+        setDraft(null);
+        onBlur?.(event);
+      }}
+    />
+  );
 }

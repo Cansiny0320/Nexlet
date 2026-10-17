@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vite-plus/test';
 import path from 'node:path';
 import { Arch, Platform } from 'electron-builder';
 // @ts-expect-error Build-time JavaScript helper is exercised directly.

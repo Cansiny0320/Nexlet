@@ -10,13 +10,13 @@ export async function packageWindows({ output = 'release', build = electronBuild
   await build({
     targets: Platform.WINDOWS.createTarget(['nsis'], Arch.x64),
     publish: 'never',
-    config: { directories, nsis: { differentialPackage: true } }
+    config: { directories, nsis: { differentialPackage: true } },
   });
   await build({
     targets: Platform.WINDOWS.createTarget(['portable'], Arch.x64),
     prepackaged: path.join(directories.output, 'win-unpacked'),
     publish: 'never',
-    config: { directories }
+    config: { directories },
   });
 }
 

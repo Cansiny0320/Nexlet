@@ -1,11 +1,47 @@
-import {beforeEach,expect,it,vi} from 'vitest';
-const native=vi.hoisted(()=>({status:vi.fn(),request:vi.fn(),open:vi.fn()}));
-vi.mock('electron',()=>({systemPreferences:{getMediaAccessStatus:native.status},shell:{openExternal:native.open}}));
-vi.mock('koffi',()=>({default:{load:()=>({func:()=>native.request})}}));
-import {ensureScreenCaptureAccess} from '../src/main/screen-capture-access';
-beforeEach(()=>{vi.clearAllMocks();native.status.mockReturnValue('denied');native.request.mockReturnValue(false);native.open.mockResolvedValue(undefined);});
-it('requests macOS access before rejecting a first capture',async()=>{native.request.mockReturnValue(true);await ensureScreenCaptureAccess('darwin');expect(native.request).toHaveBeenCalledOnce();expect(native.open).not.toHaveBeenCalled();});
-it('opens the screen recording settings when permission is still denied',async()=>{await expect(ensureScreenCaptureAccess('darwin')).rejects.toThrow('已打开');expect(native.request).toHaveBeenCalledOnce();expect(native.open).toHaveBeenCalledWith('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');});
-it('continues if the permission status changes while requesting',async()=>{native.status.mockReturnValueOnce('not-determined').mockReturnValue('granted');await ensureScreenCaptureAccess('darwin');expect(native.request).toHaveBeenCalledOnce();expect(native.open).not.toHaveBeenCalled();});
-it('does not request access again when granted or on other platforms',async()=>{native.status.mockReturnValue('granted');await ensureScreenCaptureAccess('darwin');await ensureScreenCaptureAccess('win32');await ensureScreenCaptureAccess('linux');expect(native.request).not.toHaveBeenCalled();expect(native.open).not.toHaveBeenCalled();});
-it('explains managed restrictions without requesting access',async()=>{native.status.mockReturnValue('restricted');await expect(ensureScreenCaptureAccess('darwin')).rejects.toThrow('系统策略限制');expect(native.request).not.toHaveBeenCalled();expect(native.open).toHaveBeenCalledOnce();});
+import { beforeEach, expect, it, vi } from 'vite-plus/test';
+const native = vi.hoisted(() => ({ status: vi.fn(), request: vi.fn(), open: vi.fn() }));
+vi.mock('electron', () => ({
+  systemPreferences: { getMediaAccessStatus: native.status },
+  shell: { openExternal: native.open },
+}));
+vi.mock('koffi', () => ({ default: { load: () => ({ func: () => native.request }) } }));
+import { ensureScreenCaptureAccess } from '../src/main/screen-capture-access';
+beforeEach(() => {
+  vi.clearAllMocks();
+  native.status.mockReturnValue('denied');
+  native.request.mockReturnValue(false);
+  native.open.mockResolvedValue(undefined);
+});
+it('requests macOS access before rejecting a first capture', async () => {
+  native.request.mockReturnValue(true);
+  await ensureScreenCaptureAccess('darwin');
+  expect(native.request).toHaveBeenCalledOnce();
+  expect(native.open).not.toHaveBeenCalled();
+});
+it('opens the screen recording settings when permission is still denied', async () => {
+  await expect(ensureScreenCaptureAccess('darwin')).rejects.toThrow('已打开');
+  expect(native.request).toHaveBeenCalledOnce();
+  expect(native.open).toHaveBeenCalledWith(
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
+  );
+});
+it('continues if the permission status changes while requesting', async () => {
+  native.status.mockReturnValueOnce('not-determined').mockReturnValue('granted');
+  await ensureScreenCaptureAccess('darwin');
+  expect(native.request).toHaveBeenCalledOnce();
+  expect(native.open).not.toHaveBeenCalled();
+});
+it('does not request access again when granted or on other platforms', async () => {
+  native.status.mockReturnValue('granted');
+  await ensureScreenCaptureAccess('darwin');
+  await ensureScreenCaptureAccess('win32');
+  await ensureScreenCaptureAccess('linux');
+  expect(native.request).not.toHaveBeenCalled();
+  expect(native.open).not.toHaveBeenCalled();
+});
+it('explains managed restrictions without requesting access', async () => {
+  native.status.mockReturnValue('restricted');
+  await expect(ensureScreenCaptureAccess('darwin')).rejects.toThrow('系统策略限制');
+  expect(native.request).not.toHaveBeenCalled();
+  expect(native.open).toHaveBeenCalledOnce();
+});

@@ -8,22 +8,32 @@ export interface SystemExecutor {
 }
 
 export class SystemActions {
-  private get entries() { return systemCommands(this.platform, this.release); }
+  private get entries() {
+    return systemCommands(this.platform, this.release);
+  }
   private busy = false;
-  constructor(private platform: string, private release: string, private executor: SystemExecutor) {}
+  constructor(
+    private platform: string,
+    private release: string,
+    private executor: SystemExecutor,
+  ) {}
   commands(): Command[] {
-    return this.entries.map(({ url: _url, action: _action, confirm: _confirm, ...command }) => command);
+    return this.entries.map(
+      ({ url: _url, action: _action, confirm: _confirm, ...command }) => command,
+    );
   }
   async launch(id: string, confirm: (command: Command) => Promise<boolean>): Promise<boolean> {
-    const entry = this.entries.find(c => c.id === id);
-    if (!entry) throw Error(t("系统命令不存在或不支持当前系统"));
-    if (this.busy) throw Error(t("正在处理系统操作，请稍候"));
+    const entry = this.entries.find((c) => c.id === id);
+    if (!entry) throw Error(t('系统命令不存在或不支持当前系统'));
+    if (this.busy) throw Error(t('正在处理系统操作，请稍候'));
     this.busy = true;
     try {
-      if (entry.confirm && !await confirm(entry)) return false;
+      if (entry.confirm && !(await confirm(entry))) return false;
       if (entry.url) await this.executor.open(entry.url);
       else if (entry.action) await this.executor.execute(entry.action);
       return true;
-    } finally { this.busy = false; }
+    } finally {
+      this.busy = false;
+    }
   }
 }

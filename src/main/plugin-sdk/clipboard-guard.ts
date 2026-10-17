@@ -3,13 +3,19 @@ import { randomUUID } from 'node:crypto';
 /** Single-use capabilities bound to a live plugin session. */
 export class ClipboardGuard {
   private sessions = new Map<number, { token: string; stamp?: string }>();
-  constructor(private stamp: () => Promise<string | null>, private writeText: (text: string) => Promise<void>) {}
+  constructor(
+    private stamp: () => Promise<string | null>,
+    private writeText: (text: string) => Promise<void>,
+  ) {}
   async snapshot(owner: number): Promise<string | null> {
     const entry = { token: randomUUID(), stamp: undefined as string | undefined };
     this.sessions.set(owner, entry);
     const stamp = await this.stamp();
     if (this.sessions.get(owner) !== entry) return null;
-    if (stamp === null) { this.sessions.delete(owner); return null; }
+    if (stamp === null) {
+      this.sessions.delete(owner);
+      return null;
+    }
     entry.stamp = stamp;
     return entry.token;
   }
@@ -25,5 +31,7 @@ export class ClipboardGuard {
     await this.writeText(text);
     return true;
   }
-  close(owner: number): void { this.sessions.delete(owner); }
+  close(owner: number): void {
+    this.sessions.delete(owner);
+  }
 }

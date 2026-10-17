@@ -48,12 +48,22 @@ function run(argv) {
 
 export async function loadMacSystemIcons(): Promise<Map<string, string>> {
   const entries = systemCommands(process.platform, release())
-    .filter(c => c.url?.startsWith('x-apple.systempreferences:'))
-    .map(c => [c.id, c.url!.slice('x-apple.systempreferences:'.length)]);
+    .filter((c) => c.url?.startsWith('x-apple.systempreferences:'))
+    .map((c) => [c.id, c.url!.slice('x-apple.systempreferences:'.length)]);
   if (!entries.length) return new Map();
   try {
-    const { stdout } = await exec('/usr/bin/osascript', ['-l', 'JavaScript', '-e', script, JSON.stringify(entries)], { timeout: 10000, maxBuffer: 8 * 1024 * 1024 });
+    const { stdout } = await exec(
+      '/usr/bin/osascript',
+      ['-l', 'JavaScript', '-e', script, JSON.stringify(entries)],
+      { timeout: 10000, maxBuffer: 8 * 1024 * 1024 },
+    );
     const known = new Set(entries.map(([id]) => id));
-    return new Map((JSON.parse(stdout) as [string, string][]).filter(([id, icon]) => known.has(id) && icon.startsWith('data:image/png;base64,')));
-  } catch { return new Map(); } // Keep semantic fallback icons on older/unavailable resources.
+    return new Map(
+      (JSON.parse(stdout) as [string, string][]).filter(
+        ([id, icon]) => known.has(id) && icon.startsWith('data:image/png;base64,'),
+      ),
+    );
+  } catch {
+    return new Map();
+  } // Keep semantic fallback icons on older/unavailable resources.
 }

@@ -26,14 +26,14 @@ This README describes the current source and interface. For downloadable package
 
 ## Everyday actions
 
-| Input or action | What Nexlet does |
-| --- | --- |
-| Press `Alt+Space`, then type an app name, pinyin, or initials | Find apps, system shortcuts, websites, and plugin commands |
-| Type `128*3` | Show `384`; continue calculating line by line in the scratchpad |
-| Open Clipboard | Search text, image, and file history; favorite, copy, or paste back to the previous app |
-| Open JSON tools | Edit side by side, format as a tree, or compare JSON with red deletions and green additions |
-| Open File search | Search with bundled Everything on Windows or Spotlight on macOS; browse folders and inspect files |
-| Open Plugins | Browse the GitHub marketplace, install updates, or manage local plugins |
+| Input or action                                               | What Nexlet does                                                                                  |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Press `Alt+Space`, then type an app name, pinyin, or initials | Find apps, system shortcuts, websites, and plugin commands                                        |
+| Type `128*3`                                                  | Show `384`; continue calculating line by line in the scratchpad                                   |
+| Open Clipboard                                                | Search text, image, and file history; favorite, copy, or paste back to the previous app           |
+| Open JSON tools                                               | Edit side by side, format as a tree, or compare JSON with red deletions and green additions       |
+| Open File search                                              | Search with bundled Everything on Windows or Spotlight on macOS; browse folders and inspect files |
+| Open Plugins                                                  | Browse the GitHub marketplace, install updates, or manage local plugins                           |
 
 Timestamp, URL / Base64, UUID, and website shortcuts are also included and work offline.
 
@@ -48,12 +48,12 @@ Timestamp, URL / Base64, UUID, and website shortcuts are also included and work 
 
 Packages are available from [GitHub Releases](https://github.com/Cansiny0320/Nexlet/releases) or successful [Actions runs](https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml). Tag builds create a draft Release first. Before publication, development previews are Actions artifacts and require a GitHub login.
 
-| Platform | Packages | Existing validation scope |
-| --- | --- | --- |
-| Windows x64 | Installer and portable `.exe` | Local integration tests, real external paste-back, portable startup |
-| macOS Apple Silicon | arm64 `.dmg` | Native CI build and packaged startup |
-| macOS Intel | x64 `.dmg` | Native CI build and packaged startup |
-| Linux x64 / arm64 | AppImage and `.deb` | Local builds and X11 smoke; real GNOME/KDE Wayland pending; see [Linux guide](docs/linux.en.md) |
+| Platform            | Packages                      | Existing validation scope                                                                       |
+| ------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------- |
+| Windows x64         | Installer and portable `.exe` | Local integration tests, real external paste-back, portable startup                             |
+| macOS Apple Silicon | arm64 `.dmg`                  | Native CI build and packaged startup                                                            |
+| macOS Intel         | x64 `.dmg`                    | Native CI build and packaged startup                                                            |
+| Linux x64 / arm64   | AppImage and `.deb`           | Local builds and X11 smoke; real GNOME/KDE Wayland pending; see [Linux guide](docs/linux.en.md) |
 
 On Windows, install the application or run the portable EXE. Initial extraction takes longer. Closing the window leaves Nexlet in the tray; right-click the tray icon to quit. Windows packages are unsigned. Mac packages use a stable signing identity for updates, but do not yet have Developer ID signing or Apple notarization. macOS arm64 has local evidence for paste-back and accessibility permission retention across updates signed with the same certificate; this does not cover every Mac environment. See the [validation record](docs/validation.md).
 
@@ -117,28 +117,29 @@ Start with [`examples/hello-nexlet`](examples/hello-nexlet) and select it under 
 
 Clipboard history, scratchpads, settings, and plugin data stay on the machine. Nexlet has no account, cloud sync, or telemetry. Updates and the marketplace contact GitHub. JSON tools and local file search do not upload input. Network plugins such as Translate send requests to their selected service; LLM translation uses the user's configured endpoint.
 
-| Platform | Default directory |
-| --- | --- |
-| Windows | `%APPDATA%/Nexlet` |
-| macOS | `~/Library/Application Support/Nexlet` |
-| Linux | `${XDG_CONFIG_HOME:-~/.config}/Nexlet` |
+| Platform | Default directory                      |
+| -------- | -------------------------------------- |
+| Windows  | `%APPDATA%/Nexlet`                     |
+| macOS    | `~/Library/Application Support/Nexlet` |
+| Linux    | `${XDG_CONFIG_HOME:-~/.config}/Nexlet` |
 
 Open data directory in Settings reveals this location. Quit before copying the whole directory for backup. Ordinary clipboard, scratchpad, and plugin storage has no additional encryption. Plugin `secrets` uses system `safeStorage`; without system encryption, secrets last only for the current plugin session. Clipboard defaults to 500 non-favorite entries and 30 days; favorites are not automatically deleted. File history stores paths, not copies of files.
 
 ## Local development
 
-Use Node.js 24+ and npm; CI follows [.node-version](.node-version). Electron 44 uses asynchronous clipboard APIs.
+Use Node.js 24.19 LTS and pnpm; CI follows [.node-version](.node-version). Electron 44 uses asynchronous clipboard APIs.
 
 ```sh
-npm ci
-npm start
-npm run typecheck
-npm test
-npm run test:e2e          # Builds the app and runs desktop integration tests
-npm run package:linux    # x64 + arm64 AppImage / deb; run on Linux
-npm run package:win      # Windows x64 installer and portable package
-npm run package:mac      # Stable-signature universal DMG and update ZIP
-npm run package:mac:local # Stable-signature native-architecture DMG and update ZIP
+pnpm install --frozen-lockfile
+pnpm start
+pnpm check             # Format, lint and TypeScript 7 checks
+pnpm typecheck
+pnpm test
+pnpm test:e2e          # Builds the app and runs desktop integration tests
+pnpm package:linux    # x64 + arm64 AppImage / deb; run on Linux
+pnpm package:win      # Windows x64 installer and portable package
+pnpm package:mac      # Stable-signature universal DMG and update ZIP
+pnpm package:mac:local # Stable-signature native-architecture DMG and update ZIP
 ```
 
 ### Stable local signing
@@ -150,8 +151,8 @@ On 2026-10-12, macOS 26.5.2 arm64 was tested with the same certificate from `0.2
 `package:mac:local` reads `~/Library/Application Support/Nexlet Signing/`, or `NEXLET_SIGNING_DIR`: `identity.json` contains the certificate name, SHA-1 fingerprint, and dedicated keychain path; `certificate.cer` is public; `keychain-password` unlocks the keychain. Configure the identity and necessary current-user code-signing trust beforehand. The script does not create certificates or change trust.
 
 ```sh
-npm run package:mac:local
-npm run package:mac:local -- --version 0.2.2-local.1 --arch arm64
+pnpm package:mac:local
+pnpm package:mac:local --version 0.2.2-local.1 --arch arm64
 ```
 
 Defaults use `package.json` and the machine's architecture. `--version` changes only the artifact version. `release/local-signed-<version>-<arch>/` contains DMG, update ZIP, blockmap, update manifest, and `local-signing.json` with fingerprint, requirements, and package SHA-256. Missing certificates or verification failures stop the build without ad-hoc fallback. The dedicated keychain is temporarily added to the search list, then removed and locked.
@@ -166,7 +167,7 @@ Source layout: `src/main` hosts the desktop app; `src/renderer` contains UI; `sr
 
 [Build and Release](.github/workflows/release.yml) covers Windows x64, Mac Intel / Apple Silicon, and Linux x64 / arm64 with type checks, unit tests, native packaging, and actual startup. Windows additionally runs desktop integration and portable EXE checks. Linux uses Xvfb/Openbox for packaged startup, XDG launch, file clipboard, startup registration, and cross-process paste-back. Remote status of the new Linux jobs must be confirmed after pushing. Ordinary commits and manual runs upload artifacts retained for 14 days.
 
-Update versions in `package.json` and `package-lock.json`, commit, then push a matching `v*` tag. CI validates versions and generates Windows packages, both Mac DMG/ZIP architectures and blockmaps, both Linux AppImage/deb architectures, update manifests, example plugins, and `SHA256SUMS.txt`. It creates a **draft Release** for manual review and publication. Reruns may update drafts but never overwrite published releases. Mac architecture manifests are merged and checked for version, file size, and SHA-512.
+Update the version in `package.json` (and refresh `pnpm-lock.yaml` when dependencies change), commit, then push a matching `v*` tag. CI validates versions and generates Windows packages, both Mac DMG/ZIP architectures and blockmaps, both Linux AppImage/deb architectures, update manifests, example plugins, and `SHA256SUMS.txt`. It creates a **draft Release** for manual review and publication. Reruns may update drafts but never overwrite published releases. Mac architecture manifests are merged and checked for version, file size, and SHA-512.
 
 Mac main/tag builds use Actions Secrets `NEXLET_MAC_CERTIFICATE_P12` (encrypted P12 as Base64) and `NEXLET_MAC_CERTIFICATE_PASSWORD`, with fingerprint `69397314808BC8B95C8B4AF0FBDFA53C0184FC2C`. The signing script runs only on disposable GitHub-hosted runners: import a temporary keychain, verify the fingerprint, grant administrator Code Signing trust to avoid blocking prompts, then remove trust and the keychain. Missing credentials fail the build. PR builds use ad-hoc signing without secrets. Packages remain unnotarized.
 

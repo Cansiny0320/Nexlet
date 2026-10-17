@@ -6,7 +6,9 @@ Issues, fixes, and plugins are welcome. For new features or data changes, explai
 
 ## Development checks
 
-Use Node.js 24+, run `npm ci`, and start with `npm start`. Before submitting, run `npm run typecheck` and `npm test`; desktop behavior changes also require `npm run test:e2e` on Windows. Passing tests does not prove every platform's permission flows. State the actual platform and scope in your PR.
+Use Node.js 24.19 LTS, run `pnpm install --frozen-lockfile`, and start with `pnpm start`. Before submitting, run `pnpm check` and `pnpm test`; desktop behavior changes also require `pnpm test:e2e` on Windows. Passing tests does not prove every platform's permission flows. State the actual platform and scope in your PR.
+
+Vite+ runs builds, tests, formatting, linting and TypeScript 7 checking. `pnpm check` checks without writing; `pnpm format` formats first-party sources and `pnpm lint:fix` fixes duplicate imports. Keep the independently installable `website/` project on its own commands.
 
 Do not commit dependencies, user databases, clipboard contents, temporary test directories, or private files. The website manages its output under `website/`. Never use real personal data in fixtures or screenshots.
 

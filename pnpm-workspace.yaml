@@ -1,0 +1,22 @@
+# The website remains an independently installable/exportable pnpm project.
+packages:
+  - .
+
+# Keep the flat runtime layout expected by our Electron/native packaging scripts.
+nodeLinker: hoisted
+
+overrides:
+  vite@*: npm:@voidzero-dev/vite-plus-core@1.3.0
+  vitest@*: 5.0.5
+
+peerDependencyRules:
+  allowedVersions:
+    vite: '1.3.0'
+
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  koffi: true
+  sharp: true
+  '@tailwindcss/oxide': true

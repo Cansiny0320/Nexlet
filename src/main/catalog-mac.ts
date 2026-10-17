@@ -17,12 +17,18 @@ function run(argv) {
 }`;
   for (let offset = 0; offset < unique.length; offset += 128) {
     try {
-      const { stdout } = await exec('/usr/bin/osascript', ['-l', 'JavaScript', '-e', code, JSON.stringify(unique.slice(offset, offset + 128))], { timeout: 10000, maxBuffer: 1024 * 1024 });
+      const { stdout } = await exec(
+        '/usr/bin/osascript',
+        ['-l', 'JavaScript', '-e', code, JSON.stringify(unique.slice(offset, offset + 128))],
+        { timeout: 10000, maxBuffer: 1024 * 1024 },
+      );
       for (const [file, value] of JSON.parse(stdout) as [string, string][]) {
         const name = value.trim().replace(/\.app$/i, '');
         if (name) names.set(file, name);
       }
-    } catch { /* Preserve the filename for unavailable metadata/batches. */ }
+    } catch {
+      /* Preserve the filename for unavailable metadata/batches. */
+    }
   }
   return names;
 }
@@ -48,11 +54,17 @@ export async function loadMacCatalogIcons(files: string[]): Promise<Map<string, 
   const unique = [...new Set(files)];
   for (let offset = 0; offset < unique.length; offset += 64) {
     try {
-      const { stdout } = await exec('/usr/bin/osascript', ['-l', 'JavaScript', '-e', script, JSON.stringify(unique.slice(offset, offset + 64))], { timeout: 10000, maxBuffer: 8 * 1024 * 1024 });
+      const { stdout } = await exec(
+        '/usr/bin/osascript',
+        ['-l', 'JavaScript', '-e', script, JSON.stringify(unique.slice(offset, offset + 64))],
+        { timeout: 10000, maxBuffer: 8 * 1024 * 1024 },
+      );
       for (const [file, icon] of JSON.parse(stdout) as [string, string][]) {
         if (icon) icons.set(file, icon);
       }
-    } catch { /* The caller retains Electron's file-icon fallback. */ }
+    } catch {
+      /* The caller retains Electron's file-icon fallback. */
+    }
   }
   return icons;
 }

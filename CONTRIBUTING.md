@@ -6,7 +6,9 @@
 
 ## 开发检查
 
-使用 Node.js 24+，执行 `npm ci`，通过 `npm start` 启动。提交前运行 `npm run typecheck`、`npm test`；桌面行为改动还需在 Windows 运行 `npm run test:e2e`。测试通过不代表所有平台的系统权限流程都已验证，请在 PR 中写明实际平台和范围。
+使用 Node.js 24.19 LTS，执行 `pnpm install --frozen-lockfile`，通过 `pnpm start` 启动。提交前运行 `pnpm check`、`pnpm test`；桌面行为改动还需在 Windows 运行 `pnpm test:e2e`。测试通过不代表所有平台的系统权限流程都已验证，请在 PR 中写明实际平台和范围。
+
+Vite+ 统一构建、测试、格式化、lint 和 TypeScript 7 类型检查。`pnpm check` 只检查，不改写文件；`pnpm format` 格式化第一方源码，`pnpm lint:fix` 修复重复导入。`website/` 保持可独立安装，使用自己的命令。
 
 不要提交 `node_modules`、用户数据库、剪贴板、临时测试目录或私人文件。网站产物由 `website/` 自己的规则管理。不要用真实个人数据作为测试夹具或截图。
 

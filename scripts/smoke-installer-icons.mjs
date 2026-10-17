@@ -13,7 +13,12 @@ const config = JSON.parse(readFileSync('package.json', 'utf8')).build;
 mkdirSync('.tmp', { recursive: true });
 const dir = mkdtempSync(path.join(root, '.tmp', 'installer-icons-'));
 const run = (exe, args) => {
-  const result = spawnSync(exe, args, { cwd: dir, windowsHide: true, encoding: 'utf8', timeout: 30000 });
+  const result = spawnSync(exe, args, {
+    cwd: dir,
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 30000,
+  });
   if (result.error) throw result.error;
   return result;
 };
@@ -87,7 +92,13 @@ SectionEnd
     ['uninstaller', path.join(dir, `${name}-uninstall.exe`), [`_?=${dir}`]],
   ]) {
     const result = run(exe, args);
-    assert.equal(result.status, fixed ? 0 : 42, `${name} ${kind}: ${result.stdout}${result.stderr}`);
-    console.log(`${name} ${kind}: ${fixed ? 'both window icons match Nexlet resources' : 'missing explicit window icons reproduced'}`);
+    assert.equal(
+      result.status,
+      fixed ? 0 : 42,
+      `${name} ${kind}: ${result.stdout}${result.stderr}`,
+    );
+    console.log(
+      `${name} ${kind}: ${fixed ? 'both window icons match Nexlet resources' : 'missing explicit window icons reproduced'}`,
+    );
   }
 }

@@ -26,14 +26,14 @@ Nexlet 是一個開源桌面工具箱，提供應用與快捷方式搜尋、剪�
 
 ## 幾個隨手就能完成的操作
 
-| 輸入或操作 | Nexlet 會做什麼 |
-| --- | --- |
-| `Alt+Space` 後輸入應用名、拼音或首字母 | 查詢應用、系統快捷方式、網頁與外掛指令 |
-| 輸入 `128*3` | 顯示結果 `384`，可繼續在計算草稿裡逐行計算 |
-| 開啟「剪貼簿」 | 搜尋文字、圖片和檔案歷史，收藏、複製或回貼到之前的應用 |
-| 開啟「JSON 工具」 | 雙欄編輯與樹形格式化；對比兩份 JSON，紅色表示刪除，綠色表示新增 |
-| 使用「檔案搜尋」 | Windows 使用內建 Everything，macOS 使用系統 Spotlight，搜尋本機檔案、瀏覽資料夾並檢視檔案資訊 |
-| 開啟「外掛管理」 | 瀏覽 GitHub 外掛市場，安裝、更新或管理本地外掛 |
+| 輸入或操作                             | Nexlet 會做什麼                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `Alt+Space` 後輸入應用名、拼音或首字母 | 查詢應用、系統快捷方式、網頁與外掛指令                                                        |
+| 輸入 `128*3`                           | 顯示結果 `384`，可繼續在計算草稿裡逐行計算                                                    |
+| 開啟「剪貼簿」                         | 搜尋文字、圖片和檔案歷史，收藏、複製或回貼到之前的應用                                        |
+| 開啟「JSON 工具」                      | 雙欄編輯與樹形格式化；對比兩份 JSON，紅色表示刪除，綠色表示新增                               |
+| 使用「檔案搜尋」                       | Windows 使用內建 Everything，macOS 使用系統 Spotlight，搜尋本機檔案、瀏覽資料夾並檢視檔案資訊 |
+| 開啟「外掛管理」                       | 瀏覽 GitHub 外掛市場，安裝、更新或管理本地外掛                                                |
 
 其他預裝工具包括時間戳、URL / Base64、UUID 和網頁快開。預裝工具隨應用提供，離線也能開啟。
 
@@ -48,12 +48,12 @@ Nexlet 是一個開源桌面工具箱，提供應用與快捷方式搜尋、剪�
 
 構建產物位於 [GitHub Releases](https://github.com/Cansiny0320/Nexlet/releases) 或透過檢查的 [Actions 執行記錄](https://github.com/Cansiny0320/Nexlet/actions/workflows/release.yml)。標籤構建先生成 Release 草稿；草稿公開發布前，開發預覽包從 Actions artifacts 獲取，需要登入 GitHub。
 
-| 平臺 | 產物 | 當前驗證範圍 |
-| --- | --- | --- |
-| Windows x64 | 安裝版和單檔案便攜 `.exe` | 本機整合測試、真實外部回貼、便攜包啟動檢查 |
-| macOS Apple Silicon | arm64 `.dmg` | 原生 CI 構建與打包後啟動檢查 |
-| macOS Intel | x64 `.dmg` | 原生 CI 構建與打包後啟動檢查 |
-| Linux x64 / arm64 | AppImage 和 `.deb` | 新增本地構建與 X11 smoke；真實 GNOME/KDE Wayland 待驗收，見 [Linux 說明](docs/linux.zh-Hant.md) |
+| 平臺                | 產物                      | 當前驗證範圍                                                                                    |
+| ------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
+| Windows x64         | 安裝版和單檔案便攜 `.exe` | 本機整合測試、真實外部回貼、便攜包啟動檢查                                                      |
+| macOS Apple Silicon | arm64 `.dmg`              | 原生 CI 構建與打包後啟動檢查                                                                    |
+| macOS Intel         | x64 `.dmg`                | 原生 CI 構建與打包後啟動檢查                                                                    |
+| Linux x64 / arm64   | AppImage 和 `.deb`        | 新增本地構建與 X11 smoke；真實 GNOME/KDE Wayland 待驗收，見 [Linux 說明](docs/linux.zh-Hant.md) |
 
 Windows 可使用安裝版，或直接執行便攜 EXE。首次解壓會稍慢，關閉主視窗後程式保留在托盤，右鍵托盤可退出。Windows 包未做數字簽名。macOS 正式包使用固定簽名身份以支援後續更新，尚未完成 Developer ID 簽名和 Apple 公證。macOS arm64 已有本機回貼與同證書升級保留輔助功能授權的驗證記錄；這不代表所有 Mac 環境均已驗收，詳見 [驗證記錄](docs/validation.md#macos-本机固定签名验证2026-10-12)。
 
@@ -117,31 +117,32 @@ Linux 使用指定目錄內的即時檔名搜尋，支援多關鍵詞、雙引�
 
 剪貼簿、稿紙、設定和外掛資料儲存在本機，Nexlet 本身沒有賬號、雲同步或遙測。應用更新和外掛市場會訪問 GitHub；JSON 工具與本機檔案搜尋不上傳輸入內容。翻譯等聯網外掛會將請求內容傳送給其使用的服務，LLM 翻譯使用使用者配置的服務地址。
 
-| 平臺 | 預設資料目錄 |
-| --- | --- |
-| Windows | `%APPDATA%/Nexlet` |
-| macOS | `~/Library/Application Support/Nexlet` |
-| Linux | `${XDG_CONFIG_HOME:-~/.config}/Nexlet` |
+| 平臺    | 預設資料目錄                           |
+| ------- | -------------------------------------- |
+| Windows | `%APPDATA%/Nexlet`                     |
+| macOS   | `~/Library/Application Support/Nexlet` |
+| Linux   | `${XDG_CONFIG_HOME:-~/.config}/Nexlet` |
 
 設定中的「開啟資料目錄」可直接定位。備份前退出 Nexlet，再複製整個目錄。普通剪貼簿、稿紙和外掛儲存沒有額外加密。外掛透過 `secrets` API 儲存的金鑰使用系統 `safeStorage` 加密；系統加密不可用時僅在當前外掛會話中保留。剪貼簿預設保留 500 條非收藏記錄、30 天，收藏不會自動清理。檔案歷史只儲存路徑，不復制原檔案。
 
 ## 本地開發
 
-需要 Node.js 24+ 和 npm，CI 使用 [.node-version](.node-version)。Electron 44 使用非同步剪貼簿 API。
+需要 Node.js 24.19 LTS 和 pnpm，CI 使用 [.node-version](.node-version)。Electron 44 使用非同步剪貼簿 API。
 
 ```sh
-npm ci
-npm start
+pnpm install --frozen-lockfile
+pnpm start
 ```
 
 ```sh
-npm run typecheck       # 类型检查
-npm test                # 逻辑、数据和边界测试
-npm run test:e2e         # Windows 桌面集成测试，会构建应用
-npm run package:linux   # Linux x64 + arm64 AppImage / deb（在 Linux 上运行）
-npm run package:win     # Windows x64 安装包和便携包
-npm run package:mac     # 固定签名的通用 DMG + 更新 ZIP
-npm run package:mac:local # 固定签名的本机架构 DMG + 更新 ZIP
+pnpm check             # Oxfmt + Oxlint + TypeScript 7
+pnpm typecheck       # 类型检查
+pnpm test                # 逻辑、数据和边界测试
+pnpm test:e2e         # Windows 桌面集成测试，会构建应用
+pnpm package:linux   # Linux x64 + arm64 AppImage / deb（在 Linux 上运行）
+pnpm package:win     # Windows x64 安装包和便携包
+pnpm package:mac     # 固定签名的通用 DMG + 更新 ZIP
+pnpm package:mac:local # 固定签名的本机架构 DMG + 更新 ZIP
 ```
 
 ### 本機固定簽名
@@ -153,8 +154,8 @@ npm run package:mac:local # 固定签名的本机架构 DMG + 更新 ZIP
 `package:mac:local` 讀取倉庫外的 `~/Library/Application Support/Nexlet Signing/`（可透過 `NEXLET_SIGNING_DIR` 指定其他目錄）：`identity.json` 儲存證書名稱、SHA-1 指紋和專用鑰匙串路徑，`certificate.cer` 為公開證書，`keychain-password` 用於解鎖該鑰匙串。簽名身份應提前配置並僅按需要授予當前使用者的程式碼簽名信任，指令碼不會建立證書或調整信任設定。
 
 ```sh
-npm run package:mac:local
-npm run package:mac:local -- --version 0.2.2-local.1 --arch arm64
+pnpm package:mac:local
+pnpm package:mac:local --version 0.2.2-local.1 --arch arm64
 ```
 
 預設使用 `package.json` 版本和本機架構；`--version` 只覆蓋產物版本，不修改原始碼版本。輸出位於 `release/local-signed-<版本>-<架构>/`，包含 DMG、更新 ZIP、blockmap、更新清單與 `local-signing.json`（證書指紋、簽名條件、安裝包 SHA-256）。缺少證書或簽名校驗失敗會直接報錯，不退回 ad-hoc。構建期間臨時加入專用鑰匙串搜尋路徑，結束後移除並鎖定鑰匙串。
@@ -169,7 +170,7 @@ npm run package:mac:local -- --version 0.2.2-local.1 --arch arm64
 
 [Build and Release](.github/workflows/release.yml) 配置覆蓋 Windows x64、macOS Intel / Apple Silicon、Linux x64 / arm64：型別檢查、單元測試、原生打包、實際啟動；Windows 額外執行桌面整合與便攜 EXE 驗證；Linux 使用 Xvfb/Openbox 驗證打包啟動、XDG 應用啟動、檔案剪貼簿、自啟動和跨程序回貼。新增 Linux 任務的遠端執行狀態需在推送後確認。普通提交和手動執行上傳保留 14 天的 artifacts。
 
-發版時更新 `package.json` 和 `package-lock.json` 的版本，提交後推送匹配的 `v*` 標籤。CI 驗證標籤一致性，生成 Windows 安裝版和便攜版、兩種 Mac 架構的 DMG/ZIP、blockmap、兩種 Linux 架構的 AppImage/deb、更新清單、示例外掛與 `SHA256SUMS.txt`，建立 **Release 草稿**，稽核後手動公開發布。重跑可更新草稿，不覆蓋已釋出版本。雙架構 Mac 清單會合並，並校驗版本、檔案大小和 SHA-512。
+發版時更新 `package.json` 的版本（依赖变更时同步更新 `pnpm-lock.yaml`），提交後推送匹配的 `v*` 標籤。CI 驗證標籤一致性，生成 Windows 安裝版和便攜版、兩種 Mac 架構的 DMG/ZIP、blockmap、兩種 Linux 架構的 AppImage/deb、更新清單、示例外掛與 `SHA256SUMS.txt`，建立 **Release 草稿**，稽核後手動公開發布。重跑可更新草稿，不覆蓋已釋出版本。雙架構 Mac 清單會合並，並校驗版本、檔案大小和 SHA-512。
 
 Mac 的 main / 版本標籤構建使用 `NEXLET_MAC_CERTIFICATE_P12`（加密 P12 的 Base64）和 `NEXLET_MAC_CERTIFICATE_PASSWORD` 兩項 Actions Secrets，證書指紋固定為 `69397314808BC8B95C8B4AF0FBDFA53C0184FC2C`。指令碼僅允許在一次性 GitHub 託管 runner 中執行：匯入臨時鑰匙串、校驗固定指紋，並用管理員 Code Signing 策略信任該證書，避免使用者級信任彈窗阻塞；結束時移除信任和鑰匙串。憑據缺失即失敗。PR 構建僅使用 ad-hoc 簽名，不接觸憑據。簽名仍未經過 Apple 公證。
 

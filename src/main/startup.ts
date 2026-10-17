@@ -7,12 +7,21 @@ type LoginHost = Pick<App, 'isPackaged' | 'getLoginItemSettings' | 'setLoginItem
 
 /** Read system state instead of storing a second, potentially stale enabled flag. */
 export class StartupManager {
-  constructor(private host: LoginHost, private platform: string, private executable: string, private portable?: string) {}
+  constructor(
+    private host: LoginHost,
+    private platform: string,
+    private executable: string,
+    private portable?: string,
+  ) {}
 
-  private linux() { return new LinuxStartup(process.env.APPIMAGE || this.executable); }
+  private linux() {
+    return new LinuxStartup(process.env.APPIMAGE || this.executable);
+  }
 
   private options() {
-    return this.platform === 'win32' ? { path: this.portable || this.executable, args: ['--autostart'] } : {};
+    return this.platform === 'win32'
+      ? { path: this.portable || this.executable, args: ['--autostart'] }
+      : {};
   }
 
   read(): StartupStatus {
@@ -22,8 +31,14 @@ export class StartupManager {
 
   private readStatus(): StartupStatus & { requiresApproval?: boolean } {
     if (this.platform === 'linux' && this.host.isPackaged) return this.linux().read();
-    if (!['win32', 'darwin'].includes(this.platform)) return { supported: false, enabled: false, reason: t("此平台暂不支持开机自启动") };
-    if (!this.host.isPackaged) return { supported: false, enabled: false, reason: t("请在打包后的 Nexlet 中设置开机自启动") };
+    if (!['win32', 'darwin'].includes(this.platform))
+      return { supported: false, enabled: false, reason: t('此平台暂不支持开机自启动') };
+    if (!this.host.isPackaged)
+      return {
+        supported: false,
+        enabled: false,
+        reason: t('请在打包后的 Nexlet 中设置开机自启动'),
+      };
     try {
       const item = this.host.getLoginItemSettings(this.options());
       const blocked = this.platform === 'win32' && item.executableWillLaunchAtLogin === false;
@@ -32,28 +47,43 @@ export class StartupManager {
         supported: true,
         requiresApproval: pending,
         enabled: item.openAtLogin && !blocked && !pending,
-        reason: pending ? t("请在系统设置 → 通用 → 登录项中允许 Nexlet") : item.openAtLogin && blocked ? t("系统已禁用 Nexlet 自启动，可重新开启") : null
+        reason: pending
+          ? t('请在系统设置 → 通用 → 登录项中允许 Nexlet')
+          : item.openAtLogin && blocked
+            ? t('系统已禁用 Nexlet 自启动，可重新开启')
+            : null,
       };
     } catch (error) {
-      return { supported: false, enabled: false, reason: t("无法读取系统自启动设置：{{v0}}", { v0: (error as Error).message }) };
+      return {
+        supported: false,
+        enabled: false,
+        reason: t('无法读取系统自启动设置：{{v0}}', { v0: (error as Error).message }),
+      };
     }
   }
 
   set(enabled: boolean): StartupStatus {
     const before = this.read();
-    if (!before.supported) throw new Error(before.reason || t("不支持开机自启动"));
+    if (!before.supported) throw new Error(before.reason || t('不支持开机自启动'));
     if (this.platform === 'linux') return this.linux().set(enabled);
-    this.host.setLoginItemSettings(this.platform === 'win32'
-      ? { ...this.options(), openAtLogin: enabled, enabled, name: 'app.nexlet.desktop' }
-      : { openAtLogin: enabled });
+    this.host.setLoginItemSettings(
+      this.platform === 'win32'
+        ? { ...this.options(), openAtLogin: enabled, enabled, name: 'app.nexlet.desktop' }
+        : { openAtLogin: enabled },
+    );
     const { requiresApproval, ...after } = this.readStatus();
-    if (after.enabled !== enabled && !requiresApproval) throw new Error(after.reason || t("系统未保存自启动设置，请检查应用位置与系统权限"));
+    if (after.enabled !== enabled && !requiresApproval)
+      throw new Error(after.reason || t('系统未保存自启动设置，请检查应用位置与系统权限'));
     return after;
   }
 
   wasOpenedAtLogin(argv: string[]): boolean {
     if (argv.includes('--autostart')) return true;
     if (this.platform !== 'darwin') return false;
-    try { return this.host.getLoginItemSettings().wasOpenedAtLogin; } catch { return false; }
+    try {
+      return this.host.getLoginItemSettings().wasOpenedAtLogin;
+    } catch {
+      return false;
+    }
   }
 }

@@ -3,7 +3,15 @@ import { mkdir, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 
 function environment(data: string): Record<string, string> {
-  const env = { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), NEXLET_TEST_MODE: '1', NEXLET_USER_DATA: data } as Record<string, string>;
+  const env = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
+    NEXLET_TEST_MODE: '1',
+    NEXLET_USER_DATA: data,
+  } as Record<string, string>;
   delete env.ELECTRON_RUN_AS_NODE;
   return env;
 }
@@ -19,12 +27,19 @@ test('工具标题和独立拖动区可拖动，交互控件仍可点击', async
     await expect(page.getByLabel('拖动窗口')).toBeVisible();
     await expect(page.getByLabel('拖动窗口')).toHaveCSS('-webkit-app-region', 'no-drag');
     await expect(page.locator('.launcher-input')).toHaveCSS('-webkit-app-region', 'no-drag');
-    await app.evaluate(() => (globalThis as any).__nexlet.main.webContents.send('host-change', 'navigate:json'));
+    await app.evaluate(() =>
+      (globalThis as any).__nexlet.main.webContents.send('host-change', 'navigate:json'),
+    );
     await expect(page.locator('.plugin-pill')).toHaveCSS('-webkit-app-region', 'drag');
-    await expect(page.getByRole('button', { name: '关闭当前工具' })).toHaveCSS('-webkit-app-region', 'no-drag');
+    await expect(page.getByRole('button', { name: '关闭当前工具' })).toHaveCSS(
+      '-webkit-app-region',
+      'no-drag',
+    );
     await page.getByRole('button', { name: '关闭当前工具' }).click();
     await expect(page.locator('.launcher-input')).toBeVisible();
-  } finally { await app.close(); }
+  } finally {
+    await app.close();
+  }
 });
 
 test('首页整条搜索栏可拖动，点击和搜索输入保持可用', async () => {
@@ -38,18 +53,40 @@ test('首页整条搜索栏可拖动，点击和搜索输入保持可用', async
     const position = () => app.evaluate(() => (globalThis as any).__nexlet.main.getPosition());
     // Use screen coordinates so moving the window cannot feed back into the drag delta.
     const gesture = async (selector: string, dx: number, dy: number) => {
-      await page.locator(selector).evaluate((element, { dx, dy }) => {
-        const emit = (type: string, x: number, y: number, buttons: number) => element.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons, screenX: x, screenY: y }));
-        emit('pointerdown', 400, 200, 1);
-        emit('pointermove', 400 + dx, 200 + dy, 1);
-        emit('pointerup', 400 + dx, 200 + dy, 0);
-        element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-      }, { dx, dy });
+      await page.locator(selector).evaluate(
+        (element, { dx, dy }) => {
+          const emit = (type: string, x: number, y: number, buttons: number) =>
+            element.dispatchEvent(
+              new PointerEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 1,
+                pointerType: 'mouse',
+                isPrimary: true,
+                button: 0,
+                buttons,
+                screenX: x,
+                screenY: y,
+              }),
+            );
+          emit('pointerdown', 400, 200, 1);
+          emit('pointermove', 400 + dx, 200 + dy, 1);
+          emit('pointerup', 400 + dx, 200 + dy, 0);
+          element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        },
+        { dx, dy },
+      );
     };
     await search.click();
     await expect(search).toBeFocused();
     await search.fill('拖动后保留搜索');
-    for (const selector of ['.window-drag-handle', '.launcher-input', '.titlebar-spacer', '.brand-button img', '.titlebar']) {
+    for (const selector of [
+      '.window-drag-handle',
+      '.launcher-input',
+      '.titlebar-spacer',
+      '.brand-button img',
+      '.titlebar',
+    ]) {
       const [x, y] = await position();
       await gesture(selector, 24, 12);
       await expect.poll(position).toEqual([x + 24, y + 12]);
@@ -76,7 +113,9 @@ test('首页整条搜索栏可拖动，点击和搜索输入保持可用', async
     await expect(search).toHaveValue('json');
     await page.getByRole('button', { name: '打开设置' }).click();
     await expect(page.locator('.app-shell')).toHaveClass(/view-settings/);
-  } finally { await app.close(); }
+  } finally {
+    await app.close();
+  }
 });
 
 test('最小化后唤起和重复启动都恢复窗口并取得焦点', async () => {
@@ -89,18 +128,31 @@ test('最小化后唤起和重复启动都恢复窗口并取得焦点', async ()
     await expect(page.locator('.launcher-input')).toBeVisible();
     for (const entry of ['show', 'second-instance', 'activate', 'restore']) {
       await app.evaluate(() => (globalThis as any).__nexlet.main.minimize());
-      await expect.poll(() => app.evaluate(() => (globalThis as any).__nexlet.main.isMinimized())).toBe(true);
+      await expect
+        .poll(() => app.evaluate(() => (globalThis as any).__nexlet.main.isMinimized()))
+        .toBe(true);
       await app.evaluate(async ({ app }, entry) => {
         if (entry === 'show') await (globalThis as any).__nexlet.show();
         else if (entry === 'restore') (globalThis as any).__nexlet.main.restore();
         else app.emit(entry as any, {} as any, [], process.cwd());
       }, entry);
-      await expect.poll(() => app.evaluate(() => {
-        const w = (globalThis as any).__nexlet.main;
-        return { minimized: w.isMinimized(), visible: w.isVisible(), focused: w.isFocused(), topmost: w.isAlwaysOnTop() };
-      })).toEqual({ minimized: false, visible: true, focused: true, topmost: false });
+      await expect
+        .poll(() =>
+          app.evaluate(() => {
+            const w = (globalThis as any).__nexlet.main;
+            return {
+              minimized: w.isMinimized(),
+              visible: w.isVisible(),
+              focused: w.isFocused(),
+              topmost: w.isAlwaysOnTop(),
+            };
+          }),
+        )
+        .toEqual({ minimized: false, visible: true, focused: true, topmost: false });
     }
-  } finally { await app.close(); }
+  } finally {
+    await app.close();
+  }
 });
 
 test('登录启动留在后台，手动唤起后显示，自启动开关读回系统状态', async () => {
@@ -114,16 +166,26 @@ test('登录启动留在后台，手动唤起后显示，自启动开关读回�
     await expect(page.locator('.launcher-input')).toBeAttached();
     expect(await app.evaluate(() => (globalThis as any).__nexlet.main.isVisible())).toBe(false);
     await app.evaluate(() => (globalThis as any).__nexlet.show());
-    await expect.poll(() => app.evaluate(() => (globalThis as any).__nexlet.main.isFocused())).toBe(true);
-    await app.evaluate(() => (globalThis as any).__nexlet.main.webContents.send('host-change', 'navigate:settings'));
+    await expect
+      .poll(() => app.evaluate(() => (globalThis as any).__nexlet.main.isFocused()))
+      .toBe(true);
+    await app.evaluate(() =>
+      (globalThis as any).__nexlet.main.webContents.send('host-change', 'navigate:settings'),
+    );
     await expect(page.getByRole('switch', { name: '开机自启动', exact: true })).toBeDisabled();
     // Only the OS boundary is replaced: never add a real startup entry while testing.
     await app.evaluate(({ app }) => {
       Object.defineProperty(app, 'isPackaged', { configurable: true, value: true });
       let enabled = false;
       (globalThis as any).__loginWrites = [];
-      app.getLoginItemSettings = (() => ({ openAtLogin: enabled, executableWillLaunchAtLogin: enabled })) as any;
-      app.setLoginItemSettings = (options: any) => { enabled = options.openAtLogin; (globalThis as any).__loginWrites.push(options); };
+      app.getLoginItemSettings = (() => ({
+        openAtLogin: enabled,
+        executableWillLaunchAtLogin: enabled,
+      })) as any;
+      app.setLoginItemSettings = (options: any) => {
+        enabled = options.openAtLogin;
+        (globalThis as any).__loginWrites.push(options);
+      };
       (globalThis as any).__nexlet.main.webContents.send('host-change', 'state');
     });
     const toggle = page.getByRole('switch', { name: '开机自启动', exact: true });
@@ -132,6 +194,10 @@ test('登录启动留在后台，手动唤起后显示，自启动开关读回�
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
-    expect(await app.evaluate(() => (globalThis as any).__loginWrites.map((v: any) => v.openAtLogin))).toEqual([true, false]);
-  } finally { await app.close(); }
+    expect(
+      await app.evaluate(() => (globalThis as any).__loginWrites.map((v: any) => v.openAtLogin)),
+    ).toEqual([true, false]);
+  } finally {
+    await app.close();
+  }
 });

@@ -6,5 +6,10 @@ import logout from '../../assets/system-actions/logout.png';
 import desktop from '../../assets/system-actions/desktop.png';
 
 export const systemActionIcons: Readonly<Partial<Record<string, string>>> = {
-  lock, sleep, restart, shutdown, logout, desktop
+  lock,
+  sleep,
+  restart,
+  shutdown,
+  logout,
+  desktop,
 };

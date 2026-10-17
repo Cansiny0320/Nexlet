@@ -8,7 +8,10 @@ function spawnInstaller(command: string, args: string[], waitForHandoff: boolean
     // Do not inherit a virtualized or removed working directory. Resolve both
     // paths before crossing into the installer/elevation process.
     const child = childProcess.spawn(realpathSync.native(command), args, {
-      cwd: realpathSync.native(tmpdir()), detached: true, stdio: 'ignore', windowsHide: true
+      cwd: realpathSync.native(tmpdir()),
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
     });
     child.once('error', reject);
     if (waitForHandoff) {
@@ -17,15 +20,22 @@ function spawnInstaller(command: string, args: string[], waitForHandoff: boolean
       child.once('exit', (code, signal) => {
         child.unref();
         if (code === 0) resolve();
-        else reject(Error(t("更新安装器提权失败或已取消（{{v0}}）", { v0: signal || code })));
+        else reject(Error(t('更新安装器提权失败或已取消（{{v0}}）', { v0: signal || code })));
       });
     } else {
-      child.once('spawn', () => { child.unref(); resolve(); });
+      child.once('spawn', () => {
+        child.unref();
+        resolve();
+      });
     }
   });
 }
 
-export async function launchWindowsUpdate(command: string, args: string[], elevate: string): Promise<void> {
+export async function launchWindowsUpdate(
+  command: string,
+  args: string[],
+  elevate: string,
+): Promise<void> {
   try {
     await spawnInstaller(command, args, command === elevate);
   } catch (error) {

@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it } from 'vite-plus/test';
 import { formatShortcut, parseShortcutInput } from '../src/shared/shortcut-display';
 import { normalizeAccelerator } from '../src/main/shortcut-manager';
 
@@ -14,7 +14,9 @@ it.each([
   ['darwin', 'cmd+option+J', 'Command+Option+J'],
 ])('displays %s shortcuts and preserves the registered keys', (platform, raw, display) => {
   expect(formatShortcut(raw, platform)).toBe(display);
-  expect(normalizeAccelerator(parseShortcutInput(display), platform)).toBe(normalizeAccelerator(raw, platform));
+  expect(normalizeAccelerator(parseShortcutInput(display), platform)).toBe(
+    normalizeAccelerator(raw, platform),
+  );
 });
 
 it('preserves empty values, function keys and unfinished edits for existing validation', () => {
