@@ -65,6 +65,8 @@ async function bootstrap() {
   let main: BrowserWindow;
   let panel:SuperPanelController, panelTrigger:PanelTrigger;
   let quitting=false, shortcutError:string|null=null, tray:Tray|null=null, modalCount=0;
+  let cleanedUp=false, quitPending:Promise<void>|null=null;
+  const closingWindows=new Set<number>(), closeApproved=new WeakSet<BrowserWindow>();
   const hosts=new Map<number,BrowserWindow>(), views=new Map<number,string>(), boards=new Map<number,string[]>();
   const nativeDrags=new WeakMap<BrowserWindow,()=>boolean>();
   const html=path.join(__dirname,'../renderer/index.html');
@@ -102,6 +104,15 @@ async function bootstrap() {
   const updateTransport = updateMode === 'automatic' || (testMode && app.isPackaged) ? createUpdateTransport() : null;
   if(updateTransport){updateTransport.autoDownload=false;updateTransport.autoInstallOnAppQuit=false;updateTransport.allowPrerelease=false;updateTransport.allowDowngrade=false;}
   const updateSaves = new UpdateSaveBarrier();
+  async function saveForClose(windows:number[]):Promise<()=>void>{
+    windows=windows.filter(id=>{const window=hosts.get(id);return window&&!window.isDestroyed()&&views.get(window.id)!=='superpanel';});
+    let token:string|undefined;
+    const release=()=>{if(token)for(const id of windows){const window=hosts.get(id);if(window&&!window.isDestroyed())window.webContents.send('host-change','close:cancel:'+token);}};
+    try{
+      await updateSaves.prepare(windows,(id,value)=>{token=value;hosts.get(id)?.webContents.send('host-change','close:prepare:'+value);});
+      return release;
+    }catch(error){release();throw error;}
+  }
   const updates = new AppUpdates(app.getVersion(),updateMode,updateTransport,()=>{if(updates.read().phase==='error')quitting=false;notify();},async()=>{await updateSaves.prepare([...hosts.keys()],(id,token)=>hosts.get(id)?.webContents.send('host-change','update:prepare:'+token));quitting=true;});
   const iconFile=path.join(__dirname,'../../assets/icon.png');
   const appIcon=existsSync(iconFile)?nativeImage.createFromPath(iconFile):createIcon();
@@ -115,7 +126,7 @@ async function bootstrap() {
     const window=new BrowserWindow({width:420,height:430,minWidth:300,minHeight:220,show:false,frame:false,resizable:false,skipTaskbar:true,alwaysOnTop:true,backgroundColor:'#f4f4f4',title:t("Nexlet · 超级面板"),icon:appIcon,webPreferences:{preload:path.join(__dirname,'../preload/host.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,spellcheck:false}});
     const owner=window.webContents.id;hosts.set(owner,window);views.set(window.id,'superpanel');
     window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',e=>e.preventDefault());window.webContents.on('will-attach-webview',e=>e.preventDefault());
-    window.on('closed',()=>{hosts.delete(owner);views.delete(window.id);rendererBusy.delete(window.id);inputs.forget(owner);matcher.forget(owner);});
+    window.on('closed',()=>{updateSaves.forget(owner);hosts.delete(owner);views.delete(window.id);rendererBusy.delete(window.id);inputs.forget(owner);matcher.forget(owner);});
     await window.loadFile(html,{query:{panel:'1'}});return window;
   }
   panelTrigger=new PanelTrigger(message=>{
@@ -154,8 +165,22 @@ async function bootstrap() {
     const contentsId=window.webContents.id, windowId=window.id;
     focusOnRestore(window);
     window.once('ready-to-show',()=>{if(!initiallyHidden)revealWindow(window);});
-    window.on('close',event=>{if(!detached && !quitting){event.preventDefault();window.hide();}});
-    window.on('closed',()=>{toolHandoffs.forget(contentsId);hosts.delete(contentsId);rendererBusy.delete(windowId);views.delete(windowId);boards.delete(contentsId);files.forget(contentsId);inputs.forget(contentsId);matcher.forget(contentsId);});
+    window.on('close',event=>{
+      if(!detached&&!quitting){event.preventDefault();window.hide();return;}
+      if(cleanedUp||closeApproved.delete(window))return;
+      event.preventDefault();
+      if(quitPending||closingWindows.has(contentsId))return;
+      closingWindows.add(contentsId);
+      void saveForClose([contentsId]).then(release=>{
+        if(window.isDestroyed())return;
+        if(quitPending){release();return;}
+        closeApproved.add(window);window.close();
+        if(!window.isDestroyed())release();
+      }).catch(error=>{
+        if(!window.isDestroyed()){revealWindow(window);window.webContents.send('host-change','error:'+String(error.message||error));}
+      }).finally(()=>closingWindows.delete(contentsId));
+    });
+    window.on('closed',()=>{updateSaves.forget(contentsId);toolHandoffs.forget(contentsId);hosts.delete(contentsId);rendererBusy.delete(windowId);views.delete(windowId);boards.delete(contentsId);files.forget(contentsId);inputs.forget(contentsId);matcher.forget(contentsId);});
     window.on('blur',()=>{if(!detached && !testMode && !modalCount && store.settings().hideOnBlur && views.get(window.id)==='launcher')window.hide();});
     window.on('unresponsive',()=>notify('error:'+t("界面暂时无响应，请等待或从托盘重新打开")));
     void window.loadFile(html,{query:{view,detached:detached?'1':'0',board:ids.length?'1':'0',transfer}});
@@ -466,9 +491,21 @@ async function bootstrap() {
   if(!testMode||process.env.NEXLET_TEST_DEFER_CATALOG_SCAN!=='1')void catalog.scan(store.settings().searchPaths);
   app.on('second-instance',()=>void show()); app.on('activate',()=>void show());
   app.on('window-all-closed',()=>{});
-  let cleanedUp=false;
   // Let AppKit finish canceling Cmd+Q before requesting the final quit on a new turn.
-  app.on('before-quit',event=>{quitting=true;desktopTools.close();windowActions.close();clearInterval(panelBusyTimer);panelTrigger.close();panel.close();updates.setAutomaticChecks(false);clips.stop();shortcuts.close();matcher.close();if(tray&&!tray.isDestroyed())tray.destroy();if(!cleanedUp){event.preventDefault();cleanedUp=true;void Promise.all([plugins.close(),files.close()]).finally(()=>{inputs.close();setImmediate(()=>app.quit());});}});
+  app.on('before-quit',event=>{
+    if(cleanedUp)return;
+    event.preventDefault();
+    if(quitPending)return;
+    quitting=true;
+    quitPending=(async()=>{
+      // Keep all services and windows alive until every editor confirms its save.
+      await saveForClose([...hosts.keys()]);
+      desktopTools.close();windowActions.close();clearInterval(panelBusyTimer);panelTrigger.close();panel.close();updates.setAutomaticChecks(false);clips.stop();shortcuts.close();matcher.close();
+      if(tray&&!tray.isDestroyed())tray.destroy();
+      await Promise.allSettled([plugins.close(),files.close()]);
+      inputs.close();cleanedUp=true;setImmediate(()=>app.quit());
+    })().catch(error=>{quitting=false;notify('error:'+String(error.message||error));if(!main.isDestroyed())revealWindow(main);}).finally(()=>{quitPending=null;});
+  });
   app.once('will-quit',()=>{catalog.close();store.close();});
   updates.setAutomaticChecks(store.settings().autoCheckUpdates);
   if(testMode)(globalThis as any).__nexlet={desktopTools,windowActions,panel,panelConfig,panelTrigger,selection,selectionPlatform,registry,shortcuts,hotkeyState,activateHotkey,executeCommand,updates,autoUpdater:updateTransport,store,clips,platform,catalog,systemActions,systemExecutor,plugins,marketplace,files,main,show,hosts,inputs,matcher,toolHandoffs};

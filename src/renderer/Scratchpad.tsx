@@ -31,7 +31,7 @@ export function ScratchpadPanel({initialExpression}:{initialExpression:string}){
     if(timer.current)clearTimeout(timer.current);
     while(saving.current)await new Promise(resolve=>setTimeout(resolve,20));
     await flush();
-    if(pending.current.size)throw Error(t("稿纸尚未保存，请处理保存错误后再安装更新"));
+    if(pending.current.size)throw Error(t("稿纸尚未保存，请处理保存错误后重试"));
   }),[flush]);
   useBeforeDetach(async()=>{const field=inputs.current.get(current.current.find(p=>p.id===active)?.lines[focused]?.id||'');if(restoration)restoration.values.cursor=field?{start:field.selectionStart,end:field.selectionEnd}:null;if(timer.current)clearTimeout(timer.current);while(saving.current)await new Promise(resolve=>setTimeout(resolve,20));await flush();if(pending.current.size)throw Error(t("稿纸保存失败，已保留原窗口"));});
   const restoration=useRestoreBarrier();

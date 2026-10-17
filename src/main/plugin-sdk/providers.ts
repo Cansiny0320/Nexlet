@@ -17,15 +17,21 @@ export async function readJson(response: Response, signal: AbortSignal): Promise
   try { return object(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { throw new Error(t("服务返回了无效 JSON 对象")); }
 }
 export class PluginProviders {
+  private revisions = new Map<string, number>();
   constructor(private store: Storage, private secrets: Pick<PluginSecrets, 'set' | 'get'>, readonly fetcher: Fetcher) {}
-  configure(plugin: string, owner: number, kind: 'ai' | 'services', value: unknown): { configured: boolean; persistent: boolean } {
-    if (value === null) { this.store.set(`plugin-provider:${plugin}:${kind}`, null); this.secrets.set(plugin, owner, `sdk.${kind}.key`, null); return { configured: false, persistent: true }; }
+  revision(plugin: string, kind: 'ai' | 'services'): number { return this.revisions.get(`${plugin}:${kind}`) ?? 0; }
+  configure(plugin: string, owner: number, kind: 'ai' | 'services', value: unknown, expectedRevision?: number): { configured: boolean; persistent: boolean } {
+    const revision = this.revision(plugin, kind);
+    if (expectedRevision !== undefined && revision !== expectedRevision) throw new Error(t("服务配置已变化，请重新登录"));
+    if (value === null) { this.store.set(`plugin-provider:${plugin}:${kind}`, null); this.secrets.set(plugin, owner, `sdk.${kind}.key`, null); this.revisions.set(`${plugin}:${kind}`, revision + 1); return { configured: false, persistent: true }; }
     const args = object(value), baseUrl = providerUrl(args.baseUrl).href.replace(/\/$/, '');
     const old = this.store.get<{ baseUrl: string } | null>(`plugin-provider:${plugin}:${kind}`, null);
     // A credential must never silently follow a base URL change.
     const clear = old?.baseUrl !== baseUrl;
     const saved = args.apiKey !== undefined || clear ? this.secrets.set(plugin, owner, `sdk.${kind}.key`, args.apiKey ?? null) : { persistent: true };
-    this.store.set(`plugin-provider:${plugin}:${kind}`, { baseUrl }); return { configured: true, persistent: saved.persistent };
+    this.store.set(`plugin-provider:${plugin}:${kind}`, { baseUrl });
+    this.revisions.set(`${plugin}:${kind}`, revision + 1);
+    return { configured: true, persistent: saved.persistent };
   }
   status(plugin: string, kind: 'ai' | 'services'): { configured: boolean; baseUrl?: string } {
     const config = this.store.get<{ baseUrl: string } | null>(`plugin-provider:${plugin}:${kind}`, null);
@@ -40,5 +46,10 @@ export class PluginProviders {
     if (key) headers.authorization = `Bearer ${key}`;
     return this.fetcher(providerUrl(config.baseUrl).href.replace(/\/$/, '') + route, { method: encoded === undefined ? 'GET' : 'POST', headers, body: encoded, signal, redirect: 'error', credentials: 'omit' });
   }
-  clear(plugin: string): void { for (const kind of ['ai', 'services']) this.store.set(`plugin-provider:${plugin}:${kind}`, null); }
+  clear(plugin: string): void {
+    for (const kind of ['ai', 'services'] as const) {
+      this.store.set(`plugin-provider:${plugin}:${kind}`, null);
+      this.revisions.set(`${plugin}:${kind}`, this.revision(plugin, kind) + 1);
+    }
+  }
 }

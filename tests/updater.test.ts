@@ -225,6 +225,17 @@ describe('安装前保存', () => {
     await expect(barrier.prepare([1], (id, token) => barrier.ready(id, token, '保存失败'))).rejects.toThrow('保存失败');
     await expect(barrier.prepare([1], () => {}, 5)).rejects.toThrow('超时');
   });
+  it('keeps overlapping close and quit saves independent and releases closed windows', async () => {
+    const { UpdateSaveBarrier } = await import('../src/main/updater');
+    const barrier = new UpdateSaveBarrier(), closeSent = vi.fn(), quitSent = vi.fn(), finished = vi.fn();
+    const close = barrier.prepare([1], closeSent);
+    const quit = barrier.prepare([1, 2], quitSent).then(finished);
+    barrier.ready(1, closeSent.mock.calls[0][1], null); await close;
+    barrier.ready(2, quitSent.mock.calls[0][1], null);
+    await Promise.resolve(); expect(finished).not.toHaveBeenCalled();
+    barrier.forget(1); await quit;
+    expect(finished).toHaveBeenCalledOnce();
+  });
 });
 
 it('便携模式只提供正式 EXE 链接，不调用下载或安装器', async () => {

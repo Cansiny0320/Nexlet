@@ -1490,5 +1490,7 @@
   "在{{v0}}中打开": "Open in {{v0}}",
   "Nexlet 不再内置 FFmpeg，请通过 executable 指定本机 FFmpeg 路径": "Nexlet no longer bundles FFmpeg. Specify a local FFmpeg path with executable.",
   "本地计算（动态代码与 WASM）": "Local computation (dynamic code and WASM)",
-  "插件压缩包不能超过 64 MB": "Plugin archive must not exceed 64 MB"
+  "插件压缩包不能超过 64 MB": "Plugin archive must not exceed 64 MB",
+  "服务配置已变化，请重新登录": "Service configuration has changed. Please sign in again.",
+  "稿纸尚未保存，请处理保存错误后重试": "The scratchpad has not been saved. Resolve the save error and try again."
 }

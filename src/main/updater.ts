@@ -140,24 +140,30 @@ export class AppUpdates {
 
 
 export class UpdateSaveBarrier {
-  private pending: { token: string; windows: Set<number>; resolve: () => void; reject: (error: Error) => void } | null = null;
+  private pending = new Map<string, { windows: Set<number>; resolve: () => void; reject: (error: Error) => void }>();
   async prepare(windows: number[], send: (id: number, token: string) => void, timeout = 10000): Promise<void> {
     if (!windows.length) return;
     const token = randomUUID();
     let timer: ReturnType<typeof setTimeout>;
     try {
       await new Promise<void>((resolve, reject) => {
-        this.pending = { token, windows: new Set(windows), resolve, reject };
+        this.pending.set(token, { windows: new Set(windows), resolve, reject });
         timer = setTimeout(() => reject(Error(t("等待窗口保存超时，请确认所有稿纸已保存后重试"))), timeout);
         for (const id of windows) send(id, token);
       });
-    } finally { clearTimeout(timer!); this.pending = null; }
+    } finally { clearTimeout(timer!); this.pending.delete(token); }
   }
   ready(id: number, token: unknown, error: unknown): void {
-    const pending = this.pending;
-    if (!pending || pending.token !== token || !pending.windows.has(id)) return;
+    const pending = typeof token === 'string' ? this.pending.get(token) : undefined;
+    if (!pending || !pending.windows.has(id)) return;
     if (typeof error === 'string' && error) { pending.reject(Error(error.slice(0, 500))); return; }
     pending.windows.delete(id);
     if (!pending.windows.size) pending.resolve();
+  }
+  forget(id: number): void {
+    for (const pending of this.pending.values()) {
+      pending.windows.delete(id);
+      if (!pending.windows.size) pending.resolve();
+    }
   }
 }

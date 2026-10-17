@@ -36,7 +36,7 @@ export class PluginDatabase {
     if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error(t("查询 limit 无效"));
     const prefix = options.prefix ?? '';
     if (typeof prefix !== 'string' || typeof (options.after ?? '') !== 'string') throw new Error(t("查询参数无效"));
-    const rows = this.sql.prepare('SELECT id,rev,value FROM plugin_docs WHERE plugin=? AND substr(id,1,?)=? AND id>? ORDER BY id LIMIT ?').all(plugin, prefix.length, prefix, options.after ?? '', limit) as Row[];
+    const rows = this.sql.prepare('SELECT id,rev,value FROM plugin_docs WHERE plugin=? AND substr(id,1,length(?))=? AND id>? ORDER BY id LIMIT ?').all(plugin, prefix, prefix, options.after ?? '', limit) as Row[];
     return rows.map(row => ({ ...row, value: JSON.parse(row.value) }));
   }
   remove(plugin: string, id: string, rev: string): boolean {

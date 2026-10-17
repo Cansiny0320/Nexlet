@@ -5,6 +5,66 @@ import { PluginProviders, readJson } from '../src/main/plugin-sdk/providers';
 import { PluginMcp } from '../src/main/plugin-sdk/mcp';
 import { runProcess } from '../src/main/plugin-sdk/process';
 import type { PluginTools } from '../src/main/plugin-sdk/tools';
+import { PluginServices } from '../src/main/plugin-sdk/services';
+import { PluginTasks } from '../src/main/plugin-sdk/tasks';
+import type { SdkContext } from '../src/main/plugin-sdk/context';
+
+describe('service login credentials', () => {
+  function fixture() {
+    const data = new Map<string, unknown>(), secrets = new Map<string, string>();
+    const requests: { url: string; authorization: string | null }[] = [];
+    let complete!: (response: Response) => void;
+    const provider = new PluginProviders({
+      get: <T>(key: string, fallback: T) => structuredClone(data.get(key) ?? fallback) as T,
+      set: (key, value) => { data.set(key, structuredClone(value)); }
+    }, {
+      get: (plugin, _, key) => secrets.get(plugin + key) ?? null,
+      set: (plugin, _, key, value) => { if (value === null) secrets.delete(plugin + key); else secrets.set(plugin + key, String(value)); return { persistent: true }; }
+    }, async (url, init) => {
+      requests.push({ url, authorization: new Headers(init.headers).get('authorization') });
+      if (url.endsWith('/auth/status')) return new Promise<Response>(resolve => { complete = resolve; });
+      return new Response(JSON.stringify({ user: null }));
+    });
+    const tasks = new PluginTasks(), service = new PluginServices(provider, tasks);
+    const context = { plugin: 'org.fixture', contents: { id: 1 }, require: () => {} } as unknown as SdkContext;
+    const configure = (value: unknown) => service.invoke(context, 'services.configure', value);
+    const login = () => service.invoke(context, 'services.loginStatus', { id: 'login', sessionId: 'session' });
+    return { provider, tasks, service, context, requests, configure, login, complete: () => complete(new Response(JSON.stringify({ status: 'complete', token: 'old-service-token' }))) };
+  }
+
+  it.each(['switch', 'switch-back', 'clear', 'replace-key', 'uninstall'] as const)('rejects a late login after %s without changing credentials', async change => {
+    const f = fixture();
+    try {
+      await f.configure({ baseUrl: 'https://old.example' });
+      const pending = f.login();
+      if (change === 'clear') await f.configure(null);
+      else if (change === 'uninstall') f.provider.clear(f.context.plugin);
+      else if (change === 'replace-key') await f.configure({ baseUrl: 'https://old.example', apiKey: 'replacement' });
+      else {
+        await f.configure({ baseUrl: 'https://new.example' });
+        if (change === 'switch-back') await f.configure({ baseUrl: 'https://old.example' });
+      }
+      const rejected = expect(pending).rejects.toThrow(/配置已变化/);
+      f.complete(); await rejected;
+      if (change === 'clear' || change === 'uninstall') expect(f.provider.status(f.context.plugin, 'services').configured).toBe(false);
+      else {
+        await f.service.invoke(f.context, 'services.account', { id: 'account' });
+        expect(f.requests.at(-1)?.authorization).toBe(change === 'replace-key' ? 'Bearer replacement' : null);
+      }
+    } finally { f.tasks.closeAll(); }
+  });
+
+  it('saves a current login and keeps the token out of its response', async () => {
+    const f = fixture();
+    try {
+      await f.configure({ baseUrl: 'https://old.example' });
+      const pending = f.login(); f.complete();
+      expect(await pending).toEqual({ status: 'complete', persistent: true });
+      await f.service.invoke(f.context, 'services.account', { id: 'account' });
+      expect(f.requests.at(-1)).toEqual({ url: 'https://old.example/account', authorization: 'Bearer old-service-token' });
+    } finally { f.tasks.closeAll(); }
+  });
+});
 
 describe('AI stream parsing', () => {
   it('handles split Unicode/CRLF frames and fragmented tool arguments', async () => {

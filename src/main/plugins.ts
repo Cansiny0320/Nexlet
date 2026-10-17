@@ -123,7 +123,15 @@ export class PluginManager {
     if (previous && !previous.development) await this.removeManaged(previous.directory).catch(()=>{});
     this.changed(); return true;
   }
-  async toggle(id: string, enabled: boolean): Promise<void> { const records=this.records(); const record=records.find(p=>p.manifest.id===id); if(!record)throw new Error(t("插件不存在")); record.enabled=enabled; if(!enabled){await this.runtime.stop(id);this.sdk.stop(id);} this.store.set('plugins',records); this.changed(); }
+  async toggle(id: string, enabled: boolean): Promise<void> {
+    if(!this.records().some(p=>p.manifest.id===id))throw new Error(t("插件不存在"));
+    if(!enabled){await this.runtime.stop(id);this.sdk.stop(id);}
+    // onOut may yield while another install, removal or toggle updates the list.
+    const records=this.records();
+    if(!records.some(p=>p.manifest.id===id))return;
+    this.store.set('plugins',records.map(record=>record.manifest.id===id?{...record,enabled}:record));
+    this.changed();
+  }
   async remove(id: string, deleteData: boolean): Promise<void> { const record=this.records().find(p=>p.manifest.id===id); if(!record)throw new Error(t("插件不存在")); await this.runtime.stop(id); this.store.set('plugins',this.records().filter(p=>p.manifest.id!==id)); if(!record.development)await this.removeManaged(record.directory); this.sdk.stop(id); if(deleteData){await this.sdk.clear(id);await rm(path.join(this.store.directory,'plugin-backends',id),{recursive:true,force:true});this.store.set('plugin-data:'+id,{});this.secrets.remove(id);this.store.set('plugin-network:'+id,[]);} this.changed(); }
   async launch(id:string,code:string,payload='',snapshot?:InputSnapshot):Promise<void>{
     const record=this.records().find(p=>p.manifest.id===id&&p.enabled);

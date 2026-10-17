@@ -5,6 +5,17 @@ import { PluginTasks } from '../src/main/plugin-sdk/tasks';
 import { PluginScheduler } from '../src/main/plugin-sdk/scheduler';
 
 describe('plugin document database', () => {
+  it('queries Unicode prefixes literally and paginates without crossing plugin boundaries', () => {
+    const sql = new DatabaseSync(':memory:'), db = new PluginDatabase(sql);
+    try {
+      for (const id of ['📁/a', '📁/b', '📁other', '中文/a', '𠮷/a', 'x%_/a', 'xyz/a']) db.put('a', { id, value: id });
+      db.put('b', { id: '📁/other-plugin', value: null });
+      expect(db.query('a', { prefix: '📁/', limit: 1 }).map(doc => doc.id)).toEqual(['📁/a']);
+      expect(db.query('a', { prefix: '📁/', after: '📁/a' }).map(doc => doc.id)).toEqual(['📁/b']);
+      for (const prefix of ['中文/', '𠮷/', 'x%_/']) expect(db.query('a', { prefix }).map(doc => doc.id)).toEqual([prefix + 'a']);
+      expect(db.query('a')).toHaveLength(7);
+    } finally { sql.close(); }
+  });
   it('isolates plugins, detects stale revisions and rolls back an entire bulk write', () => {
     const sql = new DatabaseSync(':memory:'), db = new PluginDatabase(sql);
     const first = db.put('a', { id: 'note', value: { text: 'one' } });

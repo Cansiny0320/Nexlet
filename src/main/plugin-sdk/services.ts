@@ -15,9 +15,11 @@ export class PluginServices {
         case 'services.account': { const result = await request('/account'); if (result.user !== null && (!result.user || typeof object(result.user).id !== 'string')) throw new Error(t("账号响应格式无效")); return result; }
         case 'services.login': { const result = await request('/auth/start', { pluginId: context.plugin }); const loginUrl = new URL(string(result.url)); const origin = new URL(loginUrl); origin.search = ''; origin.hash = ''; providerUrl(origin.href); string(result.sessionId); return result; }
         case 'services.loginStatus': {
+          // Bind credentials to this configuration, even if the URL changes away and back.
+          const revision = this.providers.revision(context.plugin, 'services');
           const result = await request('/auth/status', { sessionId: string(args.sessionId, 200) });
           if (!['pending', 'complete', 'expired'].includes(String(result.status))) throw new Error(t("登录状态无效"));
-          if (result.status === 'complete') { const status = this.providers.status(context.plugin, 'services'); const saved = this.providers.configure(context.plugin, context.contents.id, 'services', { baseUrl: status.baseUrl, apiKey: string(result.token, 16384) }); delete result.token; result.persistent = saved.persistent; }
+          if (result.status === 'complete') { const status = this.providers.status(context.plugin, 'services'); const saved = this.providers.configure(context.plugin, context.contents.id, 'services', { baseUrl: status.baseUrl, apiKey: string(result.token, 16384) }, revision); delete result.token; result.persistent = saved.persistent; }
           return result;
         }
         case 'services.license': { const result = await request('/license?product=' + encodeURIComponent(string(args.product, 200))); if (typeof result.active !== 'boolean') throw new Error(t("授权响应格式无效")); return result; }
