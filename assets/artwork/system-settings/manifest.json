@@ -1,0 +1,555 @@
+{
+  "source": "atlas.png",
+  "width": 1122,
+  "height": 1402,
+  "size": 128,
+  "padding": 4,
+  "icons": [
+    {
+      "id": "home",
+      "left": 0,
+      "top": 0,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "about",
+      "left": 140,
+      "top": 0,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "display",
+      "left": 280,
+      "top": 0,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "storage",
+      "left": 420,
+      "top": 0,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "focus",
+      "left": 560,
+      "top": 0,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "multitasking",
+      "left": 700,
+      "top": 0,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "project",
+      "left": 840,
+      "top": 0,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "crossdevice",
+      "left": 980,
+      "top": 0,
+      "width": 142,
+      "height": 145
+    },
+    {
+      "id": "tabletmode",
+      "left": 0,
+      "top": 145,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "taskbar",
+      "left": 140,
+      "top": 145,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "notifications",
+      "left": 280,
+      "top": 145,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "remotedesktop",
+      "left": 420,
+      "top": 145,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "power",
+      "left": 560,
+      "top": 145,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "sound",
+      "left": 700,
+      "top": 145,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "workplace",
+      "left": 840,
+      "top": 145,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "email",
+      "left": 980,
+      "top": 145,
+      "width": 142,
+      "height": 145
+    },
+    {
+      "id": "users",
+      "left": 0,
+      "top": 290,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "signin",
+      "left": 140,
+      "top": 290,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "sync",
+      "left": 280,
+      "top": 290,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "account",
+      "left": 420,
+      "top": 290,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "apps",
+      "left": 560,
+      "top": 290,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "webapps",
+      "left": 700,
+      "top": 290,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "defaultapps",
+      "left": 840,
+      "top": 290,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "maps",
+      "left": 980,
+      "top": 290,
+      "width": 142,
+      "height": 145
+    },
+    {
+      "id": "startup",
+      "left": 0,
+      "top": 435,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "video",
+      "left": 140,
+      "top": 435,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "autoplay",
+      "left": 280,
+      "top": 435,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "bluetooth",
+      "left": 420,
+      "top": 435,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "mouse",
+      "left": 560,
+      "top": 435,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "trackpad",
+      "left": 700,
+      "top": 435,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "pen",
+      "left": 840,
+      "top": 435,
+      "width": 140,
+      "height": 145
+    },
+    {
+      "id": "printers",
+      "left": 980,
+      "top": 435,
+      "width": 142,
+      "height": 145
+    },
+    {
+      "id": "typing",
+      "left": 0,
+      "top": 580,
+      "width": 140,
+      "height": 142
+    },
+    {
+      "id": "usb",
+      "left": 140,
+      "top": 580,
+      "width": 140,
+      "height": 142
+    },
+    {
+      "id": "accessibility",
+      "left": 280,
+      "top": 580,
+      "width": 140,
+      "height": 142
+    },
+    {
+      "id": "audio",
+      "left": 420,
+      "top": 580,
+      "width": 140,
+      "height": 142
+    },
+    {
+      "id": "captions",
+      "left": 560,
+      "top": 580,
+      "width": 140,
+      "height": 142
+    },
+    {
+      "id": "colorfilter",
+      "left": 700,
+      "top": 580,
+      "width": 140,
+      "height": 142
+    },
+    {
+      "id": "accessibility-display",
+      "left": 840,
+      "top": 580,
+      "width": 140,
+      "height": 142
+    },
+    {
+      "id": "contrast",
+      "left": 980,
+      "top": 580,
+      "width": 142,
+      "height": 142
+    },
+    {
+      "id": "keyboard",
+      "left": 0,
+      "top": 722,
+      "width": 140,
+      "height": 143
+    },
+    {
+      "id": "magnifier",
+      "left": 140,
+      "top": 722,
+      "width": 140,
+      "height": 143
+    },
+    {
+      "id": "mousekeys",
+      "left": 280,
+      "top": 722,
+      "width": 140,
+      "height": 143
+    },
+    {
+      "id": "narrator",
+      "left": 420,
+      "top": 722,
+      "width": 140,
+      "height": 143
+    },
+    {
+      "id": "speechrecognition",
+      "left": 560,
+      "top": 722,
+      "width": 140,
+      "height": 143
+    },
+    {
+      "id": "fonts",
+      "left": 700,
+      "top": 722,
+      "width": 140,
+      "height": 143
+    },
+    {
+      "id": "datausage",
+      "left": 840,
+      "top": 722,
+      "width": 140,
+      "height": 143
+    },
+    {
+      "id": "dialup",
+      "left": 980,
+      "top": 722,
+      "width": 142,
+      "height": 143
+    },
+    {
+      "id": "ethernet",
+      "left": 0,
+      "top": 865,
+      "width": 140,
+      "height": 139
+    },
+    {
+      "id": "proxy",
+      "left": 140,
+      "top": 865,
+      "width": 140,
+      "height": 139
+    },
+    {
+      "id": "network",
+      "left": 280,
+      "top": 865,
+      "width": 140,
+      "height": 139
+    },
+    {
+      "id": "wifi",
+      "left": 420,
+      "top": 865,
+      "width": 140,
+      "height": 139
+    },
+    {
+      "id": "vpn",
+      "left": 560,
+      "top": 865,
+      "width": 140,
+      "height": 139
+    },
+    {
+      "id": "wallpaper",
+      "left": 700,
+      "top": 865,
+      "width": 140,
+      "height": 139
+    },
+    {
+      "id": "colors",
+      "left": 840,
+      "top": 865,
+      "width": 140,
+      "height": 139
+    },
+    {
+      "id": "lockscreen",
+      "left": 980,
+      "top": 865,
+      "width": 142,
+      "height": 139
+    },
+    {
+      "id": "start",
+      "left": 0,
+      "top": 1004,
+      "width": 140,
+      "height": 136
+    },
+    {
+      "id": "themes",
+      "left": 140,
+      "top": 1004,
+      "width": 140,
+      "height": 136
+    },
+    {
+      "id": "privacy",
+      "left": 280,
+      "top": 1004,
+      "width": 140,
+      "height": 136
+    },
+    {
+      "id": "datetime",
+      "left": 420,
+      "top": 1004,
+      "width": 140,
+      "height": 136
+    },
+    {
+      "id": "language",
+      "left": 560,
+      "top": 1004,
+      "width": 140,
+      "height": 136
+    },
+    {
+      "id": "speech",
+      "left": 700,
+      "top": 1004,
+      "width": 140,
+      "height": 136
+    },
+    {
+      "id": "activation",
+      "left": 840,
+      "top": 1004,
+      "width": 140,
+      "height": 136
+    },
+    {
+      "id": "backup",
+      "left": 980,
+      "top": 1004,
+      "width": 142,
+      "height": 136
+    },
+    {
+      "id": "finddevice",
+      "left": 0,
+      "top": 1140,
+      "width": 140,
+      "height": 125
+    },
+    {
+      "id": "developers",
+      "left": 140,
+      "top": 1140,
+      "width": 140,
+      "height": 125
+    },
+    {
+      "id": "recovery",
+      "left": 280,
+      "top": 1140,
+      "width": 126,
+      "height": 125
+    },
+    {
+      "id": "troubleshoot",
+      "left": 406,
+      "top": 1140,
+      "width": 154,
+      "height": 125
+    },
+    {
+      "id": "security",
+      "left": 560,
+      "top": 1140,
+      "width": 140,
+      "height": 125
+    },
+    {
+      "id": "update",
+      "left": 700,
+      "top": 1140,
+      "width": 140,
+      "height": 125
+    },
+    {
+      "id": "appearance",
+      "left": 840,
+      "top": 1140,
+      "width": 140,
+      "height": 125
+    },
+    {
+      "id": "desktop",
+      "left": 980,
+      "top": 1140,
+      "width": 142,
+      "height": 125
+    },
+    {
+      "id": "sharing",
+      "left": 112,
+      "top": 1265,
+      "width": 133,
+      "height": 137
+    },
+    {
+      "id": "timemachine",
+      "left": 245,
+      "top": 1265,
+      "width": 130,
+      "height": 137
+    },
+    {
+      "id": "screentime",
+      "left": 375,
+      "top": 1265,
+      "width": 125,
+      "height": 137
+    },
+    {
+      "id": "spotlight",
+      "left": 500,
+      "top": 1265,
+      "width": 130,
+      "height": 137
+    },
+    {
+      "id": "internetaccounts",
+      "left": 630,
+      "top": 1265,
+      "width": 135,
+      "height": 137
+    },
+    {
+      "id": "airdrop",
+      "left": 765,
+      "top": 1265,
+      "width": 135,
+      "height": 137
+    }
+  ]
+}
