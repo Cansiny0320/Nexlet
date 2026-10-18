@@ -295,7 +295,6 @@ export const HOST_ACTIONS = [
   'updateInstall',
   'updatePortable',
 ] as const;
-export type HostAction = (typeof HOST_ACTIONS)[number];
 export interface HostApi {
   pathForFile(file: File): string;
   call: import('./host-rpc').HostCall;

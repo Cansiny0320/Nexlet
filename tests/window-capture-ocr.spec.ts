@@ -8,6 +8,7 @@ import {
 import { mkdtemp, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
+import { restoreClipboard, saveClipboard } from './helpers/clipboard';
 let app: ElectronApplication, main: Page, folder: string;
 const errors: string[] = [];
 const host = (action: string, payload?: unknown) =>
@@ -71,24 +72,16 @@ test.beforeAll(async () => {
   const executablePath = process.env.NEXLET_E2E_EXECUTABLE;
   app = await electron.launch({ executablePath, args: executablePath ? [] : [process.cwd()], env });
   main = await app.firstWindow();
+  main.on('pageerror', (e) => errors.push(e.message));
   app.on('window', (p) => p.on('pageerror', (e) => errors.push(e.message)));
   await home();
+  await saveClipboard(app);
   await app.evaluate(
-    async ({ clipboard, nativeImage, desktopCapturer, screen, systemPreferences, dialog }) => {
+    async ({ nativeImage, desktopCapturer, screen, systemPreferences, dialog }) => {
       (globalThis as any).desktopMainErrors = [];
       dialog.showErrorBox = (title, content) => {
         (globalThis as any).desktopMainErrors.push(title + '\n' + content);
       };
-      const n = (globalThis as any).__nexlet;
-      (globalThis as any).savedClipboard = await n.selectionPlatform.snapshot();
-      for (const name of ['write', 'writeText'] as const) {
-        const original = (clipboard[name] as any).bind(clipboard);
-        (clipboard as any)[name] = async (...args: any[]) => {
-          const result = await original(...args);
-          (globalThis as any).clipboardVersion = n.platform.sequence();
-          return result;
-        };
-      }
       const display = screen.getPrimaryDisplay();
       screen.getCursorScreenPoint = () => ({ x: display.bounds.x + 50, y: display.bounds.y + 50 });
       (systemPreferences as any).getMediaAccessStatus = () => 'granted';
@@ -115,21 +108,16 @@ test.beforeAll(async () => {
   );
 });
 test.afterEach(async () => {
+  expect(errors).toEqual([]);
   expect(await app.evaluate(() => (globalThis as any).desktopMainErrors)).toEqual([]);
 });
 test.afterAll(async () => {
   if (app) {
-    await app.evaluate(async () => {
-      const g = globalThis as any,
-        n = g.__nexlet;
-      if (
-        g.savedClipboard &&
-        g.clipboardVersion !== undefined &&
-        n.platform.sequence() === g.clipboardVersion
-      )
-        await n.selectionPlatform.restore(g.savedClipboard, g.clipboardVersion);
-    });
-    await app.close();
+    try {
+      await restoreClipboard(app);
+    } finally {
+      await app.close();
+    }
   }
 });
 

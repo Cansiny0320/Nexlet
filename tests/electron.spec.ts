@@ -8,6 +8,7 @@ import {
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
+import { restoreClipboard, saveClipboard } from './helpers/clipboard';
 
 let app: ElectronApplication, page: Page, folder: string, data: string;
 const root = process.cwd();
@@ -69,50 +70,18 @@ async function launchPlugin() {
     .pages()
     .find((p) => p.url().startsWith('nexlet-plugin://org.nexlet.hello/'))!;
 }
-async function saveClipboard() {
-  await app.evaluate(async ({ clipboard, ClipboardItem }) => {
-    const items = await clipboard.read();
-    const saved = [];
-    for (const item of items) {
-      const values: Record<string, any> = {};
-      for (const type of item.types) {
-        if (
-          [
-            'text/plain',
-            'text/html',
-            'image/png',
-            'text/rtf',
-            'electron application/bookmark',
-          ].includes(type)
-        )
-          values[type] = await item.getType(type);
-      }
-      if (Object.keys(values).length) saved.push(new ClipboardItem(values));
-    }
-    (globalThis as any).__savedClipboard = saved;
-    (globalThis as any).__savedFiles = await (globalThis as any).__nexlet.platform.readFiles();
-  });
-}
-async function restoreClipboard() {
-  await app.evaluate(async ({ clipboard }) => {
-    const saved = (globalThis as any).__savedClipboard,
-      files = (globalThis as any).__savedFiles;
-    if (files?.length) await (globalThis as any).__nexlet.platform.writeFiles(files);
-    else if (saved?.length) await clipboard.write(saved);
-  });
-}
 test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => {
   await mkdir(path.join(root, '.tmp'), { recursive: true });
   folder = await mkdtemp(path.join(root, '.tmp', 'e2e-'));
   data = path.join(folder, 'data');
   await start();
-  await saveClipboard();
+  await saveClipboard(app);
 });
 test.afterAll(async () => {
   if (app) {
     try {
-      await restoreClipboard();
+      await restoreClipboard(app);
     } finally {
       await app.close();
     }
@@ -429,10 +398,10 @@ test('真实插件安装、独立存储、权限拒绝、禁用和卸载', async
 });
 
 test('重启后稿纸、收藏与设置保留，界面无脚本异常', async () => {
-  await restoreClipboard();
+  await restoreClipboard(app);
   await app.close();
   await start();
-  await saveClipboard();
+  await saveClipboard(app);
   const pads: any = await call('pads');
   expect(pads.find((p: any) => p.name === 'Nexlet 验证稿纸').lines[1].expression).toBe('384+256');
   expect((await call('clips', { kind: 'favorite' })) as any[]).toHaveLength(1);
@@ -566,7 +535,7 @@ test('内置 Everything 自动启动、中文文件索引、受限文件操作�
   }
   const pid = await app.evaluate(() => (globalThis as any).__nexlet.files.engine.child?.pid);
   expect(pid).toBeGreaterThan(0);
-  await restoreClipboard();
+  await restoreClipboard(app);
   await app.close();
   await expect
     .poll(() => {
@@ -579,7 +548,7 @@ test('内置 Everything 自动启动、中文文件索引、受限文件操作�
     })
     .toBe(false);
   await start();
-  await saveClipboard();
+  await saveClipboard(app);
 });
 
 test('插件市场缓存、直接安装更新和失败保留旧数据', async () => {
