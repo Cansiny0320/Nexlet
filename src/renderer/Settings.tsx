@@ -44,7 +44,7 @@ export function SettingsPanel() {
   const coexist = state.platform === 'darwin' ? 'Control+Alt+Space' : 'Ctrl+Alt+Space';
   return (
     <div className="standard-panel scroll-panel settings-panel">
-      <PanelHeader title={t('设置')} description={t('Nexlet · 随叫随到的桌面工具')} />
+      <PanelHeader title={t('设置')} />
       <div className="settings-section-title">
         <Keyboard size={17} />
         {t('快捷键与窗口')}
@@ -52,7 +52,6 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('全局唤起')}</strong>
-          <p>{t('在任意应用中打开 Nexlet')}</p>
         </div>
         <div className="shortcut-control">
           <ShortcutInput
@@ -94,7 +93,6 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('失焦收起')}</strong>
-          <p>{t('切换到其他应用时收起主搜索框，独立窗口保持显示')}</p>
         </div>
         <Switch
           aria-label={t('失焦收起')}
@@ -105,10 +103,7 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('开机自启动')}</strong>
-          <p>{state.startup.reason || t('登录系统后在后台运行，通过快捷键或托盘唤出')}</p>
-          {state.platform === 'win32' && (
-            <p>{t('便携版请放在固定位置；移动后需重新开启此开关。')}</p>
-          )}
+          {state.startup.reason && <p>{state.startup.reason}</p>}
         </div>
         <Switch
           aria-label={t('开机自启动')}
@@ -134,7 +129,6 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('语言')}</strong>
-          <p>{t('切换语言不会清空正在编辑的内容')}</p>
         </div>
         <SettingsSelect
           label={t('语言')}
@@ -174,7 +168,6 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('记录剪贴板历史')}</strong>
-          <p>{t('仅保存在本机；暂停后仍可查看已有记录')}</p>
         </div>
         <Switch
           aria-label={t('记录剪贴板历史')}
@@ -185,7 +178,6 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('保留条数')}</strong>
-          <p>{t('超出数量时清理最早的非收藏记录')}</p>
         </div>
         <SettingsSelect
           label={t('保留条数')}
@@ -200,7 +192,6 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('保留时间')}</strong>
-          <p>{t('收藏记录不自动清理')}</p>
         </div>
         <SettingsSelect
           label={t('保留天数')}
@@ -216,14 +207,6 @@ export function SettingsPanel() {
         <FolderSearch size={17} />
         {t('应用和快捷方式搜索')}
       </div>
-      <p className="setting-description">
-        {state.platform === 'win32'
-          ? t('自动搜索开始菜单、桌面快捷方式与 Windows 应用。')
-          : linux
-            ? t('自动搜索 XDG 目录中的 Linux 应用。')
-            : t('自动搜索系统和用户 Applications 文件夹。')}
-        {t('支持中文、拼音和首字母。')}
-      </p>
       <div className="search-paths">
         {state.settings.searchPaths.map((folder) => (
           <div key={folder}>
@@ -275,19 +258,6 @@ export function SettingsPanel() {
             <FolderSearch size={17} />
             {linux ? t('Linux 文件搜索') : mac ? t('Spotlight 文件搜索') : t('Everything 文件索引')}
           </div>
-          <p className="setting-description">
-            {linux
-              ? t(
-                  '仅搜索下方添加的目录，支持文件名、多关键词、*.pdf 和 ext:pdf。跳过隐藏项与符号链接；最多返回 200 条，搜索超时会提示缩小范围。',
-                )
-              : mac
-                ? t(
-                    '使用 macOS 系统索引，无需安装额外引擎。默认搜索 Spotlight 可用范围；添加目录后只搜索指定范围。此设置不会改变系统索引，未索引或被 Spotlight 排除的文件可能无法找到。',
-                  )
-                : t(
-                    '内置便携引擎，无需另行安装。默认索引本地固定磁盘中当前用户可访问的文件；首次扫描可能较久。添加目录后改为仅索引指定范围。',
-                  )}
-          </p>
           <div className="search-paths">
             {state.settings.fileSearchPaths.map((folder) => (
               <div key={folder}>

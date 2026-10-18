@@ -85,10 +85,7 @@ export function PluginsPanel() {
           {!state.plugins.length ? (
             <div className="plugin-empty">
               <Puzzle size={30} />
-              <div>
-                {t('还没有安装外部插件')}
-                <p>{t('支持 Nexlet 插件 ZIP 包，或包含 plugin.json 的开发目录。')}</p>
-              </div>
+              <div>{t('还没有安装外部插件')}</div>
             </div>
           ) : (
             state.plugins.map((plugin) => (

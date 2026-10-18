@@ -170,7 +170,7 @@ export function ToolsPanel({ tool, initial }: { tool: string; initial: string })
   if (tool === 'uuid')
     return (
       <div className="standard-panel editor-tool">
-        <PanelHeader title="UUID" description={t('生成 UUID v4 随机标识')} />
+        <PanelHeader title="UUID v4" />
         <div className="form-row">
           <label htmlFor="uuid-count">{t('数量')}</label>
           <input
@@ -210,7 +210,7 @@ export function ToolsPanel({ tool, initial }: { tool: string; initial: string })
     );
   return (
     <div className="standard-panel editor-tool">
-      <PanelHeader title={t('编码转换')} description={t('UTF-8 文本编码和解码')} />
+      <PanelHeader title={t('编码转换')} />
       <div className="tool-buttons">
         <select
           aria-label={t('编码类型')}
@@ -256,7 +256,6 @@ export function ToolsPanel({ tool, initial }: { tool: string; initial: string })
             aria-label={t('工具结果')}
             readOnly
             value={error || output}
-            placeholder={t('结果将在这里显示')}
             spellCheck={false}
           />
         </div>
@@ -298,7 +297,7 @@ export function WebPanel() {
       });
       await api('webShortcut', { action: 'save', entry });
       clear();
-      toast(t('已保存，可在主搜索框中搜索名称'));
+      toast(t('已保存'));
     } catch (e) {
       toast(errorText(e), true);
     }
@@ -321,10 +320,7 @@ export function WebPanel() {
   };
   return (
     <div className="standard-panel scroll-panel">
-      <PanelHeader
-        title={t('网页快开')}
-        description={t('添加常用网站或搜索模板，在主搜索框输入名称即可使用。')}
-      />
+      <PanelHeader title={t('网页快开')} />
       <form
         className="web-form"
         onSubmit={(e) => {
@@ -365,11 +361,6 @@ export function WebPanel() {
           </button>
         )}
       </form>
-      {type === 'search' && (
-        <p className="web-template-hint">
-          {t('在网址路径或查询中使用 {query}。主搜索框可输入“名称 搜索内容”，也可打开后输入。')}
-        </p>
-      )}
       {!state.settings.webShortcuts.length ? (
         <Empty icon={<Globe size={30} />}>{t('还没有网页快捷方式')}</Empty>
       ) : (

@@ -807,7 +807,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  min-height: 64px;
+  min-height: 52px;
   padding: 10px 0;
   border-bottom: 1px solid var(--line);
 }
@@ -1486,11 +1486,6 @@ p {
 .web-form select {
   width: 116px;
 }
-.web-template-hint {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0 0 16px;
-}
 
 /* The pointer panel shares the host palette and uses a compact four-column grid. */
 .super-panel {
@@ -1857,11 +1852,6 @@ p {
 }
 .panel-settings-exclusions label {
   font-weight: 500;
-}
-.panel-settings-exclusions p {
-  font-size: 11px;
-  color: var(--muted);
-  margin: 0;
 }
 .panel-settings-exclusions textarea {
   width: 100%;

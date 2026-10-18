@@ -30,6 +30,11 @@ export function PanelSettings() {
       toast(errorText(e), true);
     }
   };
+  const mouseIssue =
+    status.error ||
+    (config.enabled && config.mouse !== 'off' && !status.mouseActive
+      ? t('等待鼠标监听就绪')
+      : null);
   return (
     <>
       <div className="settings-section-title">
@@ -39,7 +44,6 @@ export function PanelSettings() {
       <div className="setting-row">
         <div>
           <strong>{t('超级面板')}</strong>
-          <p>{t('在鼠标附近打开常用入口，并处理当前选区')}</p>
         </div>
         <Switch
           aria-label={t('启用超级面板')}
@@ -50,13 +54,7 @@ export function PanelSettings() {
       <div className="setting-row">
         <div>
           <strong>{t('鼠标触发')}</strong>
-          <p>
-            {status.mouseActive
-              ? t('鼠标监听已生效')
-              : config.mouse === 'off'
-                ? t('鼠标触发已关闭')
-                : status.error || t('等待鼠标监听就绪')}
-          </p>
+          {mouseIssue && <p>{mouseIssue}</p>}
         </div>
         <SettingsSelect
           label={t('面板鼠标触发')}
@@ -74,7 +72,6 @@ export function PanelSettings() {
         <div className="setting-row">
           <div>
             <strong>{t('右键长按时间')}</strong>
-            <p>{t('普通短按仍打开原应用右键菜单')}</p>
           </div>
           <SettingsSelect
             label={t('右键长按时间')}
@@ -87,7 +84,6 @@ export function PanelSettings() {
       <div className="setting-row">
         <div>
           <strong>{t('面板快捷键')}</strong>
-          <p>{t('留空则不注册，和已有快捷键统一检查冲突')}</p>
         </div>
         <div className="shortcut-control">
           <ShortcutInput
@@ -110,14 +106,10 @@ export function PanelSettings() {
       )}
       <div className="panel-settings-exclusions">
         <label htmlFor="panel-exclusions">{t('排除应用')}</label>
-        <p>
-          {t(
-            '每行一个应用标识或名称，例如 com.apple.Terminal、WindowsTerminal.exe；同时停用鼠标触发和自动选区获取。',
-          )}
-        </p>
         <Textarea
           id="panel-exclusions"
           aria-label={t('面板排除应用')}
+          placeholder={t('每行一个应用名称或标识')}
           value={excluded}
           onChange={(e) => setExcluded(e.target.value)}
           rows={3}
@@ -136,11 +128,6 @@ export function PanelSettings() {
           {t('保存排除列表')}
         </Button>
       </div>
-      <p className="setting-description">
-        {t(
-          '选区仅在触发时读取。复制兜底会尽量恢复原剪贴板；没有获取到选区时显示常用入口。功能快捷键可在下方功能管理中单独开启“带入当前选区”。',
-        )}
-      </p>
       <div className="tool-buttons">
         <Button
           variant="outline"

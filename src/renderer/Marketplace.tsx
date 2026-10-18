@@ -51,10 +51,6 @@ export function MarketPanel() {
   return (
     <div className="plugins-content">
       <div className="market-intro">
-        <div>
-          <strong>{t('让常用工具，随手可用')}</strong>
-          <span>{t('来自 Nexlet 开源插件仓库')}</span>
-        </div>
         <span className="flex-spacer" />
         <input
           aria-label={t('搜索插件')}

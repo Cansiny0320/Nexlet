@@ -114,10 +114,6 @@
   font-variant-numeric: tabular-nums;
   font-size: 12px;
 }
-.file-index-hint {
-  font-size: 12px;
-  color: var(--muted);
-}
 @keyframes file-search-spin {
   to {
     transform: rotate(360deg);

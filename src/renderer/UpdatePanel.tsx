@@ -54,7 +54,6 @@ export function UpdatePanel() {
       <div className="setting-row">
         <div>
           <strong>{t('自动检查更新')}</strong>
-          <p>{t('启动后自动检查，此后每 6 小时检查一次；下载和安装由你确认。')}</p>
         </div>
         <Switch
           aria-label={t('自动检查更新')}

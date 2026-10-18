@@ -551,11 +551,7 @@ export function FileSearch() {
           ) : (
             <div className="file-info-placeholder">
               <Search size={26} />
-              <p>
-                {t('单击文件或文件夹')}
-                <br />
-                {t('查看详细信息')}
-              </p>
+              <p>{t('文件信息')}</p>
             </div>
           )}
         </aside>
@@ -639,7 +635,6 @@ function IndexPreparation({ status }: { status: FileSearchIndexStatus | null }) 
           {t('已等待 {{v0}}', { v0: duration })}
           {status?.scopes?.length ? t(' · {{v0}} 个索引目录', { v0: status.scopes.length }) : ''}
         </span>
-        <span className="file-index-hint">{t('可以先输入关键词，索引就绪后会自动搜索。')}</span>
       </p>
     </div>
   );

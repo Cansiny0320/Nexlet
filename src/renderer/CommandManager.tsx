@@ -217,9 +217,6 @@ export function CommandManager() {
         <SlidersHorizontal size={17} />
         {t('功能管理')}
       </div>
-      <p className="setting-description">
-        {t('为功能设置别名、全局快捷键，或单独禁用。再次按功能快捷键会优先打开已有窗口。')}
-      </p>
       <Input
         className="command-filter"
         aria-label={t('筛选功能')}
@@ -265,7 +262,6 @@ export function CommandManager() {
         <FolderOpen size={17} />
         {t('本地启动项')}
       </div>
-      <p className="setting-description">{t('添加文件或目录后，可按名称、别名搜索打开。')}</p>
       <div className="simple-list">
         {state.commandConfig.localEntries.map((entry) => (
           <div className="web-item" key={entry.id}>
