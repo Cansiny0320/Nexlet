@@ -9,7 +9,9 @@ function fixture(initial: Data = []) {
   let data = structuredClone(initial),
     sequence: number | null = 1;
   class ClipboardItem {
-    constructor(public values: Data[number]) {}
+    constructor(public values: Data[number]) {
+      if (Object.keys(values).length === 0) throw Error('at least one MIME type is required');
+    }
   }
   const changed = (value: Data) => {
     data = structuredClone(value);
@@ -63,6 +65,27 @@ it('restores an originally empty clipboard after a test writes text', async () =
   await restoreClipboard(f.app);
   expect(f.data()).toEqual([]);
   expect(f.clipboard.clear).toHaveBeenCalledOnce();
+});
+
+it.each([1, 2])('clears an empty clipboard represented by %i formatless items', async (count) => {
+  const f = fixture(Array.from({ length: count }, () => ({})));
+  await saveClipboard(f.app);
+  await f.clipboard.writeText('test content');
+  await restoreClipboard(f.app);
+  expect(f.data()).toEqual([]);
+  expect(f.clipboard.clear).toHaveBeenCalledOnce();
+  expect(f.selectionPlatform.restore).not.toHaveBeenCalled();
+});
+
+it('restores populated items and custom formats while skipping formatless items', async () => {
+  const populated = { 'text/plain': '原内容', 'application/x-custom': new Uint8Array([0, 255]) };
+  const f = fixture([{}, populated, {}]);
+  await saveClipboard(f.app);
+  await f.clipboard.writeText('test content');
+  await restoreClipboard(f.app);
+  expect(f.data()).toEqual([populated]);
+  expect(f.selectionPlatform.restore).toHaveBeenCalledWith({ data: [populated] }, 2);
+  expect(f.clipboard.clear).not.toHaveBeenCalled();
 });
 
 it('preserves all items and custom binary formats through the existing selection snapshot', async () => {

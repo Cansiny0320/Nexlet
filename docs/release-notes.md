@@ -1,26 +1,22 @@
-Nexlet 0.2.34 补齐 6 个系统操作图标，与上一版的系统设置图标保持一致。
+Nexlet 0.2.35 精简界面文案，让设置和工具页面更紧凑。
 
-## 系统操作图标
+## 界面文案
 
-- 锁屏、睡眠、重启、关机、注销、显示桌面改用独立生成的彩色透明图标。
-- 统一固定、最近使用和搜索结果中的图标，适配浅色、深色主题及小尺寸显示。
-- 系统操作的执行方式与确认规则保持不变；翻译等插件继续使用插件自带图标。
-
-## 稳定性修复
-
-- 包含主分支已合入的异步便笺保存、插件状态与更新流程相关修复。
+- 移除设置、剪贴板、超级面板和功能管理中重复解释控件的说明，保留实际错误、权限限制和运行状态。
+- 精简网页快开、编码转换、UUID、文件搜索和插件管理页面的重复介绍与操作提示。
+- 收紧设置行间距，同步清理 English 和繁體中文文案。
 
 ## English
 
-All six system actions—Lock, Sleep, Restart, Shut down, Sign out and Show desktop—now use distinct generated color icons with transparent backgrounds. They match the system-settings artwork from the previous release and remain clear in light and dark themes at small sizes. Action execution and confirmation behavior are unchanged. This release also includes the asynchronous scratchpad, plugin-state and updater fixes already merged into main.
+Nexlet 0.2.35 removes redundant descriptions from settings, the pointer panel, command management and tool pages. Settings rows are more compact, with matching cleanup in English and Traditional Chinese. Error messages, permission requirements and live status remain available.
 
 ## 下载
 
-- Windows x64：安装包 Nexlet-0.2.34-Windows-x64-Setup.exe；便携包 Nexlet-0.2.34-Windows-x64.exe。
-- Apple Silicon Mac：Nexlet-0.2.34-macOS-arm64.dmg。
-- Intel Mac：Nexlet-0.2.34-macOS-x64.dmg。
-- Linux x64：Nexlet-0.2.34-Linux-x86_64.AppImage、Nexlet-0.2.34-Linux-amd64.deb。
-- Linux arm64：Nexlet-0.2.34-Linux-arm64.AppImage、Nexlet-0.2.34-Linux-arm64.deb。
+- Windows x64：安装包 Nexlet-0.2.35-Windows-x64-Setup.exe；便携包 Nexlet-0.2.35-Windows-x64.exe。
+- Apple Silicon Mac：Nexlet-0.2.35-macOS-arm64.dmg。
+- Intel Mac：Nexlet-0.2.35-macOS-x64.dmg。
+- Linux x64：Nexlet-0.2.35-Linux-x86_64.AppImage、Nexlet-0.2.35-Linux-amd64.deb。
+- Linux arm64：Nexlet-0.2.35-Linux-arm64.AppImage、Nexlet-0.2.35-Linux-arm64.deb。
 - 可选离线 OCR 在插件市场安装，需要 Nexlet 0.2.30 或更新版本；源码、测试和独立版本发布统一在 [插件仓库](https://github.com/Cansiny0320/Nexlet-plugins/tree/main/plugins/ocr) 维护，并由插件 Release 提供安装包。
 - macOS ZIP、blockmap 和 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 

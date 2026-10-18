@@ -56,9 +56,12 @@ export async function restoreClipboard(app: Pick<ElectronApplication, 'evaluate'
       // Without a native sequence, ownership cannot be distinguished from a user's new copy.
       if (state.version == null || n.platform.sequence() !== state.version) return;
       const data = state.snapshot.data;
-      if (state.snapshot.native !== 'mac' && Array.isArray(data) && data.length === 0)
-        clipboard.clear();
-      else await n.selectionPlatform.restore(state.snapshot, state.version);
+      if (state.snapshot.native !== 'mac' && Array.isArray(data)) {
+        const populated = data.filter((item) => Object.keys(item).length > 0);
+        if (populated.length === 0) clipboard.clear();
+        else
+          await n.selectionPlatform.restore({ ...state.snapshot, data: populated }, state.version);
+      } else await n.selectionPlatform.restore(state.snapshot, state.version);
     } finally {
       for (const { owner, name, method } of state.originals) owner[name] = method;
     }
