@@ -25,6 +25,8 @@
 
 舊的 `clipboard.read`、`clipboard.write`、`shell.openExternal`、`network.request`、`secrets` 繼續有效。獨立 KV、文件資料庫、當前外掛的動態功能和搜尋 UI 不需額外許可權。
 
+Nexlet 0.2.36 新增的 `clipboard.readHTML(): Promise<string | null>` 沿用 `clipboard.read`，返回目前剪貼簿 HTML，沒有該格式時返回 `null`，超過 2 MiB 時拒絕。內容不可信，外掛必須清理標籤、屬性及 CSS；舊主程式應偵測方法是否存在。詳見 [HTML 剪貼簿合同](plugin-clipboard-html.md)。
+
 前端與外掛子視窗保留 sandbox、contextIsolation、無 Node integration。Node backend 和 `process` 是可信原生代碼能力，**獨立程序用於生命週期與崩潰隔離，不是 OS 安全沙箱**；這些外掛能夠訪問當前使用者的本地資源。許可權顯示在已安裝外掛詳情。遠端瀏覽器不注入 Nexlet API，頁面不能獲得外掛 bridge。資源控制代碼由實際呼叫方會話持有，其他外掛或重新開啟的會話不能複用。
 
 ## 任務與後臺

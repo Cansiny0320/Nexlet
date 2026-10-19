@@ -147,6 +147,7 @@ export const inputExtensions: PluginInputExtensions = {
   drag: (options) => invoke('input.drag', options),
 };
 export const clipboardExtensions: PluginClipboardExtensions = {
+  readHTML: () => invoke('clipboard.readHTML'),
   snapshot: () => invoke('clipboard.snapshot'),
   writeTextIfUnchanged: (token, text) => invoke('clipboard.writeTextIfUnchanged', { token, text }),
   readImage: () => invoke('clipboard.readImage'),

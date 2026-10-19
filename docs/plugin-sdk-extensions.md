@@ -25,6 +25,8 @@
 
 旧的 `clipboard.read`、`clipboard.write`、`shell.openExternal`、`network.request`、`secrets` 继续有效。独立 KV、文档数据库、当前插件的动态功能和搜索 UI 不需额外权限。
 
+Nexlet 0.2.36 新增的 `clipboard.readHTML(): Promise<string | null>` 沿用 `clipboard.read`，返回当前剪贴板 HTML，没有该格式时返回 `null`，超过 2 MiB 时拒绝。内容不可信，插件必须清理标签、属性和 CSS；旧宿主应检测方法是否存在。详见 [HTML 剪贴板合同](plugin-clipboard-html.md)。
+
 前端与插件子窗口保留 sandbox、contextIsolation、无 Node integration。Node backend 和 `process` 是可信本地代码能力，**独立进程用于生命周期与崩溃隔离，不是 OS 安全沙箱**；这些插件能够访问当前用户的本地资源。权限显示在已安装插件详情。远程浏览器不注入 Nexlet API，页面不能获得插件 bridge。资源句柄由实际调用方会话持有，其他插件或重新打开的会话不能复用。
 
 ## 任务与后台

@@ -250,6 +250,16 @@ export class PluginSystem {
       notification.show();
       return true;
     }
+    if (method === 'clipboard.readHTML') {
+      context.require('clipboard.read');
+      for (const item of await clipboard.read())
+        if (item.types.includes('text/html')) {
+          const blob = await item.getType('text/html');
+          if (blob.size > 2 * 1024 * 1024) throw new Error('Clipboard HTML exceeds 2 MiB');
+          return blob.text();
+        }
+      return null;
+    }
     if (method === 'clipboard.readImage') {
       context.require('clipboard.read');
       for (const item of await clipboard.read())

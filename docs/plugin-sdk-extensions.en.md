@@ -27,6 +27,10 @@ Existing `clipboard.read`, `clipboard.write`, `shell.openExternal`, `network.req
 
 Frontends and child windows retain sandbox/contextIsolation without Node integration. Node backends and `process` are trusted local code capabilities: **a separate process isolates lifecycle/crashes, not OS privileges**. They can access the current user's resources. Installed-plugin details show permissions. Remote browsers receive no Nexlet bridge. Resource handles belong to the actual calling session and cannot be reused by other plugins or reopened sessions.
 
+## Clipboard HTML (Nexlet 0.2.36+)
+
+`nexlet.clipboard.readHTML(): Promise<string | null>` requires `clipboard.read`. It returns the first `text/html` representation, or `null` when absent. HTML over 2 MiB is rejected without truncation. This is untrusted markup: plugins must sanitize tags, attributes and CSS before rendering it. Separate `readText()` and `readHTML()` calls are not an atomic snapshot. Feature-detect the method on older hosts; user-initiated paste events remain available. See [the detailed contract](plugin-clipboard-html.md).
+
 ## Tasks and backends
 
 Long operations take a unique `id` and support `tasks.cancel(id)`. Each session allows 32 concurrent tasks, with timeouts from 1 to 3,600,000 ms. Defaults: generally 30 seconds, media 60 seconds, AI 120 seconds. `tasks.onProgress` and `ai.onChunk` return unsubscribe functions. Events stop after session close.

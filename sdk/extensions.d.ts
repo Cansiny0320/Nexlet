@@ -476,6 +476,8 @@ export interface PluginInputExtensions {
   drag(options: { files: string[]; icon?: string }): Promise<true>;
 }
 export interface PluginClipboardExtensions {
+  /** Untrusted HTML, or null when unavailable. Requires clipboard.read; maximum 2 MiB. */
+  readHTML(): Promise<string | null>;
   snapshot(): Promise<string | null>;
   writeTextIfUnchanged(token: string, text: string): Promise<boolean>;
   readImage(): Promise<Uint8Array | null>;
