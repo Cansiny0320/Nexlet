@@ -4,6 +4,63 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { build } from 'vite-plus/pack';
 
+test('默认和无更新时只显示当前版本，手动检查发现新版时显示新版版本号', async () => {
+  const data = await mkdtemp(path.join(tmpdir(), 'nexlet-update-status-'));
+  const env: Record<string, string> = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
+    NEXLET_TEST_MODE: '1',
+    NEXLET_USER_DATA: data,
+  };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const app = await electron.launch({ args: [process.cwd()], env });
+  try {
+    const page = await app.firstWindow();
+    await expect(page.locator('.launcher-input')).toBeVisible();
+    await app.evaluate(() => {
+      const n = (globalThis as any).__nexlet;
+      n.updates.transport = {
+        checkForUpdates: () =>
+          new Promise<void>((resolve) => {
+            n.finishUpdateCheck = (version: string | null) => {
+              n.updates.set({ phase: version ? 'available' : 'latest', version });
+              resolve();
+            };
+          }),
+      };
+      Object.assign(n.updates.status, { mode: 'automatic', phase: 'idle' });
+      n.main.webContents.send('host-change', 'navigate:settings');
+      n.main.webContents.send('host-change', 'state');
+    });
+    const row = page.locator('.setting-row').filter({ hasText: '应用更新' });
+    const state = await page.evaluate(() => window.nexlet.call('state'));
+    await expect(row.locator('strong + p')).toHaveText(`Nexlet ${state.version}`);
+    await expect(row.getByRole('status')).toHaveCount(0);
+    for (const version of [null, '99.0.0']) {
+      await row.getByRole('button', { name: '检查更新', exact: true }).click();
+      await expect(row.getByRole('status')).toHaveText('正在检查更新…');
+      await expect(row.getByRole('button')).toBeDisabled();
+      await app.evaluate(
+        (_, version) => (globalThis as any).__nexlet.finishUpdateCheck(version),
+        version,
+      );
+      if (version) {
+        await expect(row.getByRole('status')).toHaveText(`发现新版本 ${version}`);
+        await expect(row.getByRole('button', { name: '下载更新', exact: true })).toBeEnabled();
+      } else {
+        await expect(row.getByRole('button', { name: '检查更新', exact: true })).toBeEnabled();
+        await expect(row.getByRole('status')).toHaveCount(0);
+      }
+      await expect(row.locator('strong + p')).toHaveText(`Nexlet ${state.version}`);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
 test('点击重启安装直接执行更新，不再弹出二次确认', async () => {
   const data = await mkdtemp(path.join(tmpdir(), 'nexlet-update-install-'));
   const env: Record<string, string> = {

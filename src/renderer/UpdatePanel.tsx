@@ -40,9 +40,9 @@ export function UpdatePanel() {
           : t('正在连接下载，请稍候…')
         : t('正在下载 {{v0}}%', { v0: update.percent });
   const label = {
-    idle: t('检查是否有新的正式版本'),
+    idle: null,
     checking: t('正在检查更新…'),
-    latest: t('当前已是最新正式版本'),
+    latest: null,
     available: t('发现新版本 {{v0}}', { v0: update.version }),
     downloading,
     downloaded: t('版本 {{v0}} 已下载，准备安装', { v0: update.version }),
@@ -65,9 +65,12 @@ export function UpdatePanel() {
       <div className="setting-row">
         <div>
           <strong>{t('应用更新')}</strong>
-          <p role="status">
-            {update.mode === 'unsupported' ? t('开发模式或当前平台暂不支持更新') : label}
-          </p>
+          <p>Nexlet {state.version}</p>
+          {(update.mode === 'unsupported' || label) && (
+            <p role="status">
+              {update.mode === 'unsupported' ? t('开发模式或当前平台暂不支持更新') : label}
+            </p>
+          )}
           {update.mode === 'portable' && (
             <p>
               {state.platform === 'linux'

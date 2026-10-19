@@ -17,7 +17,6 @@ import {
   Plus,
   X,
   RefreshCw,
-  Monitor,
 } from 'lucide-react';
 import { api, useApp, errorText, PanelHeader } from './common';
 import { SettingsIconButton as IconButton } from './components/settings-icon-button';
@@ -313,30 +312,6 @@ export function SettingsPanel() {
         </>
       )}
       {state.nativeStatus && <div className="settings-warning">{state.nativeStatus}</div>}
-      <div className="settings-section-title">
-        <Monitor size={17} />
-        {t('关于与数据')}
-      </div>
-      <div className="setting-row">
-        <div>
-          <strong>Nexlet {state.version}</strong>
-          <p>
-            {state.platform === 'win32'
-              ? 'Windows'
-              : state.platform === 'darwin'
-                ? 'macOS'
-                : state.platform}
-            {t('· 本地存储')}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => void api('openData').catch((e) => toast(errorText(e), true))}
-        >
-          <FolderOpen size={16} />
-          {t('打开数据目录')}
-        </Button>
-      </div>
       <PanelSettings />
       <CommandManager />
       <UpdatePanel />
