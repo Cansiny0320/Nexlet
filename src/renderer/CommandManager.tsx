@@ -3,6 +3,7 @@ import { Textarea } from './components/ui/textarea';
 import { Input } from './components/ui/input';
 import { ShortcutInput } from './components/shortcut-input';
 import { formatShortcut } from '../shared/shortcut-display';
+import { recordedShortcutKey } from '../shared/shortcut-recording';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { useEffect, useState } from 'react';
@@ -114,7 +115,7 @@ export function CommandEditor({ command, onClose }: { command: Command; onClose:
                   e.ctrlKey ? 'Control' : null,
                   e.altKey ? 'Alt' : null,
                   e.shiftKey ? 'Shift' : null,
-                  e.code === 'Space' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key,
+                  recordedShortcutKey(e, state.platform),
                 ]
                   .filter(Boolean)
                   .join('+'),

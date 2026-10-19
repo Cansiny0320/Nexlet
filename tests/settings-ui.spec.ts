@@ -47,6 +47,57 @@ test.afterAll(async () => {
 });
 test.describe.configure({ mode: 'serial' });
 
+test('shortcut recording saves base keys and preserves command cancellation and input guards', async () => {
+  const mac = process.platform === 'darwin';
+  const wake = page.getByLabel('全局快捷键', { exact: true });
+  const row = wake.locator('xpath=ancestor::div[contains(@class,"setting-row")]');
+  const original = (await call('state')).settings.shortcut;
+  await row.getByRole('button', { name: '录制', exact: true }).click();
+  await wake.dispatchEvent('keydown', {
+    key: mac ? '∆' : 'j',
+    code: 'KeyJ',
+    ctrlKey: true,
+    altKey: true,
+  });
+  await expect(wake).toHaveValue(mac ? 'Control+Option+J' : 'Ctrl+Alt+J');
+  await row.getByRole('button', { name: '保存', exact: true }).click();
+  expect((await call('state')).settings.shortcut).toBe('Control+Alt+J');
+  await wake.fill(original);
+  await row.getByRole('button', { name: '保存', exact: true }).click();
+
+  await page.getByLabel('筛选功能').fill('JSON');
+  const commandRow = page.locator('.command-management-row').filter({ hasText: 'JSON 工具' });
+  await commandRow.click();
+  const command = page.getByLabel('功能快捷键', { exact: true });
+  await page.getByRole('button', { name: '录制快捷键', exact: true }).click();
+  for (const event of [
+    { key: 'Alt', code: 'AltLeft', altKey: true },
+    { key: 'j', code: 'KeyJ', ctrlKey: true, altKey: true, repeat: true },
+    { key: 'Process', code: 'KeyJ', isComposing: true },
+  ]) {
+    await command.dispatchEvent('keydown', event);
+    await expect(command).toHaveAttribute('readonly');
+  }
+  await command.press('Escape');
+  await expect(command).not.toHaveAttribute('readonly');
+  await expect(command).toHaveValue('');
+  await page.getByRole('button', { name: '录制快捷键', exact: true }).click();
+  await command.dispatchEvent('keydown', {
+    key: mac ? '∆' : 'j',
+    code: 'KeyJ',
+    ctrlKey: true,
+    altKey: true,
+  });
+  await expect(command).toHaveValue(mac ? 'Control+Option+J' : 'Ctrl+Alt+J');
+  await page.getByRole('button', { name: '保存功能设置', exact: true }).click();
+  expect((await call('state')).commandConfig.commands['tool:json'].shortcut).toBe('Control+Alt+J');
+  await commandRow.click();
+  await page.getByRole('button', { name: '清除快捷键', exact: true }).click();
+  await page.getByRole('button', { name: '保存功能设置', exact: true }).click();
+  await page.getByLabel('筛选功能').fill('');
+  expect(errors).toEqual([]);
+});
+
 test('shortcut labels follow the platform while editing, recording and saving retain accelerator semantics', async () => {
   const mac = process.platform === 'darwin';
   const wake = page.getByLabel('全局快捷键', { exact: true });

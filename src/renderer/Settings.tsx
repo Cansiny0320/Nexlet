@@ -2,6 +2,7 @@ import { t } from '../shared/i18n';
 import { SettingsSelect } from './components/settings-select';
 import { ShortcutInput } from './components/shortcut-input';
 import { formatShortcut } from '../shared/shortcut-display';
+import { recordedShortcutKey } from '../shared/shortcut-recording';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { PanelSettings } from './PanelSettings';
@@ -68,7 +69,7 @@ export function SettingsPanel() {
                 e.metaKey ? (mac ? 'Command' : 'Super') : null,
                 e.altKey ? 'Alt' : null,
                 e.shiftKey ? 'Shift' : null,
-                e.code === 'Space' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key,
+                recordedShortcutKey(e, state.platform),
               ].filter(Boolean);
               setShortcut(keys.join('+'));
               setRecording(false);
