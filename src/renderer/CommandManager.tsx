@@ -150,11 +150,11 @@ export function CommandEditor({ command, onClose }: { command: Command; onClose:
         )}
         <label className="command-disabled">
           <Switch
-            aria-label={t('快捷键带入当前选区')}
+            aria-label={t('快捷键启动时带入选中内容')}
             checked={captureSelection}
             onCheckedChange={setCaptureSelection}
           />
-          {t('快捷键带入当前选区')}
+          {t('快捷键启动时带入选中内容')}
         </label>
         <label className="command-disabled">
           <Switch aria-label={t('禁用此功能')} checked={disabled} onCheckedChange={setDisabled} />

@@ -220,7 +220,7 @@ test('功能编辑和本地启动项继续保存', async () => {
   await expect(page.getByRole('switch', { name: '禁用此功能', exact: true })).toBeChecked();
   await page.getByText('禁用此功能', { exact: true }).click();
   await expect(page.getByRole('switch', { name: '禁用此功能', exact: true })).not.toBeChecked();
-  await page.getByRole('switch', { name: '快捷键带入当前选区', exact: true }).check();
+  await page.getByRole('switch', { name: '快捷键启动时带入选中内容', exact: true }).check();
   await page.getByRole('button', { name: '保存功能设置', exact: true }).click();
   await expect
     .poll(async () => (await call('state')).commandConfig.commands['tool:json'].aliases)

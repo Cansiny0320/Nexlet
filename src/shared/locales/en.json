@@ -94,7 +94,7 @@
   "已保存：": "Saved:",
   "已生效：{{v0}}": "Active: {{v0}}",
   "未生效": "Inactive",
-  "快捷键带入当前选区": "Capture selection with shortcut",
+  "快捷键启动时带入选中内容": "Use selected content when launching with a shortcut",
   "禁用此功能": "Disable this command",
   "确认": "Confirm",
   "取消": "Cancel",
