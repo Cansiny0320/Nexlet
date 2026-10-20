@@ -465,6 +465,9 @@ async function bootstrap() {
     revealWindow(main);
     main.webContents.send('host-change', 'focus');
     notify();
+    void catalog
+      .checkForChanges()
+      .catch((error) => console.warn('Application catalog check failed', error));
   }
   function sourceCommands(settings = store.settings()): Command[] {
     return [
@@ -1696,6 +1699,7 @@ async function bootstrap() {
     100,
   );
   panelBusyTimer.unref();
+  catalog.startAutoRefresh();
   // Integration tests can hold the refresh to inspect the restored first frame.
   if (!testMode || process.env.NEXLET_TEST_DEFER_CATALOG_SCAN !== '1')
     void catalog.scan(store.settings().searchPaths);

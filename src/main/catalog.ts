@@ -9,7 +9,8 @@ import type { Command } from '../shared/types';
 import { loadCatalogIcon, windowsIconFingerprint } from './catalog-icons';
 import type { CatalogCache } from './catalog-cache';
 import { loadMacCatalogIcons, loadMacCatalogNames } from './catalog-mac';
-import { readWindowsApplications } from './catalog-windows';
+import { readWindowsApplications, readWindowsApplicationSignature } from './catalog-windows';
+import { CatalogMonitor, readDirectorySnapshot, type DirectorySnapshot } from './catalog-monitor';
 import { loadMacSystemIcons } from './system-icons-mac';
 import { isAuxiliaryWindowsShortcut } from './catalog-shortcut-filter';
 
@@ -31,6 +32,7 @@ function shortcutIdentity(shortcut?: {
 }
 
 interface ScanRequest {
+  refresh?: boolean;
   extra: string[];
   context: string;
 }
@@ -59,10 +61,23 @@ export class Catalog {
   private pendingScan?: ScanRequest;
   private closed = false;
   private hasSnapshot = false;
+  private monitor?: CatalogMonitor;
+  private searchPaths: string[] = [];
   constructor(
     private changed: () => void,
     private cache?: CatalogCache,
   ) {}
+  startAutoRefresh() {
+    if (this.closed) return;
+    this.monitor ??= new CatalogMonitor(
+      () => this.scan(this.searchPaths, true),
+      process.platform === 'win32' ? readWindowsApplicationSignature : undefined,
+    );
+  }
+  async checkForChanges(): Promise<void> {
+    if (this.scanning) await this.scanning;
+    await this.monitor?.check();
+  }
   private context(extra: string[]): string {
     return JSON.stringify([
       1,
@@ -87,11 +102,17 @@ export class Catalog {
   resolveIds(ids: string[]): string[] {
     return [...new Set(ids.map((id) => this.aliases.get(id) || id))];
   }
-  scan(extra: string[] = []): Promise<void> {
+  scan(extra: string[] = [], refresh = false): Promise<void> {
     if (this.closed) return Promise.resolve();
-    const request = { extra: [...extra], context: this.context(extra) };
+    this.searchPaths = [...extra];
+    const request = {
+      extra: this.searchPaths,
+      context: this.context(extra),
+      refresh: refresh || this.pendingScan?.refresh,
+    };
     if (this.scanning) {
-      this.pendingScan = request.context === this.activeContext ? undefined : request;
+      this.pendingScan =
+        request.context === this.activeContext && !request.refresh ? undefined : request;
       return this.scanning;
     }
     this.scanning = this.runScans(request).finally(() => {
@@ -122,14 +143,25 @@ export class Catalog {
   }
   private async scanOnce(request: ScanRequest): Promise<void> {
     const { extra } = request;
+    const directories = new Map<string, DirectorySnapshot>();
+    // Capture before enumeration so a missed event during scanning is still
+    // detected on the next wake, instead of being absorbed into the baseline.
+    const observe = async (directory: string) => {
+      if (this.monitor) directories.set(directory, await readDirectorySnapshot(directory));
+    };
+    const systemVersion =
+      this.monitor && process.platform === 'win32'
+        ? await readWindowsApplicationSignature().catch(() => undefined)
+        : undefined;
     const iconSources = new Map<string, string>();
     const links = new Map<string, Electron.ShortcutDetails>();
     let failed = false;
     if (process.platform === 'linux') {
-      const items = await scanLinuxApplications([
-        ...linuxDataRoots().map((root) => path.join(root, 'applications')),
-        ...extra,
-      ]);
+      const items = await scanLinuxApplications(
+        [...linuxDataRoots().map((root) => path.join(root, 'applications')), ...extra],
+        process.env,
+        observe,
+      );
       if (this.closed || this.pendingScan) return;
       for (const item of items) {
         if (item.icon) iconSources.set(item.id, item.icon);
@@ -140,6 +172,7 @@ export class Catalog {
       this.aliases.clear();
       this.items = items.sort((a, b) => a.name.localeCompare(b.name, formatLocale()));
       this.revision++;
+      this.monitor?.update(directories, systemVersion);
       return;
     }
     const roots =
@@ -159,6 +192,7 @@ export class Catalog {
     const aliases = new Map<string, string>();
     const visit = async (directory: string, depth: number): Promise<void> => {
       if (depth > 8 || found.size > 5000) return;
+      await observe(directory);
       let entries;
       try {
         entries = await readdir(directory, { withFileTypes: true });
@@ -297,6 +331,7 @@ export class Catalog {
         fingerprints: [...fingerprints],
       });
     }
+    this.monitor?.update(directories, systemVersion);
   }
   async withIcons(items: Command[]): Promise<Command[]> {
     if (this.cache)
@@ -374,6 +409,8 @@ export class Catalog {
   }
   close(): void {
     this.closed = true;
+    this.monitor?.close();
+    this.monitor = undefined;
     this.pendingScan = undefined;
     this.revision++;
     this.cache?.close();

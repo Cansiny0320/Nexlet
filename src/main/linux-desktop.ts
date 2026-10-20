@@ -58,6 +58,7 @@ async function executable(value: string, env: NodeJS.ProcessEnv) {
 export async function scanLinuxApplications(
   roots: string[],
   env: NodeJS.ProcessEnv = process.env,
+  onDirectory?: (directory: string) => void | Promise<void>,
 ): Promise<Command[]> {
   const seen = new Set<string>(),
     items: Command[] = [];
@@ -67,6 +68,7 @@ export async function scanLinuxApplications(
   for (const root of roots) {
     const visit = async (directory: string, depth: number): Promise<void> => {
       if (depth > 8 || seen.size >= 5000) return;
+      await onDirectory?.(directory);
       for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {
         if (seen.size >= 5000) break;
         if (entry.name.startsWith('.')) continue;
