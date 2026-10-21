@@ -12,7 +12,6 @@
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-/* Keep the existing 13px document type scale; Nova controls use 4px spacing. */
 @theme inline {
   --spacing: 4px;
   --text-xs: 12px;

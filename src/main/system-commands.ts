@@ -25,8 +25,6 @@ const setting = (
 ): Setting => ({ id, name, target, keywords, ...versions });
 
 // URI reference: https://learn.microsoft.com/windows/apps/develop/launch/launch-settings
-// uTools' 67-entry list is a comparison baseline, not an unconditional list of
-// supported pages. Obsolete Windows 10 pages are excluded from Windows 11.
 const windowsSettings: Setting[] = [
   setting('home', '系统设置', '', ['Windows Settings', '设置']),
   setting('about', '电脑信息', 'about', ['about', '系统信息', '关于本机']),
@@ -145,7 +143,7 @@ const windowsSettings: Setting[] = [
   ]),
 ];
 
-// macOS 13+ System Settings extension IDs, verified against installed bundle metadata.
+// System Settings extension IDs require macOS 13+.
 const macSettings: Setting[] = [
   setting('about', '关于本机', 'com.apple.SystemProfiler.AboutExtension', [
     'about',

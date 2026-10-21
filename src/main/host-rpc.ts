@@ -4,7 +4,7 @@ import type { BrowserWindow, IpcMain, IpcMainEvent } from 'electron';
 import { isHostDocument } from './host-origin';
 import type { HostAction, HostInputs, HostOutputs } from '../shared/host-rpc';
 
-/** Every handler retains its business validation; this defines its compile-time wire contract. */
+/** Schemas provide types only; handlers must validate payloads at runtime. */
 export function hostProcedure<A extends HostAction>(
   authorize: () => void,
   handler: (input: HostInputs[A]) => Promise<HostOutputs[A]>,

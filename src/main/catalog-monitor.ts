@@ -12,8 +12,6 @@ export async function readDirectorySnapshot(directory: string): Promise<Director
   };
 }
 
-// Events refresh promptly; a wake check only compares directory metadata and
-// optional registered-app IDs. Unchanged catalogs never notify the renderer.
 export class CatalogMonitor {
   private watchers = new Map<string, { watcher: FSWatcher; identity: string }>();
   private debounce?: ReturnType<typeof setTimeout>;

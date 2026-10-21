@@ -4,8 +4,6 @@ const path = require('node:path');
 
 const tools = ['filesearch', 'clipboard', 'timestamp', 'web', 'scratchpad', 'plugins', 'json'];
 
-// Packaging only: trim transparent margins, retain the approved artwork, and
-// give every icon the same optical footprint with a 3% transparent safe area.
 function normalize(file, size) {
   const source = nativeImage.createFromPath(file);
   if (source.isEmpty()) throw new Error(`Cannot read artwork: ${file}`);

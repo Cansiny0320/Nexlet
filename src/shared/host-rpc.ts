@@ -176,7 +176,6 @@ export interface HostOutputs {
   openData: boolean;
 }
 export type HostAction = keyof HostInputs;
-// Preserve the existing action facade while inferring results from its input.
 export type HostResult<A extends HostAction, P> = A extends 'search'
   ? P extends string
     ? Command[]

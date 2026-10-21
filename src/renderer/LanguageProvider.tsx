@@ -35,7 +35,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
   return <I18nextProvider i18n={i18n}>{ready ? children : null}</I18nextProvider>;
 }
-// This boundary renders the application tree on language changes without remounting it.
+// Subscribe without remounting tools so language changes preserve editor state.
 export function useAppLanguage() {
   useTranslation();
 }

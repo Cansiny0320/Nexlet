@@ -90,7 +90,7 @@ test('detaching waits for a delayed tool module before releasing the source', as
   await expect
     .poll(() => application.evaluate(() => (globalThis as any).__waitingForTool))
     .toBe(true);
-  // Beyond the previous 50 ms acknowledgement: the source must still own its draft.
+  // A delayed restore must not release the source draft before it completes.
   await page.waitForTimeout(150);
   await expect(page.getByRole('textbox', { name: 'JSON 输入', exact: true })).toHaveText(
     '{"draft":"keep me"}',

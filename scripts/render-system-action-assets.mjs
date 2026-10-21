@@ -2,7 +2,6 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-// Package imagegen originals without drawing, recoloring or changing their alpha.
 const sourceDirectory = new URL('../assets/artwork/system-actions/', import.meta.url);
 const outputDirectory = new URL('../assets/system-actions/', import.meta.url);
 const manifest = JSON.parse(await readFile(new URL('manifest.json', sourceDirectory), 'utf8'));

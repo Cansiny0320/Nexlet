@@ -77,7 +77,6 @@ import spotlight from '../../assets/system-settings/spotlight.png';
 import internetaccounts from '../../assets/system-settings/internetaccounts.png';
 import airdrop from '../../assets/system-settings/airdrop.png';
 
-// Approved imagegen artwork, shared by every system-settings entry point.
 export const systemSettingIcons: Readonly<Partial<Record<string, string>>> = {
   home,
   about,

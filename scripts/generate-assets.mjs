@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import electron from 'electron';
 
-// Rebuild approved artwork with Electron's existing image encoder.
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 const child = spawn(electron, [fileURLToPath(new URL('./render-assets.cjs', import.meta.url))], {

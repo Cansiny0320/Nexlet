@@ -7,7 +7,6 @@ export interface WindowsApplication {
   AppID: string;
   IconPath?: string;
 }
-// Checking registration does not need package manifests or icon resolution.
 export async function readWindowsApplicationSignature(): Promise<string> {
   const script =
     "$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); @(Get-StartApps | Select-Object Name,AppID) | ConvertTo-Json -Compress";

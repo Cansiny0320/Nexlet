@@ -89,18 +89,14 @@ export async function loadCatalogIcon(file: string, platform = process.platform)
         const icon = await loadWindowsResourceIcon(source.file, source.index);
         if (icon) return icon;
       }
-    } catch {
-      /* Try the next resource before accepting a generic file icon. */
-    }
+    } catch {}
   }
   for (const source of sources) {
     if (raster(source.file)) continue;
     try {
       const icon = await app.getFileIcon(source.file, { size: 'normal' });
       if (!icon.isEmpty()) return icon.toDataURL();
-    } catch {
-      /* Try the next resource. */
-    }
+    } catch {}
   }
   return '';
 }

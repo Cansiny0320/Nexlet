@@ -319,7 +319,6 @@ svg.icon {
   height: 36px;
   stroke-width: 1.9;
 }
-/* The homepage is sized against the approved 1065 px composition. */
 .home-hero {
   height: 627px;
   position: relative;
@@ -1056,7 +1055,6 @@ svg.icon {
   height: 17px;
   color: #11152d;
 }
-/* Download */
 .download-intro {
   position: relative;
   text-align: center;
@@ -1434,7 +1432,6 @@ details[open] > summary .icon {
   font-size: 14px;
   min-width: 232px;
 }
-/* Privacy */
 .privacy-page main {
   position: relative;
   isolation: isolate;
@@ -1921,7 +1918,6 @@ details[open] > summary .icon {
 .privacy-page .site-footer {
   border-top: 1px solid #edf0fa;
 }
-/* Plugins */
 .plugins-hero {
   height: 460px;
   display: grid;
@@ -3608,7 +3604,6 @@ details[open] > summary .icon {
     gap: 13px;
   }
 }
-/* Soft crossing curves from the approved artwork, kept as scalable vector backgrounds. */
 .download-banner:before,
 .source-banner:before,
 .plugin-start:before {
@@ -3822,7 +3817,6 @@ details[open] > summary .icon {
   }
 }
 
-/* Optical alignment, icon artwork and layered light from the approved compositions. */
 @font-face {
   font-family: Nexlet Notes;
   src: url('/assets/nexlet-notes.woff2') format('woff2');
@@ -4399,7 +4393,6 @@ h1 > span {
   }
 }
 
-/* Leave room for the release version below each download button. */
 .product-showcase {
   margin-top: 32px;
 }
@@ -4421,7 +4414,6 @@ h1 > span {
   }
 }
 
-/* Library glyphs retain their original viewBox and proportions. */
 svg.app-logo {
   width: 18px;
   height: 18px;
@@ -4469,7 +4461,6 @@ svg.app-logo {
   }
 }
 
-/* Language names remain readable in the header and in compact navigation. */
 .language-switch {
   display: flex;
   gap: 0.65rem;

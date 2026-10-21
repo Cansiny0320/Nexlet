@@ -41,8 +41,6 @@ for (const trigger of ['api', 'mac-native'] as const) {
           } else phases.push('final-quit');
         });
         app.once('will-quit', () => console.error('QUIT_PHASES ' + JSON.stringify(phases)));
-        // Cover both the API and native menu-action entry points. Real Cmd+Q is
-        // also checked manually: AppKit must finish canceling its first request.
         setTimeout(
           () =>
             trigger === 'mac-native' ? Menu.sendActionToFirstResponder('terminate:') : app.quit(),

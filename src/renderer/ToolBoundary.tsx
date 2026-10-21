@@ -39,8 +39,8 @@ class LoadErrorBoundary extends Component<Props, { error: Error | null; session:
   }
 }
 
-// This component commits only after the lazy child resolves. Child effects first
-// register their restore work; a second commit acknowledges its completed state.
+// Child effects register restores before this effect runs; acknowledge readiness
+// in a later commit so the restored state has reached the DOM.
 function MountedTool({ session, children, onReady }: Props) {
   const [restored, setRestored] = useState<ToolSession | null>(null);
   const [failure, setFailure] = useState<{ session: ToolSession; error: unknown } | null>(null);

@@ -114,7 +114,6 @@ test('Windows restart restores cached apps and icons, then refreshes resources a
     await app.close();
 
     await writeFile(path.join(data, 'catalog-cache.sqlite'), 'corrupt disposable cache');
-    // Normal automatic startup refresh, with no deferred-scan test override.
     app = await electron.launch({
       args: [process.cwd()],
       env: { ...env, NEXLET_TEST_DEFER_CATALOG_SCAN: '0' },

@@ -1,6 +1,5 @@
 import { load } from 'js-yaml';
 
-/** Resolve exactly the native package recorded in the pnpm lockfile. */
 export function lockedPackage(source, name, version) {
   const lock = load(source);
   const resolution = lock?.packages?.[`${name}@${version}`]?.resolution;

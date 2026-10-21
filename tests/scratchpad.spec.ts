@@ -104,7 +104,6 @@ test('新稿纸、连续续算和上下行切换保持正确的焦点与光标',
   const first = page.getByRole('textbox', { name: '第 1 行计算公式' });
   const second = page.getByRole('textbox', { name: '第 2 行计算公式' });
   const third = page.getByRole('textbox', { name: '第 3 行计算公式' });
-  // Exercise the original CI sequence without controlling the frame scheduler.
   for (let attempt = 0; attempt < 10; attempt++) {
     await page.getByRole('button', { name: '新稿纸', exact: true }).click();
     await expect(first).toBeFocused();

@@ -1,4 +1,3 @@
-// Generates localized social cards from the actual isolated desktop captures.
 import { chromium } from 'playwright';
 import { readFile, copyFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

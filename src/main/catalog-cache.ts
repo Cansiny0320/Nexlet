@@ -127,8 +127,7 @@ export class CatalogCache {
       db.exec('DROP TABLE IF EXISTS snapshot; DROP TABLE IF EXISTS icons;');
     db.exec(`CREATE TABLE IF NOT EXISTS snapshot (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS icons (id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, data TEXT NOT NULL, bytes INTEGER NOT NULL, used INTEGER NOT NULL);`);
-    // v1 may contain generic Electron icons. Keep the catalog available at startup,
-    // but discard these bitmaps before restore can serve them again.
+    // Restore v1 entries without their generic Electron icons.
     if (version.user_version === 1) db.exec('DELETE FROM icons');
     db.exec(`PRAGMA user_version=${DATABASE_VERSION};`);
     const last = db.prepare('SELECT MAX(used) AS used FROM icons').get() as { used: number | null };

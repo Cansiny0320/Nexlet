@@ -2,8 +2,6 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-// Asset packaging only: extract the approved imagegen artwork, trim transparent
-// margins and normalize its optical footprint. No drawing or recoloring.
 const sourceDirectory = new URL('../assets/artwork/system-settings/', import.meta.url);
 const outputDirectory = new URL('../assets/system-settings/', import.meta.url);
 const manifest = JSON.parse(await readFile(new URL('manifest.json', sourceDirectory), 'utf8'));

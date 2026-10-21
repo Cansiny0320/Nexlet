@@ -1,4 +1,3 @@
-// Captures documented UI with isolated sample data. Requires pnpm build.
 import { _electron as electron, expect } from '@playwright/test';
 import { mkdtemp, rm, mkdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

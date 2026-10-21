@@ -1338,7 +1338,6 @@ p {
   cursor: wait;
 }
 
-/* Command entry customization uses the existing panel and menu styles. */
 .tool-list {
   display: flex;
   flex-direction: column;
@@ -1487,7 +1486,6 @@ p {
   width: 116px;
 }
 
-/* The pointer panel shares the host palette and uses a compact four-column grid. */
 .super-panel {
   height: 100vh;
   display: flex;
@@ -1897,7 +1895,6 @@ p {
   margin-top: 4px;
 }
 
-/* Keep the readability adjustment local to the launcher. */
 .view-launcher .titlebar-spacer {
   flex: 0;
 }
@@ -1915,7 +1912,6 @@ p {
   --muted: #a7aab3;
 }
 
-/* Additional launcher readability rules from the updated main branch. */
 .view-launcher {
   --muted: #70737b;
 }

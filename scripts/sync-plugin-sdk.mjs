@@ -11,7 +11,6 @@ const compiler = fileURLToPath(
 );
 const temporary = await mkdtemp(path.join(tmpdir(), 'nexlet-sdk-'));
 try {
-  // TypeScript 7 no longer exposes the old createProgram API from its root.
   // Compile away from the destination so diagnostics cannot replace a working SDK.
   execFileSync(
     process.execPath,

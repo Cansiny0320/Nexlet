@@ -101,7 +101,6 @@ test('Windows shortcut copies appear once and saved pins still work', async () =
     expect((await call('state')).pinned).toEqual([]);
     await call('rescan');
     expect((await call('state')).recent).toEqual([fixture[0].id]);
-    // Read back real catalog results as additional local verification.
     const qqEntries = state.commands
       .filter((item: any) => /QQ/i.test(item.name))
       .map((item: any) => ({ name: item.name, path: item.path }));

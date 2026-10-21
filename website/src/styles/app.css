@@ -21,7 +21,6 @@
   --ring: #937eff;
   --radius: 0.5rem;
 }
-/* Base UI owns anchoring, focus and dismissal; preserve the existing menu surface. */
 .download-positioner {
   z-index: 60;
 }
