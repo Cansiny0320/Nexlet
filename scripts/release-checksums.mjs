@@ -8,9 +8,7 @@ const { version } = JSON.parse(await readFile('package.json', 'utf8'));
 const required = [
   `Nexlet-${version}-Windows-x64.exe`,
   `Nexlet-${version}-macOS-x64.dmg`,
-  `Nexlet-${version}-macOS-x64.dmg.blockmap`,
   `Nexlet-${version}-macOS-arm64.dmg`,
-  `Nexlet-${version}-macOS-arm64.dmg.blockmap`,
   `Nexlet-${version}-Windows-x64-Setup.exe`,
   `Nexlet-${version}-Windows-x64-Setup.exe.blockmap`,
   `Nexlet-${version}-macOS-x64.zip`,
@@ -25,7 +23,6 @@ const required = [
   'latest-linux-arm64.yml',
   'latest.yml',
   'latest-mac.yml',
-  'hello-nexlet.nexlet',
 ].sort();
 const files = (await readdir(folder)).filter((name) => name !== 'SHA256SUMS.txt').sort();
 if (JSON.stringify(files) !== JSON.stringify(required))
