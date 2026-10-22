@@ -363,8 +363,6 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
     setCursor(position);
   }
   function toggleExpanded(id: string) {
-    virtual.current?.invalidate(expanded);
-    virtual.current?.invalidate(id);
     setExpanded(expanded === id ? null : id);
   }
   return (

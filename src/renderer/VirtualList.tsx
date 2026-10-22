@@ -12,7 +12,6 @@ import { t } from '../shared/i18n';
 
 export interface VirtualListHandle {
   scrollToIndex(index: number): void;
-  invalidate(id: string | null): void;
 }
 const ESTIMATE = 112,
   OVERSCAN = 6;
@@ -126,9 +125,6 @@ export function VirtualList({
   useImperativeHandle(
     ref,
     () => ({
-      invalidate(id) {
-        if (id && heights.current.delete(id)) setVersion((value) => value + 1);
-      },
       scrollToIndex(index) {
         const node = element.current;
         if (!node || index < 0 || index >= ids.length) return;
