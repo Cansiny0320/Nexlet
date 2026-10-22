@@ -27,6 +27,18 @@ function fixture(platform = 'win32', portable = 'D:\\Apps\\Nexlet 0.2.1.exe', pa
 }
 
 describe('系统登录自启动', () => {
+  it('普通状态复用系统读数，设置页刷新和用户操作重新读取', () => {
+    const { host, manager, override } = fixture();
+    expect(manager.cached().enabled).toBe(false);
+    manager.cached();
+    expect(host.getLoginItemSettings).toHaveBeenCalledTimes(1);
+    override({ openAtLogin: true, executableWillLaunchAtLogin: true });
+    manager.invalidate();
+    expect(manager.cached().enabled).toBe(true);
+    expect(host.getLoginItemSettings).toHaveBeenCalledTimes(2);
+    manager.set(false);
+    expect(manager.cached().enabled).toBe(false);
+  });
   it.each(['en', 'zh-Hant'] as const)('macOS 待批准状态不依赖 %s 提示文本', (locale) => {
     const { host, manager, override } = fixture('darwin');
     override({ openAtLogin: false, status: 'requires-approval' });

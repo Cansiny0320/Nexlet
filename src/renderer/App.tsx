@@ -11,6 +11,7 @@ import { brandIcon } from './tool-artwork';
 import { LaunchInputChip } from './LaunchInputChip';
 import { usePluginSearch, PluginSearchResults } from './PluginSearch';
 import { saveBeforeUpdate } from './update-save';
+import { retainSearchInputs } from './state-refresh';
 import { ToolBoundary } from './ToolBoundary';
 import { useTitlebarDrag } from './use-titlebar-drag';
 
@@ -80,11 +81,19 @@ export function App() {
     toastTimer.current = setTimeout(() => setNotification(null), error ? 6500 : 2500);
   }, []);
   const titlebarDrag = useTitlebarDrag(view === 'launcher', toast);
+  const updateGeneration = useRef(0);
+  const latestUpdate = useRef<AppState['update'] | null>(null);
   const refresh = useCallback(async () => {
+    const generation = updateGeneration.current;
     try {
       const next = await api('state');
       setState((current) =>
-        current && current.catalogRevision > next.catalogRevision ? current : next,
+        retainSearchInputs(
+          current,
+          generation !== updateGeneration.current && latestUpdate.current
+            ? { ...next, update: latestUpdate.current }
+            : next,
+        ),
       );
     } catch (e) {
       setLoadError(errorText(e));
@@ -147,6 +156,13 @@ export function App() {
     void syncPlugin();
     return window.nexlet?.onChange((event) => {
       if (event === 'state') void refresh();
+      if (event.startsWith('updates:')) {
+        updateGeneration.current++;
+        const update = JSON.parse(event.slice(8)) as AppState['update'];
+        latestUpdate.current = update;
+        setState((current) => (current ? { ...current, update } : current));
+      }
+
       if (event === 'plugin-changed') void syncPlugin();
       if (event.startsWith('close:prepare:')) {
         const token = event.slice(14);

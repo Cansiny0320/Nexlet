@@ -24,6 +24,7 @@ import { PluginNetwork } from './plugin-network';
 import { PluginSecrets } from './plugin-secrets';
 import { PluginSdk } from './plugin-sdk';
 import type { Platform } from './platform';
+import { PluginStaging } from './plugin-staging';
 interface InstallOptions {
   source: 'marketplace' | 'local';
   developmentDirectory?: string;
@@ -41,6 +42,12 @@ export class PluginManager {
     | null = null;
   returnToLauncher: ((text: string) => Promise<void>) | null = null;
   private root: string;
+  private staging: PluginStaging;
+  private backgroundUpdates = new Map<
+    string,
+    { controller: AbortController; done: Promise<void> }
+  >();
+  private closed = false;
   constructor(
     private store: Store,
     private changed: (event?: string) => void,
@@ -48,6 +55,7 @@ export class PluginManager {
     platform?: Platform,
   ) {
     this.root = path.join(store.directory, 'plugins');
+    this.staging = new PluginStaging(store, this.root);
     this.secrets = new PluginSecrets(store, safeStorage);
     this.sdk = new PluginSdk(store, () => this.records(), platform, this.secrets);
     this.runtime = new PluginRuntime(
@@ -287,6 +295,7 @@ export class PluginManager {
     bundle: PluginBundle,
     options: { source: 'marketplace' | 'local'; developmentDirectory?: string },
   ): Promise<boolean> {
+    await this.cancelUpdate(bundle.manifest.id);
     return this.replaceBundle(bundle, options);
   }
   private async replaceBundle(bundle: PluginBundle, options: InstallOptions): Promise<boolean> {
@@ -365,7 +374,7 @@ export class PluginManager {
   async toggle(id: string, enabled: boolean): Promise<void> {
     if (!this.records().some((p) => p.manifest.id === id)) throw new Error(t('插件不存在'));
     if (!enabled) {
-      await this.runtime.stop(id);
+      await Promise.all([this.cancelUpdate(id), this.runtime.stop(id)]);
       this.sdk.stop(id);
     }
     // onOut may yield while another install, removal or toggle updates the list.
@@ -380,7 +389,7 @@ export class PluginManager {
   async remove(id: string, deleteData: boolean): Promise<void> {
     const record = this.records().find((p) => p.manifest.id === id);
     if (!record) throw new Error(t('插件不存在'));
-    await this.runtime.stop(id);
+    await Promise.all([this.cancelUpdate(id), this.runtime.stop(id)]);
     this.store.set(
       'plugins',
       this.records().filter((p) => p.manifest.id !== id),
@@ -412,7 +421,7 @@ export class PluginManager {
       record,
       code,
       snapshot || { input: { ...textInput(payload), id: randomUUID() }, resources: new Map() },
-      async (isCurrent, signal) => {
+      async (isCurrent) => {
         const canReplace = () =>
           isCurrent() &&
           !this.runtime.sessions.has(id) &&
@@ -424,22 +433,80 @@ export class PluginManager {
               p.source === 'marketplace' &&
               !p.development,
           );
-        if (this.updateOnLaunch && canReplace()) {
+        const staged = this.staging.ready(record, code);
+        if (staged && canReplace() && !this.installing) {
           try {
-            const bundle = await this.updateOnLaunch(record, code, signal);
-            if (bundle && canReplace())
-              await this.replaceBundle(bundle, { source: 'marketplace', canReplace });
+            this.installing = true;
+            this.sdk.stop(id);
+            this.store.set('plugins', [
+              ...this.records().filter((p) => p.manifest.id !== id),
+              { ...staged, installedAt: Date.now() },
+            ]);
+            await this.staging.forget(id);
+            await this.removeManaged(record.directory).catch(() => {});
+            this.changed();
           } catch {
             /* Keep the installed version if an update cannot be applied. */
+          } finally {
+            this.installing = false;
           }
         }
         return this.records().find((p) => p.manifest.id === id && p.enabled) || record;
       },
     );
+    const current = this.records().find((p) => p.manifest.id === id);
+    if (current) this.prepareInBackground(current, code);
   }
-  close(): Promise<void> {
+  private prepareInBackground(record: PluginRecord, code: string) {
+    const id = record.manifest.id;
+    if (
+      this.closed ||
+      !this.updateOnLaunch ||
+      record.source !== 'marketplace' ||
+      record.development ||
+      !record.enabled ||
+      this.backgroundUpdates.has(id) ||
+      this.staging.ready(record, code)
+    )
+      return;
+    const controller = new AbortController();
+    const current = () =>
+      !controller.signal.aborted &&
+      !this.closed &&
+      this.records().some(
+        (p) =>
+          p.manifest.id === id &&
+          p.directory === record.directory &&
+          p.enabled &&
+          p.source === 'marketplace' &&
+          !p.development,
+      );
+    const done = Promise.resolve()
+      .then(async () => {
+        const bundle = await this.updateOnLaunch!(record, code, controller.signal);
+        if (bundle && current()) await this.staging.prepare(record, bundle, current);
+      })
+      .catch(() => {
+        /* Background failures keep the installed version usable. */
+      })
+      .finally(() => {
+        if (this.backgroundUpdates.get(id)?.controller === controller)
+          this.backgroundUpdates.delete(id);
+      });
+    this.backgroundUpdates.set(id, { controller, done });
+  }
+  private async cancelUpdate(id: string) {
+    const pending = this.backgroundUpdates.get(id);
+    pending?.controller.abort();
+    if (pending) await pending.done;
+    await this.staging.forget(id);
+  }
+  async close(): Promise<void> {
+    this.closed = true;
+    for (const pending of this.backgroundUpdates.values()) pending.controller.abort();
+    await Promise.allSettled([...this.backgroundUpdates.values()].map((pending) => pending.done));
     this.sdk.close();
-    return this.runtime.close();
+    await this.runtime.close();
   }
   private async removeManaged(directory: string): Promise<void> {
     const relative = path.relative(path.resolve(this.root), path.resolve(directory));

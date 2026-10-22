@@ -94,36 +94,18 @@ try {
   else if (process.platform === 'win32') windows();
   else throw Error(t('当前平台不支持鼠标超级面板'));
   send({ type: 'ready' });
-  if (process.platform === 'win32') {
-    // WH_MOUSE_LL blocks system input until this installing thread responds.
-    // Wait on the Windows input queue instead of sleeping on a JS timer. Keep
-    // control messages synchronous too: this worker owns a native message loop.
-    while (!stopped) {
-      for (let i = 0; i < 64 && parentPort && !stopped; i++) {
-        const pending = receiveMessageOnPort(parentPort);
-        if (!pending) break;
-        receive(pending.message);
-      }
-      if (stopped) break;
-      pump();
-      tick();
-      waitForInput();
+  // Native input wakes this worker directly. A bounded wait also gives the
+  // parent port a chance to deliver stop/config messages without JS polling.
+  while (!stopped) {
+    for (let i = 0; i < 64 && parentPort && !stopped; i++) {
+      const pending = receiveMessageOnPort(parentPort);
+      if (!pending) break;
+      receive(pending.message);
     }
-  } else {
-    const timer = setInterval(() => {
-      try {
-        pump();
-        tick();
-      } catch (error) {
-        send({ type: 'error', error: (error as Error).message });
-        clearInterval(timer);
-        stop();
-      }
-    }, 8);
-    parentPort?.on('message', (message) => {
-      if (message.type === 'stop') clearInterval(timer);
-      receive(message);
-    });
+    if (stopped) break;
+    pump();
+    tick();
+    waitForInput();
   }
 } catch (error) {
   send({ type: 'error', error: (error as Error).message });
@@ -220,6 +202,9 @@ function mac() {
   };
   pump = () => {
     for (let i = 0; i < 32; i++) if (run(mode, 0, true) !== 4) break;
+  };
+  waitForInput = () => {
+    run(mode, heldTarget ? 0.008 : 0.05, true);
   };
   shutdown = () => {
     tapEnable(tap, false);

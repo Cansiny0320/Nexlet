@@ -13,6 +13,14 @@ vi.mock('electron', () => ({
     createFromPath: () => ({ isEmpty: () => false, toPNG: () => Buffer.from('png') }),
   },
 }));
+vi.mock('../src/main/clipboard-image', () => ({
+  ClipboardImages: class {
+    async copy() {
+      return new Uint8Array(Buffer.from('png'));
+    }
+    close() {}
+  },
+}));
 import { ClipboardService } from '../src/main/clipboard';
 import { Store } from '../src/main/store';
 

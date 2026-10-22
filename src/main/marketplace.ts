@@ -97,6 +97,7 @@ export function downloadBounded(
 }
 export class Marketplace {
   private pending = false;
+  private nextCheck = new Map<string, number>();
   constructor(
     private store: Store,
     private plugins: PluginManager,
@@ -112,14 +113,17 @@ export class Marketplace {
       record.source !== 'marketplace' ||
       record.development ||
       !record.enabled ||
-      signal.aborted
+      signal.aborted ||
+      Date.now() < (this.nextCheck.get(record.manifest.id) || 0)
     )
       return null;
     this.pending = true;
+    let successful = false;
     try {
       const bytes = await this.download(MARKET_INDEX_URL, 1024 * 1024, { timeoutMs: 2000, signal });
       if (signal.aborted) return null;
       const index = validateMarketIndex(JSON.parse(bytes.toString('utf8')));
+      successful = true;
       this.store.set('market-index', { index, fetchedAt: Date.now() });
       const entry = index.plugins.find((e) => e.id === record.manifest.id);
       if (
@@ -142,9 +146,12 @@ export class Marketplace {
         return null;
       return bundle;
     } catch {
+      successful = false;
       return null;
     } finally {
       this.pending = false;
+      if (!signal.aborted)
+        this.nextCheck.set(record.manifest.id, Date.now() + (successful ? 30 * 60_000 : 60_000));
     }
   }
   async list(refresh = false): Promise<MarketState> {

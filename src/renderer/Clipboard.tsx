@@ -114,11 +114,13 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
     }
   }, [query, kind, toast]);
   useEffect(() => {
-    void reload();
+    // Coalesce typing without delaying the initial empty-query page or mutation refreshes.
+    const timer = setTimeout(() => void reload(), query ? 70 : 0);
     const off = window.nexlet.onChange((event) => {
       if (event === 'clips') void reload();
     });
     return () => {
+      clearTimeout(timer);
       loadId.current++;
       off();
     };

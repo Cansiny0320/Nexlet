@@ -127,6 +127,59 @@ test('搜索只读取一份命令配置，不触发完整状态和自启动查�
   expect(await application.evaluate(() => (globalThis as any).__configReads)).toBeLessThan(10);
 });
 
+test('下载进度与无关状态不重复搜索或同步快捷键，命令变化仍重新搜索', async () => {
+  const page = await application.firstWindow();
+  await application.evaluate(() => {
+    const n = (globalThis as any).__nexlet;
+    n.catalog.items = [
+      { id: 'app:stable', name: 'Stable Fixture', kind: 'app', subtitle: '', keywords: [] },
+    ];
+    n.main.webContents.send('host-change', 'state');
+  });
+  await page.locator('.launcher-input').fill('Stable');
+  await expect(page.locator('[data-command-id="app:stable"]')).toBeVisible();
+  await application.evaluate(() => {
+    const n = (globalThis as any).__nexlet;
+    const counts = ((globalThis as any).__refreshCounts = { search: 0, shortcuts: 0, startup: 0 });
+    for (const [owner, method, key] of [
+      [n.matcher, 'search', 'search'],
+      [n.shortcuts, 'apply', 'shortcuts'],
+      [n.startup, 'read', 'startup'],
+    ] as const) {
+      const original = owner[method].bind(owner);
+      owner[method] = (...args: any[]) => {
+        counts[key]++;
+        return original(...args);
+      };
+    }
+    for (let percent = 1; percent <= 20; percent++)
+      n.updates.set({ phase: 'downloading', percent });
+    for (let i = 0; i < 3; i++) n.main.webContents.send('host-change', 'state');
+  });
+  // Allow the existing 60 ms search debounce to run if a state update invalidated it.
+  await page.waitForTimeout(200);
+  expect(await application.evaluate(() => (globalThis as any).__refreshCounts)).toEqual({
+    search: 0,
+    shortcuts: 0,
+    startup: 0,
+  });
+  await application.evaluate(() => {
+    const n = (globalThis as any).__nexlet;
+    n.catalog.items.push({
+      id: 'app:changed',
+      name: 'Stable Changed',
+      kind: 'app',
+      subtitle: '',
+      keywords: [],
+    });
+    n.main.webContents.send('host-change', 'state');
+  });
+  await expect(page.locator('[data-command-id="app:changed"]')).toBeVisible();
+  expect(
+    await application.evaluate(() => (globalThis as any).__refreshCounts.search),
+  ).toBeGreaterThan(0);
+});
+
 test('剪贴板虚拟滚动、跨页多选、全文展开与独立窗口恢复', async () => {
   const page = await application.firstWindow();
   await application.evaluate(({ clipboard }) => {
@@ -174,6 +227,9 @@ test('剪贴板虚拟滚动、跨页多选、全文展开与独立窗口恢复',
   await page.locator(`[data-clip-id="${target}"]`).click({ modifiers: ['Shift'] });
   await expect(page.locator('.selection-status')).toContainText(`已选择 ${200 - targetNumber} 项`);
   await page.getByRole('button', { name: '复制', exact: true }).click();
+  await expect
+    .poll(() => application.evaluate(() => typeof (globalThis as any).__copied))
+    .toBe('string');
   const copied = await application.evaluate(() => (globalThis as any).__copied as string);
   expect(copied.startsWith('record-199 ')).toBe(true);
   expect(copied.endsWith('tail-only-' + targetNumber)).toBe(true);
@@ -234,9 +290,9 @@ test('浏览历史时收到新记录保留当前可见位置，不跳回旧选�
   });
   await application.evaluate(() => {
     const n = (globalThis as any).__nexlet,
-      original = n.store.clipPage.bind(n.store);
+      original = n.clipStore.clipPage.bind(n.clipStore);
     (globalThis as any).__pageRefreshes = 0;
-    n.store.clipPage = (...args: any[]) => {
+    n.clipStore.clipPage = (...args: any[]) => {
       (globalThis as any).__pageRefreshes++;
       return original(...args);
     };

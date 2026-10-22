@@ -1,11 +1,11 @@
 import { t } from '../shared/i18n';
-import { clipboard, ClipboardItem as ElectronClipboardItem, nativeImage } from 'electron';
+import { clipboard, ClipboardItem as ElectronClipboardItem } from 'electron';
 import { createHash, randomUUID } from 'node:crypto';
-import { writeFileSync, existsSync } from 'node:fs';
-import path from 'node:path';
+import { existsSync } from 'node:fs';
 import type { ClipItem } from '../shared/types';
-import type { Store } from './store';
+import type { ClipboardStorage } from './clipboard-store';
 import type { Platform } from './platform';
+import { ClipboardImages } from './clipboard-image';
 
 const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 export class ClipboardService {
@@ -17,15 +17,23 @@ export class ClipboardService {
   private lastHash = '';
   error: string | null = null;
   constructor(
-    private store: Store,
+    private store: ClipboardStorage,
     private platform: Platform,
     private changed: () => void,
+    private images = new ClipboardImages(),
   ) {}
   start(): void {
     this.timer = setInterval(() => void this.capture(), 700);
   }
   stop(): void {
     if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+  }
+  async close(): Promise<void> {
+    this.stop();
+    this.paused++;
+    await this.pending;
+    this.images.close();
   }
   async withoutCapture<T>(work: () => Promise<T>): Promise<T> {
     this.paused++;
@@ -45,9 +53,9 @@ export class ClipboardService {
       }
       return;
     }
-    if (!force && !this.store.settings().clipboardEnabled) return;
     const sequence = this.platform.sequence();
     if (!force && sequence !== null && sequence === this.lastSequence) return;
+    if (!force && !this.store.settings().clipboardEnabled) return;
     this.busy = true;
     let idle!: () => void;
     this.pending = new Promise((resolve) => {
@@ -90,31 +98,18 @@ export class ClipboardService {
         const imageBlob = imageItem ? await imageItem.getType('image/png') : null;
         const picture =
           imageBlob instanceof Blob
-            ? nativeImage.createFromBuffer(Buffer.from(await imageBlob.arrayBuffer()))
-            : nativeImage.createEmpty();
-        if (!picture.isEmpty()) {
-          const { width, height } = picture.getSize();
-          if (width * height > 36_000_000)
-            throw new Error(t('图片过大，本次未记录（最多 3600 万像素）'));
-          const png = picture.toPNG();
-          if (png.length > 20 * 1024 * 1024) throw new Error(t('图片超过 20 MB，本次未记录'));
-          const fingerprint = hash(png);
-          if (fingerprint === this.lastHash && this.store.hasClipHash(fingerprint)) {
-            this.lastSequence = sequence;
-            return;
-          }
-          const imagePath = path.join(this.store.images, fingerprint + '.png');
-          if (!existsSync(imagePath)) writeFileSync(imagePath, png);
-          const thumbnail = picture.resize({ width: Math.min(360, width) }).toDataURL();
+            ? await this.images.capture(
+                new Uint8Array(await imageBlob.arrayBuffer()),
+                this.store.images,
+              )
+            : null;
+        if (picture) {
+          const { width, height } = picture;
           item = {
             ...base,
+            ...picture,
             kind: 'image',
             text: t('图片 {{v0}} × {{v1}}', { v0: width, v1: height }),
-            hash: fingerprint,
-            imagePath,
-            thumbnail,
-            width,
-            height,
           };
         } else {
           const text = await clipboard.readText();
@@ -122,9 +117,9 @@ export class ClipboardService {
             item = { ...base, kind: 'text', text, hash: hash('text:' + text) };
         }
       }
-      if (item && (item.hash !== this.lastHash || !this.store.hasClipHash(item.hash))) {
-        this.store.addClip(item);
-        this.store.prune();
+      if (item && (item.hash !== this.lastHash || !(await this.store.hasClipHash(item.hash)))) {
+        await this.store.addClip(item);
+        await this.store.prune();
         this.lastHash = item.hash;
         this.changed();
       }
@@ -139,7 +134,7 @@ export class ClipboardService {
     }
   }
   async copy(ids: string[]): Promise<void> {
-    const items = ids.map((id) => this.store.clip(id));
+    const items = await Promise.all(ids.map((id) => this.store.clip(id)));
     if (!items.length || items.some((i) => !i)) throw new Error(t('请选择仍存在的记录'));
     const selected = items as ClipItem[];
     if (selected.every((i) => i.kind === 'text')) {
@@ -152,17 +147,16 @@ export class ClipboardService {
       await this.platform.writeFiles(files);
       this.lastHash = hash('files:' + files.join('\0'));
     } else if (selected.length === 1 && selected[0].kind === 'image') {
-      const image = nativeImage.createFromPath(selected[0].imagePath || '');
-      if (image.isEmpty()) throw new Error(t('图片附件不存在'));
+      const png = await this.images.copy(selected[0].imagePath || '');
       await clipboard.write([
         new ElectronClipboardItem({
-          'image/png': new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' }),
+          'image/png': new Blob([new Uint8Array(png)], { type: 'image/png' }),
         }),
       ]);
       this.lastHash = selected[0].hash;
     } else throw new Error(t('合并复制支持多条文本或多个文件；图片请单独选择'));
     this.lastSequence = this.platform.sequence();
-    this.store.touchClips(ids);
+    await this.store.touchClips(ids);
     this.changed();
   }
 }

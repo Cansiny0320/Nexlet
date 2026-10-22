@@ -1,5 +1,7 @@
 import { t } from '../shared/i18n';
 import { opendir, lstat } from 'node:fs/promises';
+import type { Dir, Dirent, Stats } from 'node:fs';
+import { setImmediate as yieldLoop } from 'node:timers/promises';
 import path from 'node:path';
 import type { FileResult, FileSearchResult } from '../shared/everything';
 // Greedy glob matching avoids unbounded RegExp backtracking on repeated * tokens.
@@ -44,11 +46,41 @@ export function linuxFilenameMatcher(query: string): (name: string) => boolean {
 }
 export class LinuxFileSearch {
   private pending = new Map<number, AbortController>();
-  constructor(private paths: () => string[]) {}
+  private directories = new Map<string, { identity: string; entries: Dirent[]; bytes: number }>();
+  private cacheBytes = 0;
+  private scopesKey = '';
+  private generation = 0;
+  constructor(
+    private paths: () => string[],
+    private io: { opendir(folder: string): Promise<Dir>; lstat(file: string): Promise<Stats> } = {
+      opendir: (folder) => opendir(folder),
+      lstat: (file) => lstat(file),
+    },
+  ) {}
+  private forgetDirectory(folder: string) {
+    const old = this.directories.get(folder);
+    if (old) this.cacheBytes -= old.bytes;
+    this.directories.delete(folder);
+  }
+  private remember(folder: string, identity: string, entries: Dirent[]) {
+    const bytes =
+      folder.length * 2 + 128 + entries.reduce((sum, entry) => sum + entry.name.length * 2 + 96, 0);
+    this.forgetDirectory(folder);
+    if (bytes > 32 * 1024 * 1024) return;
+    while (this.cacheBytes + bytes > 32 * 1024 * 1024 || this.directories.size >= 10_000)
+      this.forgetDirectory(this.directories.keys().next().value!);
+    this.directories.set(folder, { identity, entries, bytes });
+    this.cacheBytes += bytes;
+  }
   async search(owner: number, query: string): Promise<FileSearchResult> {
     this.forget(owner);
     const scopes = [...new Set(this.paths())],
       empty = { items: [], limited: false, scopes };
+    const scopesKey = JSON.stringify(scopes);
+    if (scopesKey !== this.scopesKey) {
+      this.reset();
+      this.scopesKey = scopesKey;
+    }
     if (!query.trim())
       return {
         status: 'idle',
@@ -62,6 +94,7 @@ export class LinuxFileSearch {
     const matches = linuxFilenameMatcher(query),
       controller = new AbortController(),
       { signal } = controller;
+    const generation = this.generation;
     this.pending.set(owner, controller);
     const items: FileResult[] = [],
       seen = new Set<string>(),
@@ -78,26 +111,51 @@ export class LinuxFileSearch {
       }
       if (seen.has(folder)) return;
       seen.add(folder);
-      let directory;
+      let directory: AsyncIterable<Dirent> | Dirent[], identity: string;
+      let cached = false;
       try {
-        if (!(await lstat(folder)).isDirectory()) return;
-        directory = await opendir(folder);
+        const info = await this.io.lstat(folder);
+        if (!info.isDirectory()) {
+          this.forgetDirectory(folder);
+          return;
+        }
+        identity = [info.dev, info.ino, info.mtimeMs, info.ctimeMs, info.mode].join(':');
+        const previous = this.directories.get(folder);
+        if (previous?.identity === identity) {
+          directory = previous.entries;
+          cached = true;
+          this.directories.delete(folder);
+          this.directories.set(folder, previous);
+        } else {
+          this.forgetDirectory(folder);
+          directory = await this.io.opendir(folder);
+        }
         readable++;
       } catch {
+        this.forgetDirectory(folder);
         skipped++;
         return;
       }
+      const entries: Dirent[] = [];
+      let complete = true;
       for await (const entry of directory) {
         signal.throwIfAborted();
         if (items.length >= 200 || Date.now() > deadline || visited++ >= 100000) {
           limited = true;
+          complete = false;
           break;
+        }
+        if (!cached) entries.push(entry);
+        // Cached directories can contain many nonmatches; let newer queries cancel promptly.
+        if (cached && visited % 256 === 0) {
+          await yieldLoop();
+          signal.throwIfAborted();
         }
         if (entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
         const file = path.join(folder, entry.name);
         if (matches(entry.name))
           try {
-            const info = await lstat(file);
+            const info = await this.io.lstat(file);
             if (!info.isSymbolicLink())
               items.push({
                 path: file,
@@ -110,6 +168,8 @@ export class LinuxFileSearch {
           } catch {}
         if (entry.isDirectory()) await visit(file, depth + 1);
       }
+      if (!cached && complete && generation === this.generation)
+        this.remember(folder, identity, entries);
     };
     try {
       for (const scope of scopes) await visit(scope, 0);
@@ -146,5 +206,8 @@ export class LinuxFileSearch {
   }
   reset() {
     for (const owner of this.pending.keys()) this.forget(owner);
+    this.directories.clear();
+    this.cacheBytes = 0;
+    this.generation++;
   }
 }

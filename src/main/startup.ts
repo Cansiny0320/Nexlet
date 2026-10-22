@@ -1,4 +1,4 @@
-import { t } from '../shared/i18n';
+import { t, currentLocale } from '../shared/i18n';
 import { LinuxStartup } from './linux-startup';
 import type { App } from 'electron';
 import type { StartupStatus } from '../shared/types';
@@ -7,6 +7,7 @@ type LoginHost = Pick<App, 'isPackaged' | 'getLoginItemSettings' | 'setLoginItem
 
 /** Read system state instead of storing a second, potentially stale enabled flag. */
 export class StartupManager {
+  private snapshot: { locale: string; value: StartupStatus } | undefined;
   constructor(
     private host: LoginHost,
     private platform: string,
@@ -26,7 +27,14 @@ export class StartupManager {
 
   read(): StartupStatus {
     const { requiresApproval: _, ...status } = this.readStatus();
+    this.snapshot = { locale: currentLocale(), value: status };
     return status;
+  }
+  cached(): StartupStatus {
+    return this.snapshot?.locale === currentLocale() ? this.snapshot.value : this.read();
+  }
+  invalidate() {
+    this.snapshot = undefined;
   }
 
   private readStatus(): StartupStatus & { requiresApproval?: boolean } {
@@ -65,13 +73,18 @@ export class StartupManager {
   set(enabled: boolean): StartupStatus {
     const before = this.read();
     if (!before.supported) throw new Error(before.reason || t('不支持开机自启动'));
-    if (this.platform === 'linux') return this.linux().set(enabled);
+    if (this.platform === 'linux') {
+      const status = this.linux().set(enabled);
+      this.snapshot = { locale: currentLocale(), value: status };
+      return status;
+    }
     this.host.setLoginItemSettings(
       this.platform === 'win32'
         ? { ...this.options(), openAtLogin: enabled, enabled, name: 'app.nexlet.desktop' }
         : { openAtLogin: enabled },
     );
     const { requiresApproval, ...after } = this.readStatus();
+    this.snapshot = { locale: currentLocale(), value: after };
     if (after.enabled !== enabled && !requiresApproval)
       throw new Error(after.reason || t('系统未保存自启动设置，请检查应用位置与系统权限'));
     return after;

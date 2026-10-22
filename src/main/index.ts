@@ -43,6 +43,7 @@ import { copyFile, writeFile } from 'node:fs/promises';
 import { launchWindowsApplication } from './launch-windows';
 import path from 'node:path';
 import { Store } from './store';
+import { ClipboardStore } from './clipboard-store';
 import { Catalog } from './catalog';
 import { CatalogCache } from './catalog-cache';
 import { release } from 'node:os';
@@ -120,7 +121,8 @@ async function bootstrap() {
       return selectionPlatform.target();
     },
   );
-  const clips = new ClipboardService(store, platform, () => notify('clips'));
+  const clipStore = new ClipboardStore(store.directory, () => store.settings());
+  const clips = new ClipboardService(clipStore, platform, () => notify('clips'));
   const catalog = new Catalog(
     () => notify(),
     process.platform === 'win32' ? new CatalogCache(store.directory) : undefined,
@@ -217,7 +219,7 @@ async function bootstrap() {
     updateTransport,
     () => {
       if (updates.read().phase === 'error') quitting = false;
-      notify();
+      notify('updates:' + JSON.stringify(updates.read()));
     },
     async () => {
       await updateSaves.prepare([...hosts.keys()], (id, token) =>
@@ -275,6 +277,7 @@ async function bootstrap() {
       views.delete(window.id);
       rendererBusy.delete(window.id);
       inputs.forget(owner);
+      clipStore.forget(owner);
       matcher.forget(owner);
     });
     await window.loadFile(html, { query: { panel: '1' } });
@@ -385,6 +388,13 @@ async function bootstrap() {
     const contentsId = window.webContents.id,
       windowId = window.id;
     focusOnRestore(window);
+    window.on('focus', () => {
+      if (views.get(window.id) === 'settings') {
+        startup.invalidate();
+        notify();
+      }
+    });
+
     window.once('ready-to-show', () => {
       if (!initiallyHidden) revealWindow(window);
     });
@@ -426,6 +436,7 @@ async function bootstrap() {
       boards.delete(contentsId);
       files.forget(contentsId);
       inputs.forget(contentsId);
+      clipStore.forget(contentsId);
       matcher.forget(contentsId);
     });
     window.on('blur', () => {
@@ -499,9 +510,12 @@ async function bootstrap() {
     config = registry.read(),
     settings = store.settings(),
     panelSettings = panelConfig.read(),
+    availableCommands?: Command[],
   ): ShortcutBinding[] {
     const available = new Set(
-      registry.commands(sourceCommands(settings), true, config).map((c) => c.id),
+      (availableCommands || registry.commands(sourceCommands(settings), true, config)).map(
+        (c) => c.id,
+      ),
     );
     return [
       { id: 'wake', accelerator: settings.shortcut },
@@ -523,8 +537,12 @@ async function bootstrap() {
         })),
     ];
   }
-  function syncShortcuts() {
-    shortcuts.apply(bindings(), () => {}, false);
+  let shortcutKey = '';
+  function syncShortcuts(next = bindings()) {
+    const key = JSON.stringify([currentLocale(), next]);
+    if (key === shortcutKey) return;
+    shortcuts.apply(next, () => {}, false);
+    shortcutKey = key;
     shortcutError = shortcuts.status('wake').error || null;
   }
   function hotkeyState() {
@@ -578,10 +596,11 @@ async function bootstrap() {
   async function state(): Promise<AppState> {
     const catalogRevision = catalog.revision;
     const settings = store.settings();
-    syncShortcuts();
     const config = registry.read();
     const commandCatalog = registry.commands(sourceCommands(settings), true, config),
       commands = commandCatalog.filter((c) => registry.enabled(c.id, config));
+    const panelSettings = panelConfig.read();
+    syncShortcuts(bindings(config, settings, panelSettings, commandCatalog));
     const pinned = catalog.resolveIds(registry.pinned());
     const recent = catalog.resolveIds(store.get<string[]>('recent', []));
     const visibleIds = new Set([...pinned, ...recent.slice(0, 18)]);
@@ -589,16 +608,16 @@ async function bootstrap() {
     if (catalogRevision !== catalog.revision) return state();
     const icons = new Map(decorated.map((c) => [c.id, c.icon]));
     return {
-      panelConfig: panelConfig.read(),
+      panelConfig: panelSettings,
       panelStatus: panelTrigger.read(),
-      commandConfig: registry.read(),
+      commandConfig: config,
       commandCatalog,
       shortcutStatuses: shortcuts.statuses(),
       update: updates.read(),
       version: app.getVersion(),
       platform: process.platform,
       settings,
-      startup: startup.read(),
+      startup: startup.cached(),
       pinned,
       recent,
       commands: commands.map((c) => ({ ...c, icon: icons.get(c.id) || c.icon })),
@@ -1201,6 +1220,11 @@ async function bootstrap() {
             )
               throw new Error(t('视图无效'));
             views.set(window.id, view);
+            if (view === 'settings') {
+              startup.invalidate();
+              notify();
+            }
+
             if (!window.isMaximized()) {
               const bounds = window.getBounds();
               const work = screen.getDisplayMatching(bounds).workArea;
@@ -1336,7 +1360,7 @@ async function bootstrap() {
             JSON.stringify(next.searchPaths) !== JSON.stringify(settings.searchPaths)
           )
             void catalog.scan(next.searchPaths);
-          store.prune();
+          await clipStore.prune();
           notify();
           notify('clips');
           return next;
@@ -1369,17 +1393,22 @@ async function bootstrap() {
           const query = typeof args.query === 'string' ? args.query.slice(0, 1024) : '';
           const kind = typeof args.kind === 'string' ? args.kind : 'all';
           const board = boards.get(event.sender.id);
-          return store.clips(query, kind).filter((i) => !board || board.includes(i.id));
+          const items = await clipStore.clips(query, kind);
+          authorize();
+          return items.filter((i) => !board || board.includes(i.id));
         }
       }),
       clipIndex: hostProcedure<'clipIndex'>(authorize, async (payload) => {
         {
           const args = payload ? inputObject(payload) : {};
-          return store.clipIndex(
+          const result = await clipStore.clipIndex(
             typeof args.query === 'string' ? args.query.slice(0, 1024) : '',
             typeof args.kind === 'string' ? args.kind : 'all',
             boards.get(event.sender.id),
+            event.sender.id,
           );
+          authorize();
+          return result;
         }
       }),
       clipPage: hostProcedure<'clipPage'>(authorize, async (payload) => {
@@ -1393,7 +1422,9 @@ async function bootstrap() {
             (board && selected.some((id) => !board.includes(id)))
           )
             throw Error(t('参数无效'));
-          return store.clipPage(selected, args.revision);
+          const result = await clipStore.clipPage(selected, args.revision);
+          authorize();
+          return result;
         }
       }),
       clipDetail: hostProcedure<'clipDetail'>(authorize, async (payload) => {
@@ -1401,7 +1432,9 @@ async function bootstrap() {
           const id = text(payload, 150),
             board = boards.get(event.sender.id);
           if (board && !board.includes(id)) throw Error(t('参数无效'));
-          return store.clip(id);
+          const result = await clipStore.clip(id);
+          authorize();
+          return result;
         }
       }),
       clipAction: hostProcedure<'clipAction'>(authorize, async (payload) => {
@@ -1445,12 +1478,7 @@ async function bootstrap() {
             return true;
           }
           if (operation === 'clear') {
-            store.deleteClips(
-              store
-                .clips()
-                .filter((i) => args.includeFavorites === true || !i.favorite)
-                .map((i) => i.id),
-            );
+            await clipStore.clearClips(args.includeFavorites === true);
             notify('clips');
             return true;
           }
@@ -1466,17 +1494,17 @@ async function bootstrap() {
               throw error;
             }
           } else if (operation === 'delete') {
-            store.deleteClips(selected);
+            await clipStore.deleteClips(selected);
             notify('clips');
           } else if (operation === 'favorite') {
             if (typeof args.value !== 'boolean') throw new Error(t('收藏值无效'));
-            for (const id of selected) store.favorite(id, args.value);
+            for (const id of selected) await clipStore.favorite(id, args.value);
             notify('clips');
           } else if (operation === 'station') {
             const popup = createWindow('clipboard', true, selected);
             popup.setAlwaysOnTop(true);
           } else if (operation === 'save') {
-            const item = selected.length === 1 ? store.clip(selected[0]) : undefined;
+            const item = selected.length === 1 ? await clipStore.clip(selected[0]) : undefined;
             if (!item?.imagePath) throw new Error(t('请选择一张图片'));
             return withDialog(async () => {
               const result = await dialog.showSaveDialog(window, {
@@ -1678,8 +1706,7 @@ async function bootstrap() {
   panelTrigger.configure(panelConfig.read());
   const panelBusyTimer = setInterval(
     () =>
-      panelTrigger.setBusy(
-        Object.values(hotkeyState()).some(Boolean) || panel.busy,
+      panelTrigger.setBusy(Object.values(hotkeyState()).some(Boolean) || panel.busy, () =>
         panelConfig.read(),
       ),
     100,
@@ -1706,11 +1733,11 @@ async function bootstrap() {
       panelTrigger.close();
       panel.close();
       updates.setAutomaticChecks(false);
-      clips.stop();
+      await clips.close();
       shortcuts.close();
       matcher.close();
       if (tray && !tray.isDestroyed()) tray.destroy();
-      await Promise.allSettled([plugins.close(), files.close()]);
+      await Promise.allSettled([plugins.close(), files.close(), clipStore.close()]);
       inputs.close();
       cleanedUp = true;
       setImmediate(() => app.quit());
@@ -1746,6 +1773,8 @@ async function bootstrap() {
       updates,
       autoUpdater: updateTransport,
       store,
+      clipStore,
+      startup,
       clips,
       platform,
       catalog,

@@ -60,6 +60,16 @@ async function hits() {
 async function record() {
   return (await call('pluginInspect')).find((p: any) => p.manifest.id === id);
 }
+async function prepared() {
+  await expect
+    .poll(() =>
+      app.evaluate(
+        (_, id) => !!(globalThis as any).__nexlet.store.get('plugin-staged-updates', {})[id],
+        id,
+      ),
+    )
+    .toBe(true);
+}
 async function plugin() {
   await expect
     .poll(() =>
@@ -150,13 +160,18 @@ test.afterEach(async () => {
   await app?.close();
 });
 
-test('首次打开刷新旧索引，重复打开只更新一次并保留数据和输入', async () => {
+test('首次立即打开旧版，后台准备一次，下次打开新版并保留数据和输入', async () => {
   await app.evaluate((_, id) => {
     const n = (globalThis as any).__nexlet;
     n.store.set('plugin-data:' + id, { setting: 'keep' });
     n.plugins.secrets.set(id, 0, 'apiKey', 'fixture-key');
   }, id);
   await Promise.all([launch(), launch()]);
+  await expect((await plugin()).locator('#version')).toHaveText('1.0.0');
+  await prepared();
+  expect((await record()).manifest.version).toBe('1.0.0');
+  await call('window', { action: 'exitPlugin' });
+  await launch();
   const view = await plugin();
   await expect(view.locator('#version')).toHaveText('1.1.0');
   await expect(view.locator('#input')).toHaveValue('preserved input');
@@ -169,8 +184,8 @@ test('首次打开刷新旧索引，重复打开只更新一次并保留数据�
 });
 
 test('已有分离会话只聚焦，关闭后重新打开才自动更新', async () => {
-  await configure({ version: '1.0.0' });
   await launch();
+  await prepared();
   const old = await plugin();
   await old.locator('#input').fill('unsaved text');
   const detachedPromise = app.waitForEvent('window');
@@ -186,7 +201,53 @@ test('已有分离会话只聚焦，关闭后重新打开才自动更新', async
   await launch('next open');
   await expect((await plugin()).locator('#version')).toHaveText('1.1.0');
   await expect((await plugin()).locator('#input')).toHaveValue('next open');
-  expect(await hits()).toEqual(['index', 'bundle']);
+  expect(await hits()).toEqual([]);
+});
+
+test('后台暂存跨应用重启保留，离线再次打开时启用新版', async () => {
+  await launch();
+  await prepared();
+  await app.close();
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    NEXLET_TEST_MODE: '1',
+    NEXLET_USER_DATA: folder,
+  };
+  delete env.ELECTRON_RUN_AS_NODE;
+  app = await electron.launch({ args: [root], env: env as Record<string, string> });
+  page = await app.firstWindow();
+  await expect(page.locator('.launcher-input')).toBeVisible();
+  await app.evaluate(() => {
+    (globalThis as any).__nexlet.plugins.updateOnLaunch = async () => {
+      throw Error('offline');
+    };
+  });
+  expect((await record()).manifest.version).toBe('1.0.0');
+  await launch('after restart');
+  await expect((await plugin()).locator('#version')).toHaveText('1.1.0');
+  await expect((await plugin()).locator('#input')).toHaveValue('after restart');
+});
+
+test('后台下载未完成也能打开和输入，退出后准备完成不会自动重开', async () => {
+  await configure({ mode: 'slow' });
+  const opening = launch();
+  const view = await plugin();
+  await expect(view.locator('#version')).toHaveText('1.0.0');
+  await opening;
+  await expect.poll(() => hits()).toEqual(['index', 'bundle']);
+  await view.locator('#input').fill('while downloading');
+  await call('window', { action: 'exitPlugin' });
+  await app.evaluate(() => (globalThis as any).__auto.resolve());
+  await prepared();
+  expect((await record()).manifest.version).toBe('1.0.0');
+  expect(
+    app
+      .context()
+      .pages()
+      .some((p) => p.url().startsWith('nexlet-plugin://' + id + '/')),
+  ).toBe(false);
+  await launch('next launch');
+  await expect((await plugin()).locator('#version')).toHaveText('1.1.0');
 });
 
 for (const mode of ['offline', 'corrupt'])
@@ -225,6 +286,7 @@ test('不兼容宿主或移除了当前功能的新版不会替换旧版', async
   expect(await hits()).toEqual(['index']);
   expect((await record()).manifest.version).toBe('1.0.0');
   await call('window', { action: 'exitPlugin' });
+  await app.evaluate(() => (globalThis as any).__nexlet.marketplace.nextCheck.clear());
   await configure({
     minHost: '0.2.7',
     hits: [],

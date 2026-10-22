@@ -81,3 +81,50 @@ it('保留策略与旧数据兼容，分页不截断完整复制内容或丢失�
   const index = store.clipIndex();
   expect(store.clipPage(index.ids, index.revision).items.map((item) => item.id)).toEqual(index.ids);
 });
+
+it('后台回填旧记录，旧版直接写入会使派生数据和分页版本失效', () => {
+  const original = clip('legacy', '🙂'.repeat(800) + ' ÄBC');
+  const insert = store.db.prepare(
+    'INSERT INTO clips(id,hash,created,favorite,data) VALUES(?,?,?,?,?)',
+  );
+  insert.run(original.id, original.hash, original.createdAt, 0, JSON.stringify(original));
+  expect(store.clipIndex('äbc').ids).toEqual(['legacy']);
+  expect(store.backfillClips(10)).toBe(1);
+  expect(store.backfillClips(10)).toBe(0);
+  const old = store.clipIndex();
+  store.close();
+  store = new Store(directory);
+  const changed = { ...original, text: '中文更新', favorite: true };
+  store.db
+    .prepare('UPDATE clips SET data=?,favorite=1 WHERE id=?')
+    .run(JSON.stringify(changed), original.id);
+  expect(store.clipPage(old.ids, old.revision).stale).toBe(true);
+  expect(store.clipIndex('äbc').ids).toEqual([]);
+  expect(store.clipIndex('更新', 'favorite').ids).toEqual(['legacy']);
+  const next = store.clipIndex();
+  expect(store.clipPage(next.ids, next.revision).items[0]).toMatchObject({
+    text: '中文更新',
+    textLength: 4,
+    favorite: true,
+  });
+  store.deleteClips(['legacy']);
+  expect(store.db.prepare('SELECT COUNT(*) AS count FROM clip_cache').get()).toEqual({ count: 0 });
+});
+
+it('已缓存的列表只解析摘要，不解析完整 JSON，取消查询不返回部分索引', () => {
+  store.addClip(clip('large', 'x'.repeat(100_000) + ' 末尾'));
+  const index = store.clipIndex('末尾');
+  // A cached page remains usable even if JSON parsing of the full row would fail.
+  const original = JSON.parse;
+  JSON.parse = ((text: string) => {
+    if (text.length > 10_000) throw Error('Unexpected full text parsing');
+    return original(text);
+  }) as typeof JSON.parse;
+  try {
+    expect(store.clipPage(index.ids, index.revision).items[0].textLength).toBe(100_003);
+  } finally {
+    JSON.parse = original;
+  }
+  store.queryIsCurrent = () => false;
+  expect(() => store.clipIndex('末尾')).toThrow('superseded');
+});

@@ -79,7 +79,7 @@ export function Launcher({
       clearTimeout(timer);
       unsubscribe();
     };
-  }, [requestKey, capturing, state.commands, state.catalogLoading, toast]);
+  }, [requestKey, capturing, state.commands, state.recent, state.catalogLoading, toast]);
   const indexed = new Map(state.commands.map((c) => [c.id, c]));
   const pinned = state.pinned.map((id) => indexed.get(id)).filter((c): c is Command => !!c);
   const pinnedIds = new Set(state.pinned);

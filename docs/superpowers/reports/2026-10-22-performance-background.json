@@ -1,0 +1,2330 @@
+{
+  "measuredAt": "2026-10-22T08:40:17.806Z",
+  "cpu": "Apple M3 Pro",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v24.19.0",
+  "method": {
+    "runs": 5,
+    "order": "alternating",
+    "images": "first call per size cold, then 3 distinct warm captures; identical nativeImage PNG inputs, no real clipboard; time includes database persistence",
+    "lag": "maximum main-thread timer delay during operation, 1 ms monitor with timer turns before/after; not renderer frame latency",
+    "memory": "Electron process working sets summed, shared pages may be counted multiple times; includes fixtures",
+    "plugin": "actual launch with simulated 400 ms index + 400 ms archive, or 2000 ms failure",
+    "appScope": "Separate productivity changes are present in the after snapshot; whole-app startup/RSS are not attributable solely to performance changes",
+    "cpu": "process.cpuUsage includes clipboard Worker threads in the main process, but excludes the separate image renderer; not total app CPU"
+  },
+  "roots": {
+    "before": "/var/folders/v5/dc0qv_8d57v6_c5kws9d4p3w0000gn/T/nexlet-performance-20261022-fyfdqejs/before",
+    "after": "/var/folders/v5/dc0qv_8d57v6_c5kws9d4p3w0000gn/T/nexlet-performance-20261022-fyfdqejs/after-final"
+  },
+  "hashes": {
+    "before": "b882fc5bb0d9c20335a9a6b492a45b4b1febee8ec4812d205aad13244d145f86",
+    "after": "c97bac29334cf4bea918c818192ffae2b6235d664d6c36be3c7abd60c7e8d7da"
+  },
+  "samples": [
+    {
+      "label": "before",
+      "round": 0,
+      "startupMs": 1604.199084,
+      "images": {
+        "1080p": [
+          {
+            "ms": 30.043124999999918,
+            "maxLagMs": 33.79854099999989,
+            "processCpuMs": 31.917,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 231.78125,
+            "totalMiB": 505.28125
+          },
+          {
+            "ms": 29.49375000000009,
+            "maxLagMs": 28.970332999999982,
+            "processCpuMs": 31.088,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 239.84375,
+            "totalMiB": 513.9375
+          },
+          {
+            "ms": 28.284625000000005,
+            "maxLagMs": 28.50279099999989,
+            "processCpuMs": 29.711,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 248.0625,
+            "totalMiB": 522.15625
+          },
+          {
+            "ms": 29.181542000000036,
+            "maxLagMs": 29.411833000000115,
+            "processCpuMs": 30.596,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 256.515625,
+            "totalMiB": 530.609375
+          }
+        ],
+        "4k": [
+          {
+            "ms": 106.51308299999982,
+            "maxLagMs": 105.96199999999999,
+            "processCpuMs": 111.037,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 303.546875,
+            "totalMiB": 577.859375
+          },
+          {
+            "ms": 103.43595899999991,
+            "maxLagMs": 103.6446249999999,
+            "processCpuMs": 103.164,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 335.890625,
+            "totalMiB": 610.078125
+          },
+          {
+            "ms": 100.80179099999987,
+            "maxLagMs": 101.00783300000012,
+            "processCpuMs": 100.525,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 368.21875,
+            "totalMiB": 642.453125
+          },
+          {
+            "ms": 100.52633400000013,
+            "maxLagMs": 100.7180830000002,
+            "processCpuMs": 100.216,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 400.5625,
+            "totalMiB": 674.78125
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 289.458208,
+            "maxLagMs": 289.67820800000027,
+            "processCpuMs": 289.368,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 856.4375,
+            "totalMiB": 1124.578125
+          },
+          {
+            "ms": 289.02991699999984,
+            "maxLagMs": 288.10183400000005,
+            "processCpuMs": 287.782,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 307.1875,
+            "totalMiB": 575.34375
+          },
+          {
+            "ms": 290.4190410000001,
+            "maxLagMs": 290.6162919999997,
+            "processCpuMs": 290.031,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 400.4375,
+            "totalMiB": 668.640625
+          },
+          {
+            "ms": 287.3962499999998,
+            "maxLagMs": 287.59337499999947,
+            "processCpuMs": 285.369,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 493.6875,
+            "totalMiB": 761.875
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 948.6379589999997,
+          "maxLagMs": 40.675999999999476,
+          "processCpuMs": 119.017,
+          "activeVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 2098.472667,
+          "maxLagMs": 337.72841700000026,
+          "processCpuMs": 159.562,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 197.859375,
+        "totalMiB": 469.15625
+      },
+      "wakeMs": [
+        8.186332999999877,
+        5.687417000000096,
+        9.832667000000129,
+        5.2009160000000065,
+        5.739458999999897
+      ],
+      "largeSearch": [
+        {
+          "ms": 146.09354199999962,
+          "maxLagMs": 145.22045900000012,
+          "processCpuMs": 159.41,
+          "value": 1
+        },
+        {
+          "ms": 152.74183300000004,
+          "maxLagMs": 151.8977500000001,
+          "processCpuMs": 151.278,
+          "value": 1
+        },
+        {
+          "ms": 226.69129200000043,
+          "maxLagMs": 226.953125,
+          "processCpuMs": 189.782,
+          "value": 1
+        },
+        {
+          "ms": 198.8023749999993,
+          "maxLagMs": 202.59999999999945,
+          "processCpuMs": 187.943,
+          "value": 1
+        },
+        {
+          "ms": 139.30987499999992,
+          "maxLagMs": 139.5087080000003,
+          "processCpuMs": 139.232,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 11
+      },
+      "progressCounts": {
+        "search": 10,
+        "shortcuts": 10,
+        "settings": 30,
+        "panelConfig": 29
+      }
+    },
+    {
+      "label": "after",
+      "round": 0,
+      "startupMs": 1232.5631669999984,
+      "images": {
+        "1080p": [
+          {
+            "ms": 168.19295799999986,
+            "maxLagMs": 20.27283299999999,
+            "processCpuMs": 55.084,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 251.828125,
+            "totalMiB": 660.859375
+          },
+          {
+            "ms": 36.122708999999986,
+            "maxLagMs": 0.6239160000000084,
+            "processCpuMs": 5.988,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 252.078125,
+            "totalMiB": 669.578125
+          },
+          {
+            "ms": 30.919834000000037,
+            "maxLagMs": 0.601959000000079,
+            "processCpuMs": 3.982,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 252.328125,
+            "totalMiB": 678.453125
+          },
+          {
+            "ms": 30.398124999999936,
+            "maxLagMs": 0.6298340000000735,
+            "processCpuMs": 4.016,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 252.578125,
+            "totalMiB": 687.125
+          }
+        ],
+        "4k": [
+          {
+            "ms": 209.84933299999966,
+            "maxLagMs": 20.011916000000383,
+            "processCpuMs": 38.704,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 263.84375,
+            "totalMiB": 697.75
+          },
+          {
+            "ms": 103.48933299999999,
+            "maxLagMs": 0.4074580000001333,
+            "processCpuMs": 4.117,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 264.46875,
+            "totalMiB": 730.703125
+          },
+          {
+            "ms": 108.01558300000033,
+            "maxLagMs": 0.3859579999998459,
+            "processCpuMs": 5.638,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 265.09375,
+            "totalMiB": 702.4375
+          },
+          {
+            "ms": 106.91095799999994,
+            "maxLagMs": 0.43579200000021956,
+            "processCpuMs": 5.452,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 265.703125,
+            "totalMiB": 734.703125
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 387.7565410000002,
+            "maxLagMs": 17.033500000000004,
+            "processCpuMs": 32.715,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 421.4375,
+            "totalMiB": 911.84375
+          },
+          {
+            "ms": 291.9524170000004,
+            "maxLagMs": 0.4863749999999527,
+            "processCpuMs": 6.648,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 422.78125,
+            "totalMiB": 914.484375
+          },
+          {
+            "ms": 290.47070799999983,
+            "maxLagMs": 0.6938329999993584,
+            "processCpuMs": 6.842,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 424.25,
+            "totalMiB": 1007.875
+          },
+          {
+            "ms": 290.0318750000006,
+            "maxLagMs": 0.44766600000002654,
+            "processCpuMs": 5.574,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 425.5625,
+            "totalMiB": 1102.484375
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 118.9917919999989,
+          "maxLagMs": 18.709584000000177,
+          "processCpuMs": 64.475,
+          "activeVersion": "1.0.0",
+          "nextVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 80.72145799999998,
+          "maxLagMs": 4.236000000000786,
+          "processCpuMs": 29.237,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 218.265625,
+        "totalMiB": 502.96875
+      },
+      "wakeMs": [
+        7.958167000000003,
+        16.870333000000073,
+        5.929875000000038,
+        7.270750000000135,
+        5.998542000000043
+      ],
+      "largeSearch": [
+        {
+          "ms": 121.73812499999985,
+          "maxLagMs": 0.4309160000011616,
+          "processCpuMs": 110.483,
+          "value": 1
+        },
+        {
+          "ms": 71.73866700000144,
+          "maxLagMs": 0.9058330000007118,
+          "processCpuMs": 71.362,
+          "value": 1
+        },
+        {
+          "ms": 119.65079199999855,
+          "maxLagMs": 0.19608300000072632,
+          "processCpuMs": 105.698,
+          "value": 1
+        },
+        {
+          "ms": 94.84254200000032,
+          "maxLagMs": 0.20620899999994435,
+          "processCpuMs": 95.68,
+          "value": 1
+        },
+        {
+          "ms": 121.15816600000107,
+          "maxLagMs": 0.3717500000002474,
+          "processCpuMs": 104.426,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      },
+      "progressCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      }
+    },
+    {
+      "label": "after",
+      "round": 1,
+      "startupMs": 1136.718667000001,
+      "images": {
+        "1080p": [
+          {
+            "ms": 252.42345799999998,
+            "maxLagMs": 50.759459000000106,
+            "processCpuMs": 111.845,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 261.671875,
+            "totalMiB": 679.390625
+          },
+          {
+            "ms": 113.42783399999985,
+            "maxLagMs": 0.4963749999999436,
+            "processCpuMs": 7.131,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 262,
+            "totalMiB": 688.390625
+          },
+          {
+            "ms": 31.654415999999856,
+            "maxLagMs": 0.41237500000011096,
+            "processCpuMs": 3.546,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 262.3125,
+            "totalMiB": 697.046875
+          },
+          {
+            "ms": 30.94574999999986,
+            "maxLagMs": 0.44449999999983447,
+            "processCpuMs": 5.885,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 262.625,
+            "totalMiB": 705.796875
+          }
+        ],
+        "4k": [
+          {
+            "ms": 234.74379199999976,
+            "maxLagMs": 19.757292000000234,
+            "processCpuMs": 79.868,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 242.46875,
+            "totalMiB": 685.234375
+          },
+          {
+            "ms": 159.30700000000024,
+            "maxLagMs": 48.91666600000008,
+            "processCpuMs": 7.873,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 242.953125,
+            "totalMiB": 718.125
+          },
+          {
+            "ms": 106.03570899999977,
+            "maxLagMs": 0.8079580000003261,
+            "processCpuMs": 5.131,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 243.59375,
+            "totalMiB": 689.953125
+          },
+          {
+            "ms": 104.1890000000003,
+            "maxLagMs": 0.4238749999999527,
+            "processCpuMs": 3.739,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 244.171875,
+            "totalMiB": 722.1875
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 415.09762500000033,
+            "maxLagMs": 22.145790999999917,
+            "processCpuMs": 50.083,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 431.5,
+            "totalMiB": 929.34375
+          },
+          {
+            "ms": 307.6804170000005,
+            "maxLagMs": 0.7863749999996799,
+            "processCpuMs": 12.359,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 432.90625,
+            "totalMiB": 932.03125
+          },
+          {
+            "ms": 305.6557499999999,
+            "maxLagMs": 0.6262079999996786,
+            "processCpuMs": 8.142,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 434.53125,
+            "totalMiB": 1025.59375
+          },
+          {
+            "ms": 298.2664160000004,
+            "maxLagMs": 0.5445410000002084,
+            "processCpuMs": 7.348,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 435.84375,
+            "totalMiB": 1120.171875
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 226.72600000000057,
+          "maxLagMs": 39.09124999999949,
+          "processCpuMs": 53.411,
+          "activeVersion": "1.0.0",
+          "nextVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 77.57541700000002,
+          "maxLagMs": 26.544208000001163,
+          "processCpuMs": 26.514,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 224.203125,
+        "totalMiB": 514.65625
+      },
+      "wakeMs": [
+        5.748915999999781,
+        5.4497499999999945,
+        5.938000000000102,
+        7.006708000000117,
+        9.47570799999994
+      ],
+      "largeSearch": [
+        {
+          "ms": 118.00279199999932,
+          "maxLagMs": 1.0094169999993028,
+          "processCpuMs": 108.636,
+          "value": 1
+        },
+        {
+          "ms": 68.0943329999991,
+          "maxLagMs": 0.6737080000002607,
+          "processCpuMs": 69.649,
+          "value": 1
+        },
+        {
+          "ms": 111.38033300000097,
+          "maxLagMs": 0.21299999999973807,
+          "processCpuMs": 95.053,
+          "value": 1
+        },
+        {
+          "ms": 124.90120799999931,
+          "maxLagMs": 0.21408399999927497,
+          "processCpuMs": 89.549,
+          "value": 1
+        },
+        {
+          "ms": 101.94341700000041,
+          "maxLagMs": 0.8988750000007713,
+          "processCpuMs": 93.728,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      },
+      "progressCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      }
+    },
+    {
+      "label": "before",
+      "round": 1,
+      "startupMs": 1201.345666000001,
+      "images": {
+        "1080p": [
+          {
+            "ms": 30.395749999999907,
+            "maxLagMs": 30.246249999999918,
+            "processCpuMs": 33.336,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 238.25,
+            "totalMiB": 513.59375
+          },
+          {
+            "ms": 29.134874999999965,
+            "maxLagMs": 29.42775000000006,
+            "processCpuMs": 31.938,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 246.421875,
+            "totalMiB": 521.765625
+          },
+          {
+            "ms": 28.52041599999984,
+            "maxLagMs": 28.77391700000021,
+            "processCpuMs": 31.161,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 254.6875,
+            "totalMiB": 530.03125
+          },
+          {
+            "ms": 28.322791999999936,
+            "maxLagMs": 27.76533399999994,
+            "processCpuMs": 30.229,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 263.359375,
+            "totalMiB": 538.703125
+          }
+        ],
+        "4k": [
+          {
+            "ms": 103.42554099999984,
+            "maxLagMs": 105.56445799999983,
+            "processCpuMs": 102.783,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 313.265625,
+            "totalMiB": 588.875
+          },
+          {
+            "ms": 103.55045799999994,
+            "maxLagMs": 103.77883300000008,
+            "processCpuMs": 104.198,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 345.578125,
+            "totalMiB": 621.171875
+          },
+          {
+            "ms": 104.27645900000016,
+            "maxLagMs": 104.37529199999972,
+            "processCpuMs": 103.936,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 377.90625,
+            "totalMiB": 653.53125
+          },
+          {
+            "ms": 107.49637500000017,
+            "maxLagMs": 106.72495800000024,
+            "processCpuMs": 104.679,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 410.359375,
+            "totalMiB": 685.96875
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 292.99458300000015,
+            "maxLagMs": 295.9813330000002,
+            "processCpuMs": 292.803,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 846.984375,
+            "totalMiB": 1117.125
+          },
+          {
+            "ms": 295.0931249999999,
+            "maxLagMs": 295.3133750000002,
+            "processCpuMs": 293.751,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 410.671875,
+            "totalMiB": 680.84375
+          },
+          {
+            "ms": 291.2842919999998,
+            "maxLagMs": 291.48520899999994,
+            "processCpuMs": 290.805,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 503.921875,
+            "totalMiB": 774.140625
+          },
+          {
+            "ms": 293.00608399999965,
+            "maxLagMs": 293.2707909999999,
+            "processCpuMs": 292.619,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 597.171875,
+            "totalMiB": 867.359375
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 952.0444590000006,
+          "maxLagMs": 89.80154199999924,
+          "processCpuMs": 107.416,
+          "activeVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 2184.756292,
+          "maxLagMs": 60.31108399999903,
+          "processCpuMs": 205.04,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 204.296875,
+        "totalMiB": 476.390625
+      },
+      "wakeMs": [
+        6.62758400000007,
+        6.158167000000049,
+        4.676791999999978,
+        8.317000000000007,
+        14.103792000000112
+      ],
+      "largeSearch": [
+        {
+          "ms": 141.12424999999985,
+          "maxLagMs": 141.33695799999987,
+          "processCpuMs": 152.698,
+          "value": 1
+        },
+        {
+          "ms": 140.6699580000004,
+          "maxLagMs": 140.87354200000027,
+          "processCpuMs": 141.006,
+          "value": 1
+        },
+        {
+          "ms": 153.1636669999998,
+          "maxLagMs": 153.37070800000038,
+          "processCpuMs": 145.336,
+          "value": 1
+        },
+        {
+          "ms": 145.44379200000003,
+          "maxLagMs": 144.5599169999996,
+          "processCpuMs": 156.972,
+          "value": 1
+        },
+        {
+          "ms": 132.67033399999946,
+          "maxLagMs": 132.89183400000002,
+          "processCpuMs": 132.778,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 11
+      },
+      "progressCounts": {
+        "search": 10,
+        "shortcuts": 10,
+        "settings": 30,
+        "panelConfig": 29
+      }
+    },
+    {
+      "label": "before",
+      "round": 2,
+      "startupMs": 1013.380250000002,
+      "images": {
+        "1080p": [
+          {
+            "ms": 28.989166999999952,
+            "maxLagMs": 28.597333000000162,
+            "processCpuMs": 30.302,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 238.453125,
+            "totalMiB": 515.140625
+          },
+          {
+            "ms": 28.685040999999956,
+            "maxLagMs": 27.828415999999834,
+            "processCpuMs": 29.716,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 246.609375,
+            "totalMiB": 523.296875
+          },
+          {
+            "ms": 28.931208000000197,
+            "maxLagMs": 29.15608300000008,
+            "processCpuMs": 29.741,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 254.859375,
+            "totalMiB": 531.546875
+          },
+          {
+            "ms": 28.63649999999984,
+            "maxLagMs": 28.868999999999915,
+            "processCpuMs": 29.854,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 263.421875,
+            "totalMiB": 540.109375
+          }
+        ],
+        "4k": [
+          {
+            "ms": 102.19537500000001,
+            "maxLagMs": 102.41537500000004,
+            "processCpuMs": 110.707,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 471.5625,
+            "totalMiB": 748.53125
+          },
+          {
+            "ms": 106.98079200000006,
+            "maxLagMs": 107.06729100000007,
+            "processCpuMs": 110.069,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 282.5,
+            "totalMiB": 559.796875
+          },
+          {
+            "ms": 102.24175000000014,
+            "maxLagMs": 102.4437089999999,
+            "processCpuMs": 102.105,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 314.671875,
+            "totalMiB": 592
+          },
+          {
+            "ms": 100.73637500000018,
+            "maxLagMs": 100.9545840000003,
+            "processCpuMs": 100.243,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 347.0625,
+            "totalMiB": 624.375
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 301.83062500000005,
+            "maxLagMs": 303.86962500000027,
+            "processCpuMs": 301.626,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 500.265625,
+            "totalMiB": 770.453125
+          },
+          {
+            "ms": 298.4259159999997,
+            "maxLagMs": 298.6371670000003,
+            "processCpuMs": 297.635,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 593.390625,
+            "totalMiB": 863.609375
+          },
+          {
+            "ms": 299.983917,
+            "maxLagMs": 300.2059999999997,
+            "processCpuMs": 299.365,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 686.640625,
+            "totalMiB": 956.90625
+          },
+          {
+            "ms": 301.3455829999998,
+            "maxLagMs": 301.55624999999964,
+            "processCpuMs": 298.446,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 780.21875,
+            "totalMiB": 1050.453125
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 1152.746083,
+          "maxLagMs": 95.17920799999956,
+          "processCpuMs": 87.448,
+          "activeVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 2092.888459,
+          "maxLagMs": 53.03770900000018,
+          "processCpuMs": 161.471,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 204.546875,
+        "totalMiB": 478.140625
+      },
+      "wakeMs": [
+        5.530334000000039,
+        5.020750000000135,
+        4.420166000000108,
+        4.720250000000078,
+        8.78104200000007
+      ],
+      "largeSearch": [
+        {
+          "ms": 141.0815419999999,
+          "maxLagMs": 141.29266599999937,
+          "processCpuMs": 154.674,
+          "value": 1
+        },
+        {
+          "ms": 141.47862500000065,
+          "maxLagMs": 141.69445799999994,
+          "processCpuMs": 141.577,
+          "value": 1
+        },
+        {
+          "ms": 178.72000000000025,
+          "maxLagMs": 178.9340830000001,
+          "processCpuMs": 162.219,
+          "value": 1
+        },
+        {
+          "ms": 144.40250000000015,
+          "maxLagMs": 147.2320410000002,
+          "processCpuMs": 159.758,
+          "value": 1
+        },
+        {
+          "ms": 139.6544589999994,
+          "maxLagMs": 139.88216699999975,
+          "processCpuMs": 139.371,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 10
+      },
+      "progressCounts": {
+        "search": 10,
+        "shortcuts": 10,
+        "settings": 30,
+        "panelConfig": 29
+      }
+    },
+    {
+      "label": "after",
+      "round": 2,
+      "startupMs": 1012.0305419999931,
+      "images": {
+        "1080p": [
+          {
+            "ms": 179.85737500000005,
+            "maxLagMs": 47.742541000000074,
+            "processCpuMs": 51.054,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 262.765625,
+            "totalMiB": 676.1875
+          },
+          {
+            "ms": 42.18879199999992,
+            "maxLagMs": 1.6866250000000491,
+            "processCpuMs": 4.359,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 263.09375,
+            "totalMiB": 685.03125
+          },
+          {
+            "ms": 69.1455410000001,
+            "maxLagMs": 12.284457999999859,
+            "processCpuMs": 7.574,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 263.484375,
+            "totalMiB": 693.765625
+          },
+          {
+            "ms": 73.74945900000012,
+            "maxLagMs": 7.346499999999878,
+            "processCpuMs": 7.782,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 263.84375,
+            "totalMiB": 702.828125
+          }
+        ],
+        "4k": [
+          {
+            "ms": 224.48929199999998,
+            "maxLagMs": 29.19729200000006,
+            "processCpuMs": 72.851,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 243.5625,
+            "totalMiB": 681.828125
+          },
+          {
+            "ms": 105.6623340000001,
+            "maxLagMs": 0.47062499999992724,
+            "processCpuMs": 6.975,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 244.203125,
+            "totalMiB": 714.890625
+          },
+          {
+            "ms": 115.3200410000004,
+            "maxLagMs": 15.300083000000086,
+            "processCpuMs": 14.17,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 244.984375,
+            "totalMiB": 686.84375
+          },
+          {
+            "ms": 108.79337499999974,
+            "maxLagMs": 1.822208000000046,
+            "processCpuMs": 10.871,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 245.609375,
+            "totalMiB": 719.140625
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 430.583666,
+            "maxLagMs": 23.664208000000144,
+            "processCpuMs": 56.972,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 319.953125,
+            "totalMiB": 791.984375
+          },
+          {
+            "ms": 305.8006660000001,
+            "maxLagMs": 0.950540999999248,
+            "processCpuMs": 10.081,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 321.34375,
+            "totalMiB": 794.65625
+          },
+          {
+            "ms": 298.56574999999975,
+            "maxLagMs": 0.5632919999998194,
+            "processCpuMs": 10.413,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 324.203125,
+            "totalMiB": 889.4375
+          },
+          {
+            "ms": 299.46766599999955,
+            "maxLagMs": 0.47358299999996234,
+            "processCpuMs": 8.15,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 325.546875,
+            "totalMiB": 984.09375
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 168.17862500000047,
+          "maxLagMs": 107.80508299999929,
+          "processCpuMs": 58.978,
+          "activeVersion": "1.0.0",
+          "nextVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 107.51629099999991,
+          "maxLagMs": 9.527250000001004,
+          "processCpuMs": 40.824,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 219.3125,
+        "totalMiB": 508.4375
+      },
+      "wakeMs": [
+        10.567250000000058,
+        8.271207999999888,
+        5.85245800000007,
+        7.986916000000065,
+        7.115832999999839
+      ],
+      "largeSearch": [
+        {
+          "ms": 129.61575000000084,
+          "maxLagMs": 0.31620899999870744,
+          "processCpuMs": 114.137,
+          "value": 1
+        },
+        {
+          "ms": 68.51212499999929,
+          "maxLagMs": 0.20287500000085856,
+          "processCpuMs": 70.177,
+          "value": 1
+        },
+        {
+          "ms": 129.81662499999948,
+          "maxLagMs": 0.4882080000006681,
+          "processCpuMs": 116.618,
+          "value": 1
+        },
+        {
+          "ms": 105.87541699999929,
+          "maxLagMs": 0.2313750000012078,
+          "processCpuMs": 93.364,
+          "value": 1
+        },
+        {
+          "ms": 103.73641700000007,
+          "maxLagMs": 0.5857499999983702,
+          "processCpuMs": 96.443,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      },
+      "progressCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      }
+    },
+    {
+      "label": "after",
+      "round": 3,
+      "startupMs": 1138.1766249999928,
+      "images": {
+        "1080p": [
+          {
+            "ms": 197.21245799999997,
+            "maxLagMs": 18.35195900000008,
+            "processCpuMs": 53.59,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 254.015625,
+            "totalMiB": 664.484375
+          },
+          {
+            "ms": 30.012249999999995,
+            "maxLagMs": 0.45791700000017954,
+            "processCpuMs": 3.529,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 254.375,
+            "totalMiB": 673.359375
+          },
+          {
+            "ms": 29.885917000000063,
+            "maxLagMs": 0.42762500000003456,
+            "processCpuMs": 3.321,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 254.65625,
+            "totalMiB": 681.984375
+          },
+          {
+            "ms": 32.67949999999996,
+            "maxLagMs": 0.7243329999998878,
+            "processCpuMs": 3.439,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 254.90625,
+            "totalMiB": 690.921875
+          }
+        ],
+        "4k": [
+          {
+            "ms": 202.76766700000007,
+            "maxLagMs": 12.66749999999979,
+            "processCpuMs": 36.325,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 392.40625,
+            "totalMiB": 827.703125
+          },
+          {
+            "ms": 105.8133329999996,
+            "maxLagMs": 0.4604159999998956,
+            "processCpuMs": 5.309,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 392.984375,
+            "totalMiB": 860.625
+          },
+          {
+            "ms": 108.28183400000034,
+            "maxLagMs": 0.9694579999995767,
+            "processCpuMs": 6.483,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 393.546875,
+            "totalMiB": 832.375
+          },
+          {
+            "ms": 106.8125829999999,
+            "maxLagMs": 1.0835839999999735,
+            "processCpuMs": 5.897,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 394.09375,
+            "totalMiB": 864.578125
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 458.425291,
+            "maxLagMs": 15.33508299999994,
+            "processCpuMs": 49.864,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 423.78125,
+            "totalMiB": 915.90625
+          },
+          {
+            "ms": 297.4545000000003,
+            "maxLagMs": 0.8684999999995853,
+            "processCpuMs": 11.536,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 425.171875,
+            "totalMiB": 917.8125
+          },
+          {
+            "ms": 297.2745420000001,
+            "maxLagMs": 0.754624999999578,
+            "processCpuMs": 13.985,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 426.765625,
+            "totalMiB": 1011.359375
+          },
+          {
+            "ms": 301.9020839999994,
+            "maxLagMs": 0.5906249999998181,
+            "processCpuMs": 11.241,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 428.078125,
+            "totalMiB": 1105.9375
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 134.76391700000022,
+          "maxLagMs": 43.19725000000108,
+          "processCpuMs": 40.51,
+          "activeVersion": "1.0.0",
+          "nextVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 83.867291999999,
+          "maxLagMs": 10.451750000000175,
+          "processCpuMs": 27.668,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 218.765625,
+        "totalMiB": 509.265625
+      },
+      "wakeMs": [
+        9.587332999999944,
+        6.184416000000056,
+        6.2046670000001996,
+        7.515292000000045,
+        16.117957999999817
+      ],
+      "largeSearch": [
+        {
+          "ms": 112.00841700000092,
+          "maxLagMs": 5.166000000001077,
+          "processCpuMs": 104.601,
+          "value": 1
+        },
+        {
+          "ms": 71.96020800000042,
+          "maxLagMs": 0.2051659999997355,
+          "processCpuMs": 70.168,
+          "value": 1
+        },
+        {
+          "ms": 111.51766700000007,
+          "maxLagMs": 0.29087499999877764,
+          "processCpuMs": 93.248,
+          "value": 1
+        },
+        {
+          "ms": 117.89145800000006,
+          "maxLagMs": 0.763875000000553,
+          "processCpuMs": 102.533,
+          "value": 1
+        },
+        {
+          "ms": 117.22883299999921,
+          "maxLagMs": 0.4901669999999285,
+          "processCpuMs": 102.563,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      },
+      "progressCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      }
+    },
+    {
+      "label": "before",
+      "round": 3,
+      "startupMs": 1129.9923750000016,
+      "images": {
+        "1080p": [
+          {
+            "ms": 28.99108299999989,
+            "maxLagMs": 28.853166999999985,
+            "processCpuMs": 30.629,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 233,
+            "totalMiB": 506.609375
+          },
+          {
+            "ms": 30.77995900000019,
+            "maxLagMs": 31.05354199999988,
+            "processCpuMs": 30.717,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 241.125,
+            "totalMiB": 514.734375
+          },
+          {
+            "ms": 36.30708300000015,
+            "maxLagMs": 35.89104100000009,
+            "processCpuMs": 34.047,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 249.359375,
+            "totalMiB": 523
+          },
+          {
+            "ms": 28.435791999999992,
+            "maxLagMs": 27.783582999999908,
+            "processCpuMs": 30.028,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 257.875,
+            "totalMiB": 531.515625
+          }
+        ],
+        "4k": [
+          {
+            "ms": 105.41437500000006,
+            "maxLagMs": 104.88195799999994,
+            "processCpuMs": 109.719,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 307.453125,
+            "totalMiB": 581.34375
+          },
+          {
+            "ms": 104.8254159999999,
+            "maxLagMs": 105.04154100000005,
+            "processCpuMs": 103.468,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 339.78125,
+            "totalMiB": 613.671875
+          },
+          {
+            "ms": 107.82170799999994,
+            "maxLagMs": 108.06079200000022,
+            "processCpuMs": 104.107,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 372.125,
+            "totalMiB": 646.03125
+          },
+          {
+            "ms": 102.24762499999997,
+            "maxLagMs": 102.45208300000013,
+            "processCpuMs": 102.029,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 404.46875,
+            "totalMiB": 678.359375
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 292.17229099999986,
+            "maxLagMs": 292.2089579999997,
+            "processCpuMs": 292.985,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 769.421875,
+            "totalMiB": 1037.8125
+          },
+          {
+            "ms": 289.3448330000001,
+            "maxLagMs": 289.5592919999999,
+            "processCpuMs": 288.999,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 404.71875,
+            "totalMiB": 673.125
+          },
+          {
+            "ms": 285.9145419999995,
+            "maxLagMs": 286.0697089999999,
+            "processCpuMs": 285.543,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 497.96875,
+            "totalMiB": 766.390625
+          },
+          {
+            "ms": 312.33141700000033,
+            "maxLagMs": 312.52679199999966,
+            "processCpuMs": 312.377,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 591.5625,
+            "totalMiB": 859.953125
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 1021.4042079999999,
+          "maxLagMs": 123.21054100000038,
+          "processCpuMs": 147.06,
+          "activeVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 2103.8744580000002,
+          "maxLagMs": 19.62695800000074,
+          "processCpuMs": 157.794,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 198.3125,
+        "totalMiB": 469.015625
+      },
+      "wakeMs": [
+        7.678708000000142,
+        5.2754580000000715,
+        5.360249999999951,
+        4.994166999999834,
+        8.644834000000174
+      ],
+      "largeSearch": [
+        {
+          "ms": 172.7168330000004,
+          "maxLagMs": 172.96479199999976,
+          "processCpuMs": 186.929,
+          "value": 1
+        },
+        {
+          "ms": 162.51058300000022,
+          "maxLagMs": 162.73833300000024,
+          "processCpuMs": 159.945,
+          "value": 1
+        },
+        {
+          "ms": 209.36883299999954,
+          "maxLagMs": 209.57570899999973,
+          "processCpuMs": 179.343,
+          "value": 1
+        },
+        {
+          "ms": 204.97383400000035,
+          "maxLagMs": 207.8821250000001,
+          "processCpuMs": 199.749,
+          "value": 1
+        },
+        {
+          "ms": 150.82879199999934,
+          "maxLagMs": 149.94516600000043,
+          "processCpuMs": 149.604,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 11
+      },
+      "progressCounts": {
+        "search": 10,
+        "shortcuts": 10,
+        "settings": 30,
+        "panelConfig": 29
+      }
+    },
+    {
+      "label": "before",
+      "round": 4,
+      "startupMs": 1000.9180000000051,
+      "images": {
+        "1080p": [
+          {
+            "ms": 29.631415999999945,
+            "maxLagMs": 29.496249999999918,
+            "processCpuMs": 30.442,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 238.765625,
+            "totalMiB": 514.65625
+          },
+          {
+            "ms": 28.511334000000033,
+            "maxLagMs": 28.765041999999994,
+            "processCpuMs": 29.526,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 247.03125,
+            "totalMiB": 522.9375
+          },
+          {
+            "ms": 28.802374999999984,
+            "maxLagMs": 28.271582999999964,
+            "processCpuMs": 29.572,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 255.34375,
+            "totalMiB": 531.25
+          },
+          {
+            "ms": 28.587332999999944,
+            "maxLagMs": 27.70612499999993,
+            "processCpuMs": 29.083,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 263.875,
+            "totalMiB": 539.78125
+          }
+        ],
+        "4k": [
+          {
+            "ms": 107.2255419999999,
+            "maxLagMs": 108.59349999999995,
+            "processCpuMs": 114.472,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 313.953125,
+            "totalMiB": 590.296875
+          },
+          {
+            "ms": 103.05349999999999,
+            "maxLagMs": 102.61033399999997,
+            "processCpuMs": 103.487,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 346.265625,
+            "totalMiB": 622.59375
+          },
+          {
+            "ms": 102.0936250000002,
+            "maxLagMs": 102.30812500000025,
+            "processCpuMs": 101.861,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 378.59375,
+            "totalMiB": 654.921875
+          },
+          {
+            "ms": 102.72524999999996,
+            "maxLagMs": 102.92225000000008,
+            "processCpuMs": 102.29,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 410.9375,
+            "totalMiB": 687.25
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 292.89295800000036,
+            "maxLagMs": 295.6242089999996,
+            "processCpuMs": 292.716,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 844.078125,
+            "totalMiB": 1114.171875
+          },
+          {
+            "ms": 290.5209579999996,
+            "maxLagMs": 290.7402079999997,
+            "processCpuMs": 289.942,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 411.75,
+            "totalMiB": 681.828125
+          },
+          {
+            "ms": 295.41333299999997,
+            "maxLagMs": 295.6128329999997,
+            "processCpuMs": 294.91,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 505,
+            "totalMiB": 775.078125
+          },
+          {
+            "ms": 296.9743749999998,
+            "maxLagMs": 297.18574999999964,
+            "processCpuMs": 296.6,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 598.25,
+            "totalMiB": 868.3125
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 988.5485410000001,
+          "maxLagMs": 52.913000000000466,
+          "processCpuMs": 93.844,
+          "activeVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 2126.0819580000007,
+          "maxLagMs": 64.51020900000003,
+          "processCpuMs": 164.883,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 200.4375,
+        "totalMiB": 473.1875
+      },
+      "wakeMs": [
+        21.373917000000006,
+        11.026542000000063,
+        11.522000000000162,
+        6.5617919999999685,
+        7.178042000000005
+      ],
+      "largeSearch": [
+        {
+          "ms": 142.28379200000018,
+          "maxLagMs": 142.4862089999997,
+          "processCpuMs": 153.729,
+          "value": 1
+        },
+        {
+          "ms": 137.78450000000066,
+          "maxLagMs": 137.99112500000047,
+          "processCpuMs": 137.905,
+          "value": 1
+        },
+        {
+          "ms": 145.8904590000002,
+          "maxLagMs": 146.1058749999993,
+          "processCpuMs": 145.391,
+          "value": 1
+        },
+        {
+          "ms": 133.6299170000002,
+          "maxLagMs": 136.70208300000013,
+          "processCpuMs": 148.618,
+          "value": 1
+        },
+        {
+          "ms": 132.55599999999959,
+          "maxLagMs": 132.77066699999978,
+          "processCpuMs": 132.645,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 11
+      },
+      "progressCounts": {
+        "search": 10,
+        "shortcuts": 10,
+        "settings": 30,
+        "panelConfig": 29
+      }
+    },
+    {
+      "label": "after",
+      "round": 4,
+      "startupMs": 1014.7461670000048,
+      "images": {
+        "1080p": [
+          {
+            "ms": 390.68899999999985,
+            "maxLagMs": 227.37299999999982,
+            "processCpuMs": 72.106,
+            "pngBytes": 33251,
+            "cold": true,
+            "mainMiB": 253.484375,
+            "totalMiB": 663.21875
+          },
+          {
+            "ms": 39.44599999999991,
+            "maxLagMs": 12.205832999999984,
+            "processCpuMs": 5.954,
+            "pngBytes": 33239,
+            "cold": false,
+            "mainMiB": 253.671875,
+            "totalMiB": 671.984375
+          },
+          {
+            "ms": 53.733625000000075,
+            "maxLagMs": 8.801584000000048,
+            "processCpuMs": 4.52,
+            "pngBytes": 33249,
+            "cold": false,
+            "mainMiB": 253.9375,
+            "totalMiB": 680.78125
+          },
+          {
+            "ms": 30.436500000000024,
+            "maxLagMs": 0.5481250000000273,
+            "processCpuMs": 2.939,
+            "pngBytes": 33248,
+            "cold": false,
+            "mainMiB": 254.171875,
+            "totalMiB": 689.453125
+          }
+        ],
+        "4k": [
+          {
+            "ms": 233.4060830000003,
+            "maxLagMs": 24.74920800000018,
+            "processCpuMs": 48.861,
+            "pngBytes": 119395,
+            "cold": true,
+            "mainMiB": 265.21875,
+            "totalMiB": 700.015625
+          },
+          {
+            "ms": 105.07000000000016,
+            "maxLagMs": 0.4601249999996071,
+            "processCpuMs": 4.905,
+            "pngBytes": 119391,
+            "cold": false,
+            "mainMiB": 265.84375,
+            "totalMiB": 733.015625
+          },
+          {
+            "ms": 110.01216699999986,
+            "maxLagMs": 0.5195410000001175,
+            "processCpuMs": 7.307,
+            "pngBytes": 119387,
+            "cold": false,
+            "mainMiB": 266.515625,
+            "totalMiB": 704.875
+          },
+          {
+            "ms": 104.93762500000003,
+            "maxLagMs": 0.4021250000000691,
+            "processCpuMs": 4.553,
+            "pngBytes": 119374,
+            "cold": false,
+            "mainMiB": 267.125,
+            "totalMiB": 737.140625
+          }
+        ],
+        "24mp": [
+          {
+            "ms": 413.0231249999997,
+            "maxLagMs": 18.819208000000344,
+            "processCpuMs": 46.82,
+            "pngBytes": 338146,
+            "cold": true,
+            "mainMiB": 422.921875,
+            "totalMiB": 913.546875
+          },
+          {
+            "ms": 299.3704170000001,
+            "maxLagMs": 0.913166999999703,
+            "processCpuMs": 8.981,
+            "pngBytes": 338147,
+            "cold": false,
+            "mainMiB": 424.328125,
+            "totalMiB": 916.28125
+          },
+          {
+            "ms": 294.62858400000005,
+            "maxLagMs": 0.5702499999997599,
+            "processCpuMs": 8.029,
+            "pngBytes": 338202,
+            "cold": false,
+            "mainMiB": 425.90625,
+            "totalMiB": 1009.78125
+          },
+          {
+            "ms": 298.70858300000054,
+            "maxLagMs": 0.5540000000000873,
+            "processCpuMs": 8.028,
+            "pngBytes": 338155,
+            "cold": false,
+            "mainMiB": 427.078125,
+            "totalMiB": 1104.21875
+          }
+        ]
+      },
+      "plugins": {
+        "slow": {
+          "ms": 155.6834170000002,
+          "maxLagMs": 35.58941599999889,
+          "processCpuMs": 80.352,
+          "activeVersion": "1.0.0",
+          "nextVersion": "1.1.0"
+        },
+        "timeout": {
+          "ms": 118.3557499999988,
+          "maxLagMs": 10.891999999999825,
+          "processCpuMs": 40.877,
+          "activeVersion": "1.0.0"
+        }
+      },
+      "homeMemory": {
+        "mainMiB": 218.78125,
+        "totalMiB": 507.359375
+      },
+      "wakeMs": [
+        6.899584000000004,
+        4.714875000000006,
+        5.787750000000187,
+        4.628582999999935,
+        5.228207999999995
+      ],
+      "largeSearch": [
+        {
+          "ms": 100.24666700000125,
+          "maxLagMs": 0.8727500000004511,
+          "processCpuMs": 105.747,
+          "value": 1
+        },
+        {
+          "ms": 72.29441600000064,
+          "maxLagMs": 0.9424579999995331,
+          "processCpuMs": 72.521,
+          "value": 1
+        },
+        {
+          "ms": 96.59358400000019,
+          "maxLagMs": 0.21841700000004494,
+          "processCpuMs": 89.211,
+          "value": 1
+        },
+        {
+          "ms": 112.54045800000131,
+          "maxLagMs": 0.20183300000098825,
+          "processCpuMs": 94.174,
+          "value": 1
+        },
+        {
+          "ms": 110.22358399999939,
+          "maxLagMs": 0.24829199999840057,
+          "processCpuMs": 103.71,
+          "value": 1
+        }
+      ],
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      },
+      "progressCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      }
+    }
+  ],
+  "summary": {
+    "before": {
+      "startupMs": {
+        "samples": 5,
+        "p50": 1129.9923750000016,
+        "p95": 1604.199084
+      },
+      "wakeMs": {
+        "samples": 25,
+        "p50": 6.5617919999999685,
+        "p95": 14.103792000000112
+      },
+      "homeRssMiB": {
+        "samples": 5,
+        "p50": 473.1875,
+        "p95": 478.140625
+      },
+      "images": {
+        "1080p": {
+          "cold": {
+            "ms": {
+              "samples": 5,
+              "p50": 29.631415999999945,
+              "p95": 30.395749999999907
+            },
+            "maxLagMs": {
+              "samples": 5,
+              "p50": 29.496249999999918,
+              "p95": 33.79854099999989
+            },
+            "processCpuMs": {
+              "samples": 5,
+              "p50": 30.629,
+              "p95": 33.336
+            },
+            "totalMiB": {
+              "samples": 5,
+              "p50": 513.59375,
+              "p95": 515.140625
+            }
+          },
+          "warm": {
+            "ms": {
+              "samples": 15,
+              "p50": 28.685040999999956,
+              "p95": 36.30708300000015
+            },
+            "maxLagMs": {
+              "samples": 15,
+              "p50": 28.77391700000021,
+              "p95": 35.89104100000009
+            },
+            "processCpuMs": {
+              "samples": 15,
+              "p50": 30.028,
+              "p95": 34.047
+            },
+            "totalMiB": {
+              "samples": 15,
+              "p50": 530.03125,
+              "p95": 540.109375
+            }
+          }
+        },
+        "4k": {
+          "cold": {
+            "ms": {
+              "samples": 5,
+              "p50": 105.41437500000006,
+              "p95": 107.2255419999999
+            },
+            "maxLagMs": {
+              "samples": 5,
+              "p50": 105.56445799999983,
+              "p95": 108.59349999999995
+            },
+            "processCpuMs": {
+              "samples": 5,
+              "p50": 110.707,
+              "p95": 114.472
+            },
+            "totalMiB": {
+              "samples": 5,
+              "p50": 588.875,
+              "p95": 748.53125
+            }
+          },
+          "warm": {
+            "ms": {
+              "samples": 15,
+              "p50": 103.05349999999999,
+              "p95": 107.82170799999994
+            },
+            "maxLagMs": {
+              "samples": 15,
+              "p50": 102.92225000000008,
+              "p95": 108.06079200000022
+            },
+            "processCpuMs": {
+              "samples": 15,
+              "p50": 103.164,
+              "p95": 110.069
+            },
+            "totalMiB": {
+              "samples": 15,
+              "p50": 642.453125,
+              "p95": 687.25
+            }
+          }
+        },
+        "24mp": {
+          "cold": {
+            "ms": {
+              "samples": 5,
+              "p50": 292.89295800000036,
+              "p95": 301.83062500000005
+            },
+            "maxLagMs": {
+              "samples": 5,
+              "p50": 295.6242089999996,
+              "p95": 303.86962500000027
+            },
+            "processCpuMs": {
+              "samples": 5,
+              "p50": 292.803,
+              "p95": 301.626
+            },
+            "totalMiB": {
+              "samples": 5,
+              "p50": 1114.171875,
+              "p95": 1124.578125
+            }
+          },
+          "warm": {
+            "ms": {
+              "samples": 15,
+              "p50": 293.00608399999965,
+              "p95": 312.33141700000033
+            },
+            "maxLagMs": {
+              "samples": 15,
+              "p50": 293.2707909999999,
+              "p95": 312.52679199999966
+            },
+            "processCpuMs": {
+              "samples": 15,
+              "p50": 292.619,
+              "p95": 312.377
+            },
+            "totalMiB": {
+              "samples": 15,
+              "p50": 774.140625,
+              "p95": 1050.453125
+            }
+          }
+        }
+      },
+      "largeSearch": {
+        "ms": {
+          "samples": 25,
+          "p50": 145.44379200000003,
+          "p95": 209.36883299999954
+        },
+        "maxLagMs": {
+          "samples": 25,
+          "p50": 145.22045900000012,
+          "p95": 209.57570899999973
+        },
+        "processCpuMs": {
+          "samples": 25,
+          "p50": 152.698,
+          "p95": 189.782
+        }
+      },
+      "plugins": {
+        "slow": {
+          "samples": 5,
+          "p50": 988.5485410000001,
+          "p95": 1152.746083
+        },
+        "timeout": {
+          "samples": 5,
+          "p50": 2103.8744580000002,
+          "p95": 2184.756292
+        }
+      },
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 11
+      },
+      "progressCounts": {
+        "search": 10,
+        "shortcuts": 10,
+        "settings": 30,
+        "panelConfig": 29
+      }
+    },
+    "after": {
+      "startupMs": {
+        "samples": 5,
+        "p50": 1136.718667000001,
+        "p95": 1232.5631669999984
+      },
+      "wakeMs": {
+        "samples": 25,
+        "p50": 6.899584000000004,
+        "p95": 16.117957999999817
+      },
+      "homeRssMiB": {
+        "samples": 5,
+        "p50": 508.4375,
+        "p95": 514.65625
+      },
+      "images": {
+        "1080p": {
+          "cold": {
+            "ms": {
+              "samples": 5,
+              "p50": 197.21245799999997,
+              "p95": 390.68899999999985
+            },
+            "maxLagMs": {
+              "samples": 5,
+              "p50": 47.742541000000074,
+              "p95": 227.37299999999982
+            },
+            "processCpuMs": {
+              "samples": 5,
+              "p50": 55.084,
+              "p95": 111.845
+            },
+            "totalMiB": {
+              "samples": 5,
+              "p50": 664.484375,
+              "p95": 679.390625
+            }
+          },
+          "warm": {
+            "ms": {
+              "samples": 15,
+              "p50": 32.67949999999996,
+              "p95": 113.42783399999985
+            },
+            "maxLagMs": {
+              "samples": 15,
+              "p50": 0.6239160000000084,
+              "p95": 12.284457999999859
+            },
+            "processCpuMs": {
+              "samples": 15,
+              "p50": 4.359,
+              "p95": 7.782
+            },
+            "totalMiB": {
+              "samples": 15,
+              "p50": 687.125,
+              "p95": 705.796875
+            }
+          }
+        },
+        "4k": {
+          "cold": {
+            "ms": {
+              "samples": 5,
+              "p50": 224.48929199999998,
+              "p95": 234.74379199999976
+            },
+            "maxLagMs": {
+              "samples": 5,
+              "p50": 20.011916000000383,
+              "p95": 29.19729200000006
+            },
+            "processCpuMs": {
+              "samples": 5,
+              "p50": 48.861,
+              "p95": 79.868
+            },
+            "totalMiB": {
+              "samples": 5,
+              "p50": 697.75,
+              "p95": 827.703125
+            }
+          },
+          "warm": {
+            "ms": {
+              "samples": 15,
+              "p50": 106.8125829999999,
+              "p95": 159.30700000000024
+            },
+            "maxLagMs": {
+              "samples": 15,
+              "p50": 0.47062499999992724,
+              "p95": 48.91666600000008
+            },
+            "processCpuMs": {
+              "samples": 15,
+              "p50": 5.638,
+              "p95": 14.17
+            },
+            "totalMiB": {
+              "samples": 15,
+              "p50": 722.1875,
+              "p95": 864.578125
+            }
+          }
+        },
+        "24mp": {
+          "cold": {
+            "ms": {
+              "samples": 5,
+              "p50": 415.09762500000033,
+              "p95": 458.425291
+            },
+            "maxLagMs": {
+              "samples": 5,
+              "p50": 18.819208000000344,
+              "p95": 23.664208000000144
+            },
+            "processCpuMs": {
+              "samples": 5,
+              "p50": 49.864,
+              "p95": 56.972
+            },
+            "totalMiB": {
+              "samples": 5,
+              "p50": 913.546875,
+              "p95": 929.34375
+            }
+          },
+          "warm": {
+            "ms": {
+              "samples": 15,
+              "p50": 298.56574999999975,
+              "p95": 307.6804170000005
+            },
+            "maxLagMs": {
+              "samples": 15,
+              "p50": 0.5906249999998181,
+              "p95": 0.950540999999248
+            },
+            "processCpuMs": {
+              "samples": 15,
+              "p50": 8.15,
+              "p95": 13.985
+            },
+            "totalMiB": {
+              "samples": 15,
+              "p50": 1007.875,
+              "p95": 1120.171875
+            }
+          }
+        }
+      },
+      "largeSearch": {
+        "ms": {
+          "samples": 25,
+          "p50": 111.38033300000097,
+          "p95": 129.61575000000084
+        },
+        "maxLagMs": {
+          "samples": 25,
+          "p50": 0.3717500000002474,
+          "p95": 1.0094169999993028
+        },
+        "processCpuMs": {
+          "samples": 25,
+          "p50": 95.68,
+          "p95": 114.137
+        }
+      },
+      "plugins": {
+        "slow": {
+          "samples": 5,
+          "p50": 155.6834170000002,
+          "p95": 226.72600000000057
+        },
+        "timeout": {
+          "samples": 5,
+          "p50": 83.867291999999,
+          "p95": 118.3557499999988
+        }
+      },
+      "idleCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      },
+      "progressCounts": {
+        "search": 0,
+        "shortcuts": 0,
+        "settings": 0,
+        "panelConfig": 0
+      }
+    }
+  }
+}

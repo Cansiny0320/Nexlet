@@ -18,6 +18,7 @@ await pack({
   ...common,
   entry: {
     index: 'src/main/index.ts',
+    'clipboard-store-worker': 'src/main/clipboard-store-worker.ts',
     'panel-native-worker': 'src/main/panel-native-worker.ts',
     'plugin-backend-worker': 'src/main/plugin-sdk/backend-worker.ts',
     'plugin-image-worker': 'src/main/plugin-sdk/image-worker.ts',
@@ -27,7 +28,7 @@ await pack({
 });
 await copyFile('src/main/match-worker.cjs', 'dist/main/match-worker.cjs');
 // Sandboxed preloads cannot load sibling chunks or npm packages.
-for (const name of ['host', 'plugin', 'desktop-tools']) {
+for (const name of ['host', 'plugin', 'desktop-tools', 'clipboard-image']) {
   await pack({
     ...common,
     entry: { [name]: 'src/preload/' + name + '.ts' },

@@ -78,9 +78,11 @@ export class PanelTrigger {
       }
     });
   }
-  setBusy(busy: boolean, config: PanelConfig) {
+  setBusy(busy: boolean, readConfig: PanelConfig | (() => PanelConfig)) {
     if (this.busy === busy) return;
     this.busy = busy;
+    if (!this.worker) return;
+    const config = typeof readConfig === 'function' ? readConfig() : readConfig;
     this.worker?.postMessage({
       type: 'config',
       config: {
