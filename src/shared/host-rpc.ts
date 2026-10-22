@@ -62,12 +62,23 @@ export type WindowInput =
   | { action: 'height'; height: number }
   | { action: 'detach'; view: string; snapshot?: ToolSessionSnapshot };
 export type ClipActionInput =
-  | { action: 'writeText'; text: string }
+  | { action: 'writeText' | 'pasteText'; text: string }
   | { action: 'writeImage' | 'saveImage'; data: string }
   | { action: 'writeFiles'; files: string[] }
   | { action: 'capture' }
   | { action: 'clear'; includeFavorites?: boolean }
-  | { action: 'copy' | 'paste' | 'delete' | 'station' | 'save'; ids: string[] }
+  | {
+      action:
+        | 'copy'
+        | 'paste'
+        | 'copyPlain'
+        | 'pastePlain'
+        | 'continue'
+        | 'delete'
+        | 'station'
+        | 'save';
+      ids: string[];
+    }
   | { action: 'favorite'; ids: string[]; value: boolean };
 export interface HostInputs {
   state: void;
@@ -93,6 +104,7 @@ export interface HostInputs {
     | { type: 'image'; data: string }
   );
   clearInput: void;
+  continueResult: import('./launch').ToolResult;
   launch: { id: string; inputId?: string; payload?: string; query?: string; mode?: 'open' };
   pin: string;
   commandConfig: CommandConfigInput;
@@ -101,6 +113,20 @@ export interface HostInputs {
   toolSession:
     | { action: 'read'; token: string }
     | { action: 'ready'; token: string; error?: string };
+  toolDraft:
+    | { action: 'read'; view: string }
+    | { action: 'save'; view: string; state: Record<string, unknown> }
+    | { action: 'clear' };
+  productivity:
+    | { action: 'read' }
+    | { action: 'save'; value: import('./productivity').ProductivityConfig };
+  snippetPreview: { body: string; values: Record<string, string> };
+  clearSearchPreferences: void;
+  configProfile:
+    | { action: 'export' | 'open' | 'undo' }
+    | { action: 'preview'; text: string }
+    | { action: 'apply'; token: string; categories: import('./config-profile').ProfileCategory[] };
+  workspaceRun: { id: string; action: 'run' | 'cancel' | 'status'; items?: string[] };
   window: WindowInput;
   settings: Partial<Settings>;
   rescan: void;
@@ -110,6 +136,14 @@ export interface HostInputs {
   clipIndex: { query?: string; kind?: string } | void;
   clipPage: { ids: string[]; revision: number };
   clipDetail: string;
+  clipOcr: { action: 'status' | 'import' } | { action: 'run' | 'cancel' | 'clear'; ids: string[] };
+  clipCleanup: {
+    action: 'preview' | 'apply';
+    start: number;
+    end: number;
+    includeFavorites: boolean;
+    revision?: number;
+  };
   clipAction: ClipActionInput;
   pads: void;
   savePad: { pad: Scratchpad; expectedUpdatedAt: number };
@@ -125,6 +159,7 @@ export interface HostInputs {
   fileSearchStatus: void;
   fileBrowse: { path: string; filter?: string; cursor?: string };
   fileInfo: string;
+  filePreview: string;
   fileAction: { action: 'open' | 'reveal' | 'copy' | 'download'; path?: string };
   openData: void;
 }
@@ -142,12 +177,19 @@ export interface HostOutputs {
   search: Command[] | SearchResponse;
   launchInput: LaunchInput;
   clearInput: boolean;
+  continueResult: LaunchInput;
   launch: { view?: string; payload?: string; opened?: boolean; needsQuery?: string };
   pin: boolean;
   commandConfig: CommandConfig | boolean;
   localPick: string | null;
   webShortcut: boolean;
   toolSession: ToolSessionSnapshot | boolean;
+  toolDraft: Record<string, unknown> | null | boolean;
+  productivity: import('./productivity').ProductivityConfig;
+  snippetPreview: string;
+  clearSearchPreferences: boolean;
+  configProfile: import('./config-profile').ProfilePreview | boolean | string | null;
+  workspaceRun: import('./productivity').WorkspaceResult[];
   window: PluginSearchState | [number, number] | boolean | null | undefined;
   settings: Settings;
   rescan: boolean;
@@ -157,6 +199,8 @@ export interface HostOutputs {
   clipIndex: ClipIndex;
   clipPage: ClipPage;
   clipDetail: ClipItem | undefined;
+  clipOcr: import('./clipboard-ocr').OcrIndexTask[];
+  clipCleanup: { count: number; revision: number };
   clipAction: boolean;
   pads: Scratchpad[];
   savePad: Scratchpad;
@@ -172,6 +216,7 @@ export interface HostOutputs {
   fileSearchStatus: FileSearchIndexStatus;
   fileBrowse: DirectoryPage;
   fileInfo: FileInfo;
+  filePreview: import('./file-preview').FilePreview;
   fileAction: boolean;
   openData: boolean;
 }

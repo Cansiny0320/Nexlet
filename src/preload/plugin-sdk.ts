@@ -16,6 +16,13 @@ export const onSdkEvent = (event: string, callback: (value: any) => void) => {
   return () => ipcRenderer.removeListener('plugin-sdk-event', listener);
 };
 export const sdk: PluginSdkExtensions = {
+  results: { publish: (result) => invoke('results.publish', result) },
+  session: {
+    read: () => invoke('session.read'),
+    save: (state) => invoke('session.save', state),
+    readImage: () => invoke('session.readImage'),
+    saveImage: (data) => invoke('session.saveImage', data),
+  },
   i18n: { getLocale: localeBridge.get, onChange: localeBridge.onChange },
   window: {
     info: (window) => invoke('window.info', { window }),

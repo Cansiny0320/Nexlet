@@ -5,6 +5,8 @@ import { formatShortcut } from '../shared/shortcut-display';
 import { recordedShortcutKey } from '../shared/shortcut-recording';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
+import { ClipboardControls } from './ClipboardControls';
+import { ConfigProfilePanel } from './ConfigProfile';
 import { PanelSettings } from './PanelSettings';
 import { CommandManager } from './CommandManager';
 import { UpdatePanel } from './UpdatePanel';
@@ -24,7 +26,7 @@ import { SettingsIconButton as IconButton } from './components/settings-icon-but
 import type { Settings as SettingsType } from '../shared/types';
 
 export function SettingsPanel() {
-  const { state, toast, refresh } = useApp();
+  const { state, toast, refresh, dialog } = useApp();
   const [shortcut, setShortcut] = useState(state.settings.shortcut),
     [recording, setRecording] = useState(false),
     [startupBusy, setStartupBusy] = useState(false);
@@ -161,6 +163,36 @@ export function SettingsPanel() {
           ]}
         />
       </div>
+      <div className="setting-row">
+        <div>
+          <strong>{t('重启后恢复工具状态')}</strong>
+          <p>{t('输入与结果仅存储在本机，不包含在配置导出中')}</p>
+        </div>
+        <Switch
+          aria-label={t('重启后恢复工具状态')}
+          checked={state.settings.restoreToolSessions}
+          onCheckedChange={(value) => void update({ restoreToolSessions: value })}
+        />
+      </div>
+      <div className="setting-row">
+        <strong>{t('工具草稿')}</strong>
+        <button
+          className="button"
+          onClick={async () => {
+            if (
+              await dialog({
+                title: t('清除工具草稿？'),
+                message: t('将清除当前输入与结果，包括跨重启保存的草稿。'),
+                confirm: t('清除'),
+                danger: true,
+              })
+            )
+              await api('toolDraft', { action: 'clear' });
+          }}
+        >
+          {t('清除工具草稿')}
+        </button>
+      </div>
       <div className="settings-section-title">
         <ClipboardList size={17} />
         {t('剪贴板')}
@@ -203,6 +235,7 @@ export function SettingsPanel() {
           }))}
         />
       </div>
+      <ClipboardControls />
       <div className="settings-section-title">
         <FolderSearch size={17} />
         {t('应用和快捷方式搜索')}
@@ -315,6 +348,23 @@ export function SettingsPanel() {
       {state.nativeStatus && <div className="settings-warning">{state.nativeStatus}</div>}
       <PanelSettings />
       <CommandManager />
+      <div className="setting-row">
+        <div>
+          <strong>{t('本地搜索偏好')}</strong>
+          <p>{t('仅根据普通指令搜索学习排序，不包含粘贴正文，也不会上传。')}</p>
+        </div>
+        <button
+          className="button"
+          onClick={() =>
+            void api('clearSearchPreferences')
+              .then(() => toast(t('搜索偏好已清除')))
+              .catch((error) => toast(errorText(error), true))
+          }
+        >
+          {t('清除搜索偏好')}
+        </button>
+      </div>
+      <ConfigProfilePanel />
       <UpdatePanel />
     </div>
   );

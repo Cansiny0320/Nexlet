@@ -21,6 +21,8 @@ import {
   LogOut,
   Monitor,
   SlidersHorizontal,
+  TextQuote,
+  Layers,
 } from 'lucide-react';
 import type { AppState, Command } from '../shared/types';
 import { builtInArtwork } from './tool-artwork';
@@ -104,6 +106,10 @@ export function ToolIcon({ command, size = 32 }: { command: Command; size?: numb
   const key = command.id.startsWith('tool:') ? command.id.slice(5) : command.kind;
   const icons: Record<string, typeof ClipboardList> = {
     clipboard: ClipboardList,
+    snippets: TextQuote,
+    snippet: TextQuote,
+    workspaces: Layers,
+    workspace: Layers,
     scratchpad: Calculator,
     plugins: Blocks,
     web: Globe,

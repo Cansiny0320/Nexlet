@@ -24,6 +24,8 @@ import { SPOTLIGHT_IDLE } from '../shared/spotlight';
 import { api, useApp, errorText, IconButton, Empty } from './common';
 import { FileIcon, fileKind } from './file-kind';
 import './filesearch.css';
+import { ActionMenu, useActionShortcut } from './ActionMenu';
+import type { FilePreview } from '../shared/file-preview';
 
 export function FileSearch() {
   const { state, toast, navigate } = useApp();
@@ -42,6 +44,15 @@ export function FileSearch() {
   const [info, setInfo] = useState<FileInfo | null>(null),
     [infoError, setInfoError] = useState(''),
     [infoBusy, setInfoBusy] = useState(false);
+  const [preview, setPreview] = useState<FilePreview | null>(null),
+    [previewError, setPreviewError] = useState(''),
+    [previewBusy, setPreviewBusy] = useState(false);
+  const [context, setContext] = useState<{
+    x: number;
+    y: number;
+    path: string;
+    directory: boolean;
+  } | null>(null);
   const [index, setIndex] = useState<FileSearchIndexStatus | null>(null),
     [preparationRequest, setPreparationRequest] = useState(0),
     [grantEpoch, setGrantEpoch] = useState(0);
@@ -262,6 +273,35 @@ export function FileSearch() {
       disposed = true;
     };
   }, [current?.path, grantEpoch, refresh]);
+  useActionShortcut(() => {
+    if (current)
+      setContext({ x: innerWidth - 230, y: 90, path: current.path, directory: current.directory });
+  });
+  useEffect(() => {
+    let active = true;
+    setPreview(null);
+    setPreviewError('');
+    setPreviewBusy(!!current && !current.directory);
+    const timer = setTimeout(() => {
+      if (current && !current.directory)
+        void api('filePreview', current.path)
+          .then(
+            (value) => {
+              if (active) setPreview(value);
+            },
+            (error) => {
+              if (active) setPreviewError(errorText(error));
+            },
+          )
+          .finally(() => {
+            if (active) setPreviewBusy(false);
+          });
+    }, 90);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [current?.path, grantEpoch, refresh]);
   const choose = (file: string) => (browsing ? setBrowseSelected(file) : setSelected(file));
   const action = async (action: 'open' | 'reveal' | 'copy' | 'download', path?: string) => {
     try {
@@ -321,6 +361,8 @@ export function FileSearch() {
     }
   };
   const keyboard = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229 || document.querySelector('[role=menu]'))
+      return;
     if (e.altKey && e.key === 'ArrowUp' && directory?.parent) {
       e.preventDefault();
       enter(directory.parent);
@@ -466,6 +508,16 @@ export function FileSearch() {
                     className="file-result"
                     key={item.path}
                     onClick={() => choose(item.path)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      choose(item.path);
+                      setContext({
+                        x: Math.min(event.clientX, innerWidth - 230),
+                        y: Math.min(event.clientY, innerHeight - 200),
+                        path: item.path,
+                        directory: item.directory,
+                      });
+                    }}
                     onDoubleClick={() => activate(item)}
                   >
                     <FileIcon name={item.name} directory={item.directory} />
@@ -535,6 +587,24 @@ export function FileSearch() {
                     <dd>{fileDate(info.modified)}</dd>
                   </dl>
                 )
+              )}
+              {!current.directory && (
+                <div className="file-content-preview" aria-label={t('文件预览')}>
+                  {previewBusy ? (
+                    <p role="status">{t('正在生成预览…')}</p>
+                  ) : previewError ? (
+                    <p role="alert">{previewError}</p>
+                  ) : preview?.kind === 'image' ? (
+                    <img src={preview.data} alt={current.name} />
+                  ) : preview?.kind === 'text' ? (
+                    <>
+                      <pre>{preview.text}</pre>
+                      {preview.truncated && <p>{t('仅预览前 256 KB')}</p>}
+                    </>
+                  ) : preview?.kind === 'unavailable' ? (
+                    <p>{preview.reason}</p>
+                  ) : null}
+                </div>
               )}
               <div className="file-info-actions">
                 <button className="button" onClick={() => activate(current)}>
@@ -606,6 +676,45 @@ export function FileSearch() {
           </>
         )}
       </footer>
+      {context && (
+        <ActionMenu x={context.x} y={context.y} onClose={() => setContext(null)}>
+          <button
+            onClick={() => {
+              if (context.directory) enter(context.path);
+              else void action('open', context.path);
+              setContext(null);
+            }}
+          >
+            {context.directory ? t('浏览文件夹') : t('打开文件')}
+          </button>
+          <button
+            onClick={() => {
+              void action('reveal', context.path);
+              setContext(null);
+            }}
+          >
+            {t('在文件管理器中显示')}
+          </button>
+          <button
+            onClick={() => {
+              void action('copy', context.path);
+              setContext(null);
+            }}
+          >
+            {t('复制路径')}
+          </button>
+          <button
+            onClick={() => {
+              void api('continueResult', { type: 'files', paths: [context.path] }).catch((error) =>
+                toast(errorText(error), true),
+              );
+              setContext(null);
+            }}
+          >
+            {t('继续处理')}
+          </button>
+        </ActionMenu>
+      )}
     </div>
   );
 }

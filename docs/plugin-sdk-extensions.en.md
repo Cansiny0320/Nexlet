@@ -2,7 +2,15 @@
 
 # Nexlet SDK extensions
 
-These extensions retain `apiVersion: 1` and existing interfaces, adding desktop capabilities through Nexlet APIs. **They do not provide compatibility with uTools source, API names, or packages.** These changes are unreleased; older hosts do not recognize new permissions. Public contracts live in `sdk/index.d.ts` and `src/shared/plugin-api.ts`; `node scripts/sync-plugin-sdk.mjs` generates the plugin repository's types.
+These extensions retain `apiVersion: 1` and existing interfaces, adding desktop capabilities through Nexlet APIs. **They do not provide compatibility with uTools source, API names, or packages.** Set the minimum host version for the APIs you use; older hosts may not recognize newer permissions. Public contracts live in `sdk/index.d.ts` and `src/shared/plugin-api.ts`; `node scripts/sync-plugin-sdk.mjs` generates the plugin repository's types.
+
+## Result handoff and drafts (v0.2.40)
+
+`nexlet.results.publish(result)` accepts `{ type: 'text', text, html? }`, `{ type: 'image', data }` (a data URL), or `{ type: 'files', resources }` (file tokens held by this plugin), and returns `Promise<true>`. The host opens the launcher for the user to choose the next tool without writing the clipboard. Files are revalidated and granted to the destination; arbitrary paths are not accepted. A text `PluginContext` may include untrusted `html`, which must be sanitized before rendering. Existing `search.returnToLauncher(text)` remains supported.
+
+`nexlet.session.read()` / `save(state)` access JSON drafts isolated by plugin, feature, and window; `readImage()` / `saveImage(Uint8Array)` provide one image slot. JSON is limited to 4 MB, each image to 20 MiB, and the total image cache to 64 MiB. Drafts last for the current run by default. User opt-in permits main-window restart restoration; detached windows are not persisted. Drafts are excluded from configuration export and must not contain API keys. Use `secrets` for credentials.
+
+Restore on `onEnter` only when no explicit new input is present. Return the saving Promise from `onOut`; state and image saves are permitted while closing, but new tasks are not. Restoration must not automatically restart network or compute work. Guard asynchronous results with a generation check. Feature-detect `nexlet.session` and `nexlet.results` for older hosts; plugins using these APIs should declare `minHostVersion: "0.2.40"`.
 
 ## Permissions and runtime boundaries
 

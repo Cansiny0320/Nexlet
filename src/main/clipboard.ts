@@ -5,10 +5,13 @@ import { existsSync } from 'node:fs';
 import type { ClipItem } from '../shared/types';
 import type { ClipboardStorage } from './clipboard-store';
 import type { Platform } from './platform';
+import { shouldRecordClipboard, textClipboardHash } from '../shared/clipboard';
 import { ClipboardImages } from './clipboard-image';
 
 const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 export class ClipboardService {
+  onCaptured: ((item: ClipItem) => void) | undefined;
+  foreground: (() => Promise<{ app: string; name?: string } | null>) | undefined;
   private timer: NodeJS.Timeout | null = null;
   private busy = false;
   private pending: Promise<void> = Promise.resolve();
@@ -55,13 +58,24 @@ export class ClipboardService {
     }
     const sequence = this.platform.sequence();
     if (!force && sequence !== null && sequence === this.lastSequence) return;
-    if (!force && !this.store.settings().clipboardEnabled) return;
+    const settings = this.store.settings();
+    if (!force && !shouldRecordClipboard(settings, null)) {
+      this.lastSequence = sequence;
+      return;
+    }
     this.busy = true;
     let idle!: () => void;
     this.pending = new Promise((resolve) => {
       idle = resolve;
     });
     try {
+      if (!force && settings.clipboardExcludedApps.length) {
+        const source = (await this.foreground?.().catch(() => null)) ?? null;
+        if (!shouldRecordClipboard(settings, source)) {
+          this.lastSequence = sequence;
+          return;
+        }
+      }
       const contents = await clipboard.read();
       const formats = contents.flatMap((item) => item.types);
       // Respect common password-manager and transient clipboard markers.
@@ -113,13 +127,27 @@ export class ClipboardService {
           };
         } else {
           const text = await clipboard.readText();
-          if (text && Buffer.byteLength(text) <= 2 * 1024 * 1024)
-            item = { ...base, kind: 'text', text, hash: hash('text:' + text) };
+          if (text && Buffer.byteLength(text) <= 2 * 1024 * 1024) {
+            const htmlItem = contents.find((item) => item.types.includes('text/html'));
+            const htmlBlob = htmlItem ? await htmlItem.getType('text/html') : null;
+            const html =
+              htmlBlob instanceof Blob && htmlBlob.size <= 2 * 1024 * 1024
+                ? await htmlBlob.text()
+                : undefined;
+            item = {
+              ...base,
+              kind: 'text',
+              text,
+              ...(html ? { html } : {}),
+              hash: hash(textClipboardHash(text, html)),
+            };
+          }
         }
       }
       if (item && (item.hash !== this.lastHash || !(await this.store.hasClipHash(item.hash)))) {
-        await this.store.addClip(item);
+        const saved = await this.store.addClip(item);
         await this.store.prune();
+        this.onCaptured?.(saved);
         this.lastHash = item.hash;
         this.changed();
       }
@@ -133,14 +161,38 @@ export class ClipboardService {
       idle();
     }
   }
-  async copy(ids: string[]): Promise<void> {
+  async importImage(bytes: Uint8Array): Promise<ClipItem> {
+    if (bytes.byteLength > 20 * 1024 * 1024) throw Error(t('图片超过 20 MB，无法导入'));
+    const image = await this.images.capture(bytes, this.store.images);
+    if (!image) throw Error(t('无法识别图片'));
+    const item = await this.store.addClip({
+      ...image,
+      id: randomUUID(),
+      kind: 'image',
+      text: t('图片 {{v0}} × {{v1}}', { v0: image.width, v1: image.height }),
+      createdAt: Date.now(),
+      favorite: false,
+    });
+    await this.store.prune();
+    this.changed();
+    return item;
+  }
+  async copy(ids: string[], plain = false): Promise<void> {
     const items = await Promise.all(ids.map((id) => this.store.clip(id)));
     if (!items.length || items.some((i) => !i)) throw new Error(t('请选择仍存在的记录'));
     const selected = items as ClipItem[];
     if (selected.every((i) => i.kind === 'text')) {
       const text = selected.map((i) => i.text).join('\n');
-      await clipboard.writeText(text);
-      this.lastHash = hash('text:' + text);
+      const html = !plain && selected.length === 1 ? selected[0].html : undefined;
+      if (html)
+        await clipboard.write([
+          new ElectronClipboardItem({
+            'text/plain': new Blob([text], { type: 'text/plain' }),
+            'text/html': new Blob([html], { type: 'text/html' }),
+          }),
+        ]);
+      else await clipboard.writeText(text);
+      this.lastHash = hash(textClipboardHash(text, html));
     } else if (selected.every((i) => i.kind === 'files')) {
       const files = [...new Set(selected.flatMap((i) => i.files || []))];
       if (files.some((file) => !existsSync(file))) throw new Error(t('部分原文件已移动或删除'));

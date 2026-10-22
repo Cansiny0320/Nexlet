@@ -1,5 +1,6 @@
 import { formatLocale, t } from '../shared/i18n';
 import { useToolState, useRestoreBarrier } from './tool-session';
+import { ResultActions } from './ActionMenu';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Copy,
@@ -322,6 +323,7 @@ export function JsonTool({ initial }: { initial: string }) {
   return (
     <div className="json-tool">
       <div className="json-toolbar">
+        <ResultActions result={{ type: 'text', text: output }} />
         <div className="json-tabs" role="tablist">
           <button
             role="tab"

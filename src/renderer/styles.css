@@ -1124,6 +1124,17 @@ p {
 .context-menu button:hover:not(:disabled) {
   background: var(--hover);
 }
+.context-menu button:focus-visible {
+  background: var(--selected);
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+.result-actions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
 .context-menu hr {
   border: 0;
   border-top: 1px solid var(--line);
@@ -1920,4 +1931,62 @@ p {
 }
 .view-launcher .context-menu button {
   font-size: 14px;
+}
+
+.profile-editor {
+  width: 100%;
+  min-height: 180px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.6 monospace;
+  resize: vertical;
+}
+.config-profile {
+  padding-bottom: 20px;
+}
+.config-profile details {
+  margin: 12px 0;
+}
+.profile-diff summary {
+  cursor: pointer;
+}
+.profile-diff input {
+  margin-right: 8px;
+}
+.profile-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+.profile-columns > div {
+  min-width: 0;
+}
+.profile-columns pre {
+  max-height: 240px;
+  overflow: auto;
+  background: var(--bg);
+  padding: 10px;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.command-label mark {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  border-radius: 2px;
+}
+
+.clip-ocr {
+  margin: 8px 0;
+  font: 12px/1.5 inherit;
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow: auto;
+  user-select: text;
 }

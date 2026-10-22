@@ -15,7 +15,10 @@ export type ClipboardMethod =
   | 'favorite'
   | 'deleteClips'
   | 'clearClips'
-  | 'prune';
+  | 'prune'
+  | 'clipRange'
+  | 'clearClipRange'
+  | 'setClipOcr';
 export interface ClipboardRequest {
   id: number;
   method: ClipboardMethod | 'close';
@@ -143,6 +146,15 @@ export class ClipboardStore {
   }
   clearClips(...args: Parameters<Store['clearClips']>) {
     return this.call('clearClips', ...args);
+  }
+  clipRange(...args: Parameters<Store['clipRange']>) {
+    return this.call('clipRange', ...args);
+  }
+  clearClipRange(...args: Parameters<Store['clearClipRange']>) {
+    return this.call('clearClipRange', ...args);
+  }
+  setClipOcr(...args: Parameters<Store['setClipOcr']>) {
+    return this.call('setClipOcr', ...args);
   }
   prune(...args: Parameters<Store['prune']>) {
     return this.call('prune', ...args);

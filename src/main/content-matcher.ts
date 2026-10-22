@@ -42,6 +42,7 @@ export class ContentMatcher {
     query: string,
     recent: string[],
     progress?: (value: SearchResponse) => void,
+    preferences: Record<string, number> = {},
   ): Promise<SearchResponse> {
     this.cancel(owner);
     const content = new Set<string>(),
@@ -59,7 +60,7 @@ export class ContentMatcher {
     const attach = (c: Command): Command => ({ ...c, inputId: input.id });
     const results =
       input.type === 'text' && query.length <= 1024
-        ? searchCommands(commands, query, recent).map(attach)
+        ? searchCommands(commands, query, recent, 60, preferences).map(attach)
         : [];
     const ids = new Set(results.map((c) => c.id)),
       builtins = builtinMatches(input);

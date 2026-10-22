@@ -1,0 +1,88 @@
+.productivity-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.productivity-columns {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+}
+.productivity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  padding-right: 14px;
+}
+.productivity-list > .scroll-panel {
+  min-height: 0;
+}
+.productivity-list .scroll-panel > button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.productivity-list .scroll-panel > button.active {
+  background: var(--selected);
+}
+.productivity-list small,
+.productivity-editor .muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+.productivity-editor {
+  min-width: 0;
+  padding-right: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.productivity-editor > label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.productivity-editor textarea {
+  min-height: 110px;
+  resize: vertical;
+  width: 100%;
+}
+.productivity-editor .form-row input {
+  min-width: 0;
+  flex: 1;
+}
+.productivity-editor .tool-buttons {
+  flex-wrap: wrap;
+}
+.workspace-item {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.workspace-item legend {
+  color: var(--muted);
+  padding: 0 6px;
+}
+.workspace-item textarea {
+  min-height: 55px;
+}
+@media (max-width: 650px) {
+  .productivity-columns {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 12px;
+  }
+}

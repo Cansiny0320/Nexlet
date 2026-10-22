@@ -17,6 +17,8 @@ import { MATCH_TARGETS } from '../shared/command-config';
 import type { LaunchInput, InputSource, SearchResponse } from '../shared/launch';
 import { api, useApp, ToolIcon, errorText } from './common';
 import { CommandEditor } from './CommandManager';
+import { highlightRanges } from '../shared/search';
+import { ActionMenu, useActionShortcut } from './ActionMenu';
 
 export function Launcher({
   query,
@@ -53,6 +55,10 @@ export function Launcher({
   const results = result?.results || [],
     matching = result?.matches || [];
   const layout = state.commandConfig.layout;
+  useActionShortcut(() => {
+    const command = visible.find((item) => item.id === activeId);
+    if (command) setMenu({ command, x: innerWidth - 240, y: 90 });
+  });
   useEffect(() => setSelected(''), [requestKey]);
   useEffect(() => {
     let valid = true;
@@ -79,7 +85,15 @@ export function Launcher({
       clearTimeout(timer);
       unsubscribe();
     };
-  }, [requestKey, capturing, state.commands, state.recent, state.catalogLoading, toast]);
+  }, [
+    requestKey,
+    capturing,
+    state.commands,
+    state.recent,
+    state.catalogLoading,
+    state.searchPreferenceRevision,
+    toast,
+  ]);
   const indexed = new Map(state.commands.map((c) => [c.id, c]));
   const pinned = state.pinned.map((id) => indexed.get(id)).filter((c): c is Command => !!c);
   const pinnedIds = new Set(state.pinned);
@@ -282,7 +296,7 @@ export function Launcher({
         >
           <ToolIcon command={{ ...command, icon: command.icon || icons[command.id] }} size={38} />
           <span className="command-label">
-            {command.name}
+            <HighlightedName name={command.name} query={query} />
             {layout === 'list' && <small>{command.subtitle}</small>}
           </span>
           {layout === 'list' && state.shortcutStatuses[command.id]?.effective && (
@@ -391,11 +405,15 @@ export function Launcher({
         </button>
       )}
       {menu && menuCommand && (
-        <div
-          className="context-menu launcher-menu"
-          style={{ left: menu.x, top: menu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <ActionMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
+          <button
+            onClick={() => {
+              setMenu(null);
+              void launch(menu.command);
+            }}
+          >
+            {t('打开')}
+          </button>
           <button onClick={() => void action({ action: 'pin', id: menuId })}>
             {state.pinned.includes(menuId) ? <PinOff size={15} /> : <Pin size={15} />}{' '}
             {state.pinned.includes(menuId) ? t('取消固定') : t('固定到首页')}
@@ -439,7 +457,7 @@ export function Launcher({
             <EyeOff size={15} />
             {t('禁用此功能')}
           </button>
-        </div>
+        </ActionMenu>
       )}
       {editing && (
         <CommandEditor
@@ -452,5 +470,25 @@ export function Launcher({
         />
       )}
     </div>
+  );
+}
+
+function HighlightedName({ name, query }: { name: string; query: string }) {
+  const ranges = highlightRanges(name, query);
+  let offset = 0;
+  return (
+    <>
+      {ranges.map(([start, end]) => {
+        const prefix = name.slice(offset, start);
+        offset = end;
+        return (
+          <span key={start}>
+            {prefix}
+            <mark>{name.slice(start, end)}</mark>
+          </span>
+        );
+      })}
+      {name.slice(offset)}
+    </>
   );
 }

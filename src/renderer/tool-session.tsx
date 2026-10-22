@@ -9,14 +9,23 @@ import {
   type SetStateAction,
 } from 'react';
 export interface ToolSession {
+  id: number;
   initial: Record<string, unknown>;
   values: Record<string, unknown>;
   before: Set<() => Promise<void>>;
   restores: Set<Promise<unknown>>;
+  changed?: () => void;
 }
 export const ToolSessionContext = createContext<ToolSession | null>(null);
+let nextSession = 0;
 export function createToolSession(initial: Record<string, unknown> = {}): ToolSession {
-  return { initial, values: {}, before: new Set(), restores: new Set() };
+  return {
+    id: ++nextSession,
+    initial,
+    values: { ...initial },
+    before: new Set(),
+    restores: new Set(),
+  };
 }
 export function useToolState<T>(
   key: string,
@@ -31,7 +40,10 @@ export function useToolState<T>(
         : initial,
   );
   useLayoutEffect(() => {
-    if (session) session.values[key] = value;
+    if (session) {
+      session.values[key] = value;
+      session.changed?.();
+    }
   }, [session, key, value]);
   return [value, setValue];
 }

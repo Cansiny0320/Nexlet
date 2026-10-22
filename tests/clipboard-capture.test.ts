@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from '../src/shared/types';
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 const { read, readText } = vi.hoisted(() => ({ read: vi.fn(), readText: vi.fn() }));
 vi.mock('electron', () => ({
@@ -27,7 +28,7 @@ it.each(['darwin', 'win32'] as const)(
     readText.mockResolvedValueOnce('earlier').mockResolvedValueOnce('selected input');
     const addClip = vi.fn(),
       store = {
-        settings: () => ({ clipboardEnabled: true }),
+        settings: () => ({ ...DEFAULT_SETTINGS, clipboardEnabled: true }),
         addClip,
         prune: () => {},
         hasClipHash: () => false,
@@ -56,7 +57,7 @@ it('临时选区事务暂停捕获，恢复后仍记录外部新复制', async (
   readText.mockResolvedValue('external copy');
   const addClip = vi.fn(),
     store = {
-      settings: () => ({ clipboardEnabled: true }),
+      settings: () => ({ ...DEFAULT_SETTINGS, clipboardEnabled: true }),
       addClip,
       prune: () => {},
       hasClipHash: () => false,

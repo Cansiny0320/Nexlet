@@ -16,6 +16,15 @@ import {
   webSearchCommands,
 } from '../shared/web-shortcuts';
 import { ToolHandoffs } from './tool-handoff';
+import { ToolDrafts } from './tool-drafts';
+import { Productivity } from './productivity';
+import { SearchPreferences } from './search-preferences';
+import { ConfigProfiles } from './config-profile';
+import type { ProfileCategory } from '../shared/config-profile';
+import { WorkspaceRunner } from './workspaces';
+import { executeWorkspaceItem } from './workspace-executor';
+import { renderSnippet } from '../shared/productivity';
+import { spawn } from 'node:child_process';
 import { launchLinuxApplication } from './linux-desktop';
 import { LINUX_DESKTOP_NAME } from './linux-startup';
 import { createUpdateTransport } from './update-transport';
@@ -39,7 +48,7 @@ import {
   systemPreferences,
 } from 'electron';
 import { mkdirSync, existsSync, readFileSync } from 'node:fs';
-import { copyFile, writeFile } from 'node:fs/promises';
+import { copyFile, writeFile, readFile, stat } from 'node:fs/promises';
 import { launchWindowsApplication } from './launch-windows';
 import path from 'node:path';
 import { Store } from './store';
@@ -50,12 +59,15 @@ import { release } from 'node:os';
 import { SystemActions } from './system-actions';
 import { createSystemExecutor } from './system-executor';
 import { Platform } from './platform';
+import { ClipboardOcr } from './clipboard-ocr';
+import { OcrIndexRunner } from './ocr-index-runner';
 import { ClipboardService } from './clipboard';
 import { PluginManager } from './plugins';
 import { LaunchInputs } from './launch-input';
 import { ContentMatcher } from './content-matcher';
 import { INPUT_TEXT_LIMIT } from '../shared/launch';
 import { Marketplace } from './marketplace';
+import { previewFile } from './file-preview';
 import { EverythingSearch } from './everything';
 import { StartupManager } from './startup';
 import { revealWindow, focusOnRestore } from './window-visibility';
@@ -89,6 +101,9 @@ async function bootstrap() {
   await app.whenReady();
   app.setAppUserModelId('app.nexlet.desktop');
   const store = new Store(app.getPath('userData'));
+  const drafts = new ToolDrafts(store);
+  const productivity = new Productivity(store);
+  const searchPreferences = new SearchPreferences(store);
   const systemLocale = (testMode && process.env.NEXLET_TEST_LOCALE) || app.getLocale();
   setLocale(resolveLocale(store.settings().language, systemLocale));
   ipcMain.handle('app-locale', () => currentLocale());
@@ -114,6 +129,30 @@ async function bootstrap() {
       if (!window.isDestroyed()) window.webContents.send('host-change', event);
     if (event === 'state') panel?.refresh();
   };
+  const workspaces = new WorkspaceRunner(
+    (item) =>
+      executeWorkspaceItem(item, {
+        platform: process.platform,
+        openPath: (target) => shell.openPath(target),
+        openExternal: (url) => shell.openExternal(url),
+        start: (program, args, cwd) =>
+          new Promise<void>((resolve, reject) => {
+            const child = spawn(program, args, {
+              cwd,
+              detached: true,
+              stdio: 'ignore',
+              shell: false,
+              windowsHide: false,
+            });
+            child.once('error', reject);
+            child.once('spawn', () => {
+              child.unref();
+              resolve();
+            });
+          }),
+      }),
+    (id, results) => notify('workspace-progress:' + JSON.stringify({ id, results })),
+  );
   const platform: Platform = new Platform(
     () => main?.getNativeWindowHandle(),
     async () => {
@@ -130,7 +169,23 @@ async function bootstrap() {
   catalog.restore(store.settings().searchPaths);
   const registry = new CommandRegistry(store, (ids) => catalog.resolveIds(ids));
   const panelConfig = new PanelConfigStore(store, () => registry.pinned());
+  const profiles = new ConfigProfiles(store, () => plugins.records());
+  const ocrRunner = new OcrIndexRunner(() => plugins.records());
+  const clipboardOcr = new ClipboardOcr(
+    clipStore,
+    (item, signal, progress) => ocrRunner.recognize(item, signal, progress),
+    () => {
+      notify('ocr-index');
+      notify('clips');
+    },
+  );
+  clips.onCaptured = (item) => {
+    if (item?.favorite && item.kind === 'image' && store.settings().clipboardOcrFavorites)
+      void clipboardOcr.enqueue([item.id], true).catch((error) => notify('error:' + error.message));
+  };
+
   const selectionPlatform = new SelectionPlatform(platform, clips);
+  clips.foreground = () => selectionPlatform.target();
   const selection = new SelectionService(selectionPlatform);
   const systemExecutor = createSystemExecutor();
   if (testMode)
@@ -144,12 +199,18 @@ async function bootstrap() {
   });
   const matcher = new ContentMatcher();
   const plugins = new PluginManager(store, notify, inputs, platform);
-  const returnToLauncher = async (value: Buffer | string) => {
-    await plugins.runtime.exitWindow(main);
+  plugins.drafts = drafts;
+  const returnToLauncher = async (
+    value: Buffer | string | import('../shared/plugin-api').PluginResult,
+    caller?: number,
+  ) => {
     const input =
       typeof value === 'string'
         ? inputs.setText(main.webContents.id, value, 'input')
-        : await inputs.captureImage(main.webContents.id, value);
+        : Buffer.isBuffer(value)
+          ? await inputs.captureImage(main.webContents.id, value)
+          : await inputs.publish(main.webContents.id, value, caller);
+    await plugins.runtime.exitWindow(main, false);
     revealWindow(main);
     main.webContents.send('host-change', 'selection-input:' + input.id);
     views.set(main.id, 'launcher');
@@ -394,7 +455,6 @@ async function bootstrap() {
         notify();
       }
     });
-
     window.once('ready-to-show', () => {
       if (!initiallyHidden) revealWindow(window);
     });
@@ -478,6 +538,7 @@ async function bootstrap() {
   function sourceCommands(settings = store.settings()): Command[] {
     return [
       ...BUILTIN_COMMANDS.map(localizeCommand),
+      ...productivity.commands(),
       ...desktopCommands(),
       ...catalog.items,
       ...systemActions.commands(),
@@ -536,6 +597,66 @@ async function bootstrap() {
               : {}),
         })),
     ];
+  }
+  async function settingsChanged(settings: Settings, next: Settings) {
+    if (next.language !== settings.language) {
+      setLocale(resolveLocale(next.language, systemLocale));
+      for (const contents of webContents.getAllWebContents())
+        if (!contents.isDestroyed()) contents.send('app-locale', currentLocale());
+      for (const owner of hosts.values()) owner.webContents.send('host-change', 'plugin-changed');
+      refreshTray();
+      panelTrigger.refreshLocale();
+      desktopTools.refreshLocale();
+      for (const window of hosts.values()) {
+        const view = views.get(window.id);
+        if (view && view !== 'launcher' && view !== 'plugin')
+          window.setTitle(
+            view === 'superpanel'
+              ? t('Nexlet · 超级面板')
+              : 'Nexlet · ' +
+                  t(BUILTIN_COMMANDS.find((c) => c.id === 'tool:' + view)?.name || '工具'),
+          );
+      }
+    }
+    updates.setAutomaticChecks(next.autoCheckUpdates);
+    if (next.restoreToolSessions !== settings.restoreToolSessions) {
+      drafts.persist();
+      await drafts.persistResources();
+    }
+    nativeTheme.themeSource = next.theme;
+    if (
+      next.language !== settings.language ||
+      JSON.stringify(next.searchPaths) !== JSON.stringify(settings.searchPaths)
+    )
+      void catalog.scan(next.searchPaths);
+    await clipStore.prune();
+    notify();
+    notify('clips');
+  }
+  async function applyProfile(
+    action: 'apply' | 'undo',
+    token: string,
+    selected: ProfileCategory[],
+  ) {
+    const previous = store.settings();
+    const wrap = (next: import('../shared/config-profile').ProfileCategories, write: () => void) =>
+      shortcuts.apply(
+        bindings(
+          { ...next.commands, revision: registry.read().revision, pinned: next.pinned },
+          { ...previous, ...next.settings, webShortcuts: next.webShortcuts },
+          { ...next.panel, revision: panelConfig.read().revision },
+        ),
+        write,
+      );
+    if (action === 'apply') profiles.apply(token, selected, wrap);
+    else profiles.undo(wrap);
+    if (
+      JSON.stringify(previous.fileSearchPaths) !== JSON.stringify(store.settings().fileSearchPaths)
+    )
+      await files.reset();
+    panelTrigger.configure(panelConfig.read());
+    syncShortcuts();
+    await settingsChanged(previous, store.settings());
   }
   let shortcutKey = '';
   function syncShortcuts(next = bindings()) {
@@ -625,6 +746,7 @@ async function bootstrap() {
       shortcutError,
       catalogLoading: catalog.loading,
       catalogRevision,
+      searchPreferenceRevision: searchPreferences.revision,
       nativeStatus: platform.status || clips.error,
       canPaste: !!platform.target,
     };
@@ -703,6 +825,12 @@ async function bootstrap() {
     registry.assertEnabled(id);
     const current = { settings: store.settings(), commands: registry.commands(sourceCommands()) };
     const snapshot = args.inputId ? inputs.get(window.webContents.id, args.inputId) : undefined;
+    const recordLaunch = (commandId: string) => {
+      const command = current.commands.find((item) => item.id === commandId);
+      if (command && snapshot?.input.type === 'text')
+        searchPreferences.learn(snapshot.input.text, snapshot.input.from, command);
+      recordRecent(commandId);
+    };
     const content =
       snapshot?.input.type === 'text'
         ? snapshot.input.text
@@ -712,7 +840,7 @@ async function bootstrap() {
     if (id.startsWith('capture:')) {
       if (!['capture:region', 'capture:screen'].includes(id)) throw Error(t('截图功能不存在'));
       await desktopTools.screenshot(id === 'capture:screen' ? 'screen' : 'region', 'launcher');
-      recordRecent(id);
+      recordLaunch(id);
       return { opened: true };
     }
     if (id === 'image:pin') {
@@ -735,7 +863,7 @@ async function bootstrap() {
       if (!bytes) throw Error(t('请先粘贴或拖入图片，再选择贴图'));
       await desktopTools.pin(bytes);
       window.hide();
-      recordRecent(id);
+      recordLaunch(id);
       return { opened: true };
     }
     if (id === 'input:url') {
@@ -768,7 +896,7 @@ async function bootstrap() {
       }
       await clips.capture(true);
       if (clips.error) throw Error(clips.error);
-      recordRecent('tool:clipboard');
+      recordLaunch('tool:clipboard');
       return { view: 'clipboard' };
     }
     if (['match:calc', 'match:json', 'match:clipboard', 'match:timestamp'].includes(id)) {
@@ -781,11 +909,22 @@ async function bootstrap() {
             : id === 'match:timestamp'
               ? 'timestamp'
               : 'clipboard';
-      recordRecent('tool:' + view);
+      recordLaunch('tool:' + view);
       return { view, payload: content };
     }
     const command = current.commands.find((c) => c.id === id);
     if (!command) throw new Error(t('工具或快捷方式已不存在，请刷新索引'));
+    if (command.kind === 'snippet' || command.kind === 'workspace') {
+      await plugins.runtime.exitWindow(window);
+      recordLaunch(id);
+      return {
+        view: command.kind === 'snippet' ? 'snippets' : 'workspaces',
+        payload: JSON.stringify({
+          id: id.slice(id.indexOf(':') + 1),
+          run: command.kind === 'workspace',
+        }),
+      };
+    }
     if (command.kind === 'system') {
       try {
         const opened = await systemActions.launch(id, (c) =>
@@ -807,7 +946,7 @@ async function bootstrap() {
           }),
         );
         if (opened) {
-          recordRecent(id);
+          recordLaunch(id);
           window.hide();
         }
         return { opened };
@@ -825,12 +964,12 @@ async function bootstrap() {
           ) || [...hosts.values()].find((w) => w === main && views.get(w.id) === view);
         if (target) {
           revealWindow(target);
-          recordRecent(id);
+          recordLaunch(id);
           return { opened: true };
         }
       }
       await plugins.runtime.exitWindow(window);
-      recordRecent(id);
+      recordLaunch(id);
       return {
         view,
         ...(snapshot?.input.type === 'text' && snapshot.input.from !== 'input'
@@ -840,11 +979,11 @@ async function bootstrap() {
     }
     if (command.kind === 'plugin') {
       if (args.mode === 'open' && plugins.runtime.focus(command.pluginId!, command.feature!)) {
-        recordRecent(id);
+        recordLaunch(id);
         return { opened: true };
       }
       await plugins.launch(command.pluginId!, command.feature!, content, snapshot);
-      recordRecent(id);
+      recordLaunch(id);
       return { opened: true };
     }
     if (command.kind === 'web') {
@@ -879,7 +1018,7 @@ async function bootstrap() {
       const error = await shell.openPath(command.path);
       if (error) throw new Error(error);
     }
-    recordRecent(id);
+    recordLaunch(id);
     window.hide();
     return { opened: true };
   }
@@ -1015,7 +1154,13 @@ async function bootstrap() {
           if (typeof payload === 'string') {
             const current = searchState();
             return catalog.withIcons(
-              searchCommands(current.commands, text(payload, 1024), current.recent),
+              searchCommands(
+                current.commands,
+                text(payload, 1024),
+                current.recent,
+                60,
+                searchPreferences.weights(payload),
+              ),
             );
           }
           const args = inputObject(payload),
@@ -1056,6 +1201,7 @@ async function bootstrap() {
                     });
                 }
               : undefined,
+            input.from === 'input' ? searchPreferences.weights(query) : {},
           );
           return result.cancelled ? result : decorate(result);
         }
@@ -1068,6 +1214,12 @@ async function bootstrap() {
         matcher.cancel(event.sender.id);
         inputs.clear(event.sender.id);
         return true;
+      }),
+      continueResult: hostProcedure<'continueResult'>(authorize, async (payload) => {
+        matcher.cancel(event.sender.id);
+        const input = await inputs.publish(event.sender.id, payload);
+        event.sender.send('host-change', 'selection-input:' + input.id);
+        return input;
       }),
       launch: hostProcedure<'launch'>(authorize, async (payload) => {
         return executeCommand(window, inputObject(payload));
@@ -1139,6 +1291,61 @@ async function bootstrap() {
           notify();
           return true;
         }
+      }),
+      productivity: hostProcedure<'productivity'>(authorize, async (payload) => {
+        const args = inputObject(payload);
+        if (args.action === 'read') return productivity.read();
+        if (args.action !== 'save') throw Error(t('配置格式无效'));
+        const next = productivity.save(args.value);
+        syncShortcuts();
+        notify();
+        return next;
+      }),
+      snippetPreview: hostProcedure<'snippetPreview'>(authorize, async (payload) => {
+        const args = inputObject(payload),
+          body = text(args.body, 50_000),
+          values = inputObject(args.values);
+        for (const value of Object.values(values)) text(value, 50_000);
+        return renderSnippet(
+          body,
+          values,
+          /\{\{\s*clipboard\s*\}\}/.test(body) ? await clipboard.readText() : '',
+        );
+      }),
+      workspaceRun: hostProcedure<'workspaceRun'>(authorize, async (payload) => {
+        const args = inputObject(payload),
+          id = text(args.id, 100);
+        if (args.action === 'cancel') {
+          workspaces.cancel(id);
+          return workspaces.read(id);
+        }
+        if (args.action === 'status') return workspaces.read(id);
+        if (args.action !== 'run') throw Error(t('参数无效'));
+        const workspace = productivity.read().workspaces.find((item) => item.id === id);
+        if (!workspace) throw Error(t('工作区已不存在'));
+        const selected = args.items === undefined ? undefined : ids(args.items);
+        if (selected?.some((id) => !workspace.items.some((item) => item.id === id)))
+          throw Error(t('工作区项目已不存在'));
+        return workspaces.run(workspace, selected);
+      }),
+      toolDraft: hostProcedure<'toolDraft'>(authorize, async (payload) => {
+        const args = inputObject(payload);
+        if (args.action === 'clear') {
+          await plugins.runtime.close();
+          await drafts.clear();
+          notify('drafts-cleared');
+          return true;
+        }
+        const view = text(args.view, 100);
+        if (!BUILTIN_COMMANDS.some((command) => command.id === 'tool:' + view))
+          throw Error(t('工具状态无效'));
+        const key = (window === main ? 'main:' : `window:${window.id}:`) + view;
+        if (args.action === 'read') return drafts.read(key);
+        if (args.action === 'save') {
+          drafts.save(key, args.state);
+          return true;
+        }
+        throw Error(t('工具状态无效'));
       }),
       toolSession: hostProcedure<'toolSession'>(authorize, async (payload) => {
         {
@@ -1216,6 +1423,8 @@ async function bootstrap() {
                 'encoding',
                 'uuid',
                 'filesearch',
+                'snippets',
+                'workspaces',
               ].includes(view)
             )
               throw new Error(t('视图无效'));
@@ -1224,7 +1433,6 @@ async function bootstrap() {
               startup.invalidate();
               notify();
             }
-
             if (!window.isMaximized()) {
               const bounds = window.getBounds();
               const work = screen.getDisplayMatching(bounds).workArea;
@@ -1259,6 +1467,8 @@ async function bootstrap() {
                 'encoding',
                 'uuid',
                 'filesearch',
+                'snippets',
+                'workspaces',
               ].includes(view)
             )
               throw new Error(t('此视图不能分离'));
@@ -1278,6 +1488,42 @@ async function bootstrap() {
           return true;
         }
       }),
+      clearSearchPreferences: hostProcedure<'clearSearchPreferences'>(authorize, async () => {
+        searchPreferences.clear();
+        notify();
+        return true;
+      }),
+      configProfile: hostProcedure<'configProfile'>(authorize, async (payload) => {
+        const args = inputObject(payload);
+        if (args.action === 'preview') return profiles.preview(text(args.text, 4 * 1024 * 1024));
+        if (args.action === 'apply' || args.action === 'undo') {
+          await applyProfile(args.action, args.token, args.categories);
+          return true;
+        }
+        return withDialog(async () => {
+          if (args.action === 'export') {
+            const result = await dialog.showSaveDialog(window, {
+              defaultPath: 'Nexlet.nexlet.jsonc',
+              filters: [{ name: 'Nexlet JSONC', extensions: ['jsonc'] }],
+            });
+            if (result.canceled || !result.filePath) return false;
+            await writeFile(result.filePath, profiles.export(), 'utf8');
+            return true;
+          }
+          if (args.action === 'open') {
+            const result = await dialog.showOpenDialog(window, {
+              properties: ['openFile'],
+              filters: [{ name: 'Nexlet JSONC', extensions: ['jsonc', 'json'] }],
+            });
+            if (result.canceled) return null;
+            const filename = result.filePaths[0];
+            if ((await stat(filename)).size > 4 * 1024 * 1024)
+              throw Error(t('配置文件不能超过 4 MB'));
+            return readFile(filename, 'utf8');
+          }
+          throw Error(t('操作无效'));
+        });
+      }),
       settings: hostProcedure<'settings'>(authorize, async (payload) => {
         {
           const update = inputObject(payload),
@@ -1292,11 +1538,40 @@ async function bootstrap() {
             if (!['light', 'dark', 'system'].includes(update.theme)) throw new Error(t('主题无效'));
             next.theme = update.theme;
           }
-          for (const key of ['hideOnBlur', 'clipboardEnabled', 'autoCheckUpdates'] as const)
+          for (const key of [
+            'hideOnBlur',
+            'clipboardEnabled',
+            'autoCheckUpdates',
+            'restoreToolSessions',
+            'clipboardOcrFavorites',
+          ] as const)
             if (key in update) {
               if (typeof update[key] !== 'boolean') throw new Error(t('开关无效'));
               next[key] = update[key];
             }
+          if ('clipboardPausedUntil' in update) {
+            if (
+              !Number.isSafeInteger(update.clipboardPausedUntil) ||
+              update.clipboardPausedUntil < 0 ||
+              update.clipboardPausedUntil > Date.now() + 86400000
+            )
+              throw Error(t('暂停时间无效'));
+            next.clipboardPausedUntil = update.clipboardPausedUntil;
+          }
+          if ('clipboardExcludedApps' in update) {
+            if (
+              !Array.isArray(update.clipboardExcludedApps) ||
+              update.clipboardExcludedApps.length > 100
+            )
+              throw Error(t('最多排除 100 个应用'));
+            next.clipboardExcludedApps = [
+              ...new Set<string>(
+                update.clipboardExcludedApps
+                  .map((value: unknown) => text(value, 32767).trim())
+                  .filter(Boolean),
+              ),
+            ];
+          }
           for (const key of ['maxClipboardItems', 'retentionDays'] as const)
             if (key in update) {
               const n = update[key];
@@ -1333,36 +1608,7 @@ async function bootstrap() {
               throw Error(t('网页 ID 重复'));
           }
           shortcuts.apply(bindings(registry.read(), next), () => store.set('settings', next));
-          if (next.language !== settings.language) {
-            setLocale(resolveLocale(next.language, systemLocale));
-            for (const contents of webContents.getAllWebContents())
-              if (!contents.isDestroyed()) contents.send('app-locale', currentLocale());
-            for (const owner of hosts.values())
-              owner.webContents.send('host-change', 'plugin-changed');
-            refreshTray();
-            panelTrigger.refreshLocale();
-            desktopTools.refreshLocale();
-            for (const window of hosts.values()) {
-              const view = views.get(window.id);
-              if (view && view !== 'launcher' && view !== 'plugin')
-                window.setTitle(
-                  view === 'superpanel'
-                    ? t('Nexlet · 超级面板')
-                    : 'Nexlet · ' +
-                        t(BUILTIN_COMMANDS.find((c) => c.id === 'tool:' + view)?.name || '工具'),
-                );
-            }
-          }
-          updates.setAutomaticChecks(next.autoCheckUpdates);
-          nativeTheme.themeSource = next.theme;
-          if (
-            next.language !== settings.language ||
-            JSON.stringify(next.searchPaths) !== JSON.stringify(settings.searchPaths)
-          )
-            void catalog.scan(next.searchPaths);
-          await clipStore.prune();
-          notify();
-          notify('clips');
+          await settingsChanged(settings, next);
           return next;
         }
       }),
@@ -1437,12 +1683,64 @@ async function bootstrap() {
           return result;
         }
       }),
+      clipOcr: hostProcedure<'clipOcr'>(authorize, async (payload) => {
+        const args = inputObject(payload);
+        if (args.action === 'status') return clipboardOcr.read();
+        if (args.action === 'run') {
+          await ocrRunner.available();
+          await clipboardOcr.enqueue(ids(args.ids));
+        } else if (args.action === 'cancel') clipboardOcr.cancel(ids(args.ids));
+        else if (args.action === 'clear') await clipboardOcr.clear(ids(args.ids));
+        else if (args.action === 'import') {
+          await ocrRunner.available();
+          await withDialog(async () => {
+            const result = await dialog.showOpenDialog(window, {
+              properties: ['openFile', 'multiSelections'],
+              filters: [{ name: t('图片'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp'] }],
+            });
+            if (result.canceled) return;
+            if (result.filePaths.length > 50) throw Error(t('每次最多添加 50 张图片'));
+            for (const file of result.filePaths) {
+              if ((await stat(file)).size > 20 * 1024 * 1024)
+                throw Error(t('图片超过 20 MB，无法导入'));
+              const item = await clips.importImage(new Uint8Array(await readFile(file)));
+              await clipboardOcr.enqueue([item.id]);
+            }
+          });
+        } else throw Error(t('操作无效'));
+        return clipboardOcr.read();
+      }),
+      clipCleanup: hostProcedure<'clipCleanup'>(authorize, async (payload) => {
+        const args = inputObject(payload);
+        if (typeof args.includeFavorites !== 'boolean') throw Error(t('参数无效'));
+        const range = await clipStore.clipRange(args.start, args.end, args.includeFavorites);
+        if (args.action === 'preview') return { count: range.ids.length, revision: range.revision };
+        if (args.action !== 'apply') throw Error(t('操作无效'));
+        clipboardOcr.cancel(range.ids);
+        const count = await clipStore.clearClipRange(
+          args.start,
+          args.end,
+          args.includeFavorites,
+          args.revision,
+        );
+        notify('clips');
+        return { count, revision: range.revision };
+      }),
       clipAction: hostProcedure<'clipAction'>(authorize, async (payload) => {
         {
           const args = inputObject(payload),
             operation = text(args.action, 30);
-          if (operation === 'writeText') {
+          if (operation === 'writeText' || operation === 'pasteText') {
             await clipboard.writeText(text(args.text, 2 * 1024 * 1024));
+            if (operation === 'pasteText') {
+              window.hide();
+              try {
+                await platform.paste();
+              } catch (error) {
+                revealWindow(window);
+                throw error;
+              }
+            }
             return true;
           }
           if (operation === 'writeImage') {
@@ -1478,14 +1776,16 @@ async function bootstrap() {
             return true;
           }
           if (operation === 'clear') {
+            clipboardOcr.cancel();
             await clipStore.clearClips(args.includeFavorites === true);
             notify('clips');
             return true;
           }
           const selected = ids(args.ids);
-          if (operation === 'copy') await clips.copy(selected);
-          else if (operation === 'paste') {
-            await clips.copy(selected);
+          if (operation === 'copy' || operation === 'copyPlain')
+            await clips.copy(selected, operation === 'copyPlain');
+          else if (operation === 'paste' || operation === 'pastePlain') {
+            await clips.copy(selected, operation === 'pastePlain');
             window.hide();
             try {
               await platform.paste();
@@ -1493,12 +1793,31 @@ async function bootstrap() {
               window.show();
               throw error;
             }
+          } else if (operation === 'continue') {
+            const item = selected.length === 1 ? await clipStore.clip(selected[0]) : undefined;
+            if (!item) throw Error(t('请选择一条记录'));
+            const result: import('../shared/launch').ToolResult =
+              item.kind === 'text'
+                ? { type: 'text', text: item.text, ...(item.html ? { html: item.html } : {}) }
+                : item.kind === 'files'
+                  ? { type: 'files', paths: item.files || [] }
+                  : {
+                      type: 'image',
+                      data:
+                        'data:image/png;base64,' +
+                        (await readFile(item.imagePath!)).toString('base64'),
+                    };
+            const input = await inputs.publish(event.sender.id, result);
+            event.sender.send('host-change', 'selection-input:' + input.id);
           } else if (operation === 'delete') {
+            clipboardOcr.cancel(selected);
             await clipStore.deleteClips(selected);
             notify('clips');
           } else if (operation === 'favorite') {
             if (typeof args.value !== 'boolean') throw new Error(t('收藏值无效'));
             for (const id of selected) await clipStore.favorite(id, args.value);
+            if (args.value && store.settings().clipboardOcrFavorites)
+              await clipboardOcr.enqueue(selected, true);
             notify('clips');
           } else if (operation === 'station') {
             const popup = createWindow('clipboard', true, selected);
@@ -1590,6 +1909,7 @@ async function bootstrap() {
         {
           const args = inputObject(payload);
           if (typeof args.enabled !== 'boolean') throw new Error(t('状态无效'));
+          if (args.id === 'org.nexlet.ocr' && !args.enabled) clipboardOcr.cancel();
           await plugins.toggle(text(args.id, 100), args.enabled);
           return true;
         }
@@ -1597,6 +1917,7 @@ async function bootstrap() {
       pluginRemove: hostProcedure<'pluginRemove'>(authorize, async (payload) => {
         {
           const args = inputObject(payload);
+          if (args.id === 'org.nexlet.ocr') clipboardOcr.cancel();
           await plugins.remove(text(args.id, 100), args.deleteData === true);
           return true;
         }
@@ -1626,6 +1947,14 @@ async function bootstrap() {
             typeof args.cursor === 'string' ? text(args.cursor, 100) : undefined,
           );
         }
+      }),
+      filePreview: hostProcedure<'filePreview'>(authorize, async (payload) => {
+        const target = text(payload, 32767);
+        await files.info(event.sender.id, target);
+        const result = await previewFile(target);
+        await files.info(event.sender.id, target);
+        authorize();
+        return result;
       }),
       fileInfo: hostProcedure<'fileInfo'>(authorize, async (payload) => {
         return files.info(event.sender.id, text(payload, 32767));
@@ -1728,6 +2057,8 @@ async function bootstrap() {
     quitPending = (async () => {
       // Keep all services and windows alive until every editor confirms its save.
       await saveForClose([...hosts.keys()]);
+      workspaces.close();
+      clipboardOcr.close();
       desktopTools.close();
       clearInterval(panelBusyTimer);
       panelTrigger.close();
@@ -1773,7 +2104,12 @@ async function bootstrap() {
       updates,
       autoUpdater: updateTransport,
       store,
+      productivity,
+      workspaces,
+      drafts,
       clipStore,
+      clipboardOcr,
+      ocrRunner,
       startup,
       clips,
       platform,

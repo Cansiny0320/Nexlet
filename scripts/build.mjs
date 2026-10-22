@@ -28,7 +28,7 @@ await pack({
 });
 await copyFile('src/main/match-worker.cjs', 'dist/main/match-worker.cjs');
 // Sandboxed preloads cannot load sibling chunks or npm packages.
-for (const name of ['host', 'plugin', 'desktop-tools', 'clipboard-image']) {
+for (const name of ['host', 'plugin', 'desktop-tools', 'clipboard-image', 'ocr-index']) {
   await pack({
     ...common,
     entry: { [name]: 'src/preload/' + name + '.ts' },

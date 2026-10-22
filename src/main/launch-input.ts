@@ -27,6 +27,59 @@ export class LaunchInputs {
   private owners = new Map<number, { generation: number; snapshot?: InputSnapshot }>();
   private grants = new Map<number, InputSnapshot>();
   constructor(private imageSize?: (bytes: Buffer) => { width: number; height: number }) {}
+  async publish(owner: number, value: unknown, caller?: number): Promise<LaunchInput> {
+    if (!value || typeof value !== 'object') throw Error(t('输入无效'));
+    const result = value as Record<string, unknown>;
+    if (result.type === 'text') {
+      if (
+        result.html !== undefined &&
+        (typeof result.html !== 'string' || result.html.length > 2_000_000)
+      )
+        throw Error(t('富文本超过 2 MB'));
+      const input = this.setText(owner, result.text as string, 'result');
+      if (input.type === 'text') input.html = result.html as string | undefined;
+      return input;
+    }
+    if (result.type === 'files' && caller !== undefined) {
+      const snapshot = this.grants.get(caller);
+      const tokens = result.resources;
+      if (!snapshot || !Array.isArray(tokens) || !tokens.length || tokens.length > INPUT_FILE_LIMIT)
+        throw Error(t('输入资源未授权或已失效'));
+      const resources = new Map<string, Resource>();
+      for (const token of new Set(tokens)) {
+        const resource = typeof token === 'string' ? snapshot.resources.get(token) : undefined;
+        if (!resource) throw Error(t('输入资源未授权或已失效'));
+        if (!resource.descriptor.isDirectory) await this.read(caller, token);
+        else if (resource.file) {
+          const current = await stat(resource.file.path);
+          if (
+            !current.isDirectory() ||
+            current.dev !== resource.file.identity.dev ||
+            current.ino !== resource.file.identity.ino
+          )
+            throw Error(t('输入文件已变化，请重新拖入'));
+        }
+        const id = randomUUID();
+        resources.set(id, { ...resource, descriptor: { ...resource.descriptor, id } });
+      }
+      if (this.grants.get(caller) !== snapshot) throw Error(t('输入资源已失效'));
+      const input: LaunchInput = {
+        id: randomUUID(),
+        from: 'result',
+        type: 'files',
+        files: [...resources.values()].map((r) => r.descriptor),
+      };
+      this.owners.set(owner, {
+        generation: (this.owners.get(owner)?.generation || 0) + 1,
+        snapshot: { input, resources },
+      });
+      return input;
+    }
+    if (result.type !== 'image' && result.type !== 'files') throw Error(t('不支持的输入类型'));
+    const input = await this.capture(owner, { ...result, from: 'paste' });
+    input.from = 'result';
+    return input;
+  }
   async captureImage(owner: number, bytes: Buffer): Promise<LaunchInput> {
     const input = await this.capture(owner, {
       type: 'image',

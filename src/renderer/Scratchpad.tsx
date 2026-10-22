@@ -1,5 +1,6 @@
 import { formatLocale, t } from '../shared/i18n';
 import { useToolState, useBeforeDetach, useRestoreBarrier } from './tool-session';
+import { ResultActions } from './ActionMenu';
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   Palette,
@@ -404,6 +405,22 @@ export function ScratchpadPanel({ initialExpression }: { initialExpression: stri
           })}
         </div>
         <footer className="scratch-toolbar">
+          <ResultActions
+            result={{
+              type: 'text',
+              text:
+                pad?.lines
+                  .map((line) => {
+                    const result = calculate(line.expression);
+                    return (
+                      line.expression +
+                      (result.result ? ' = ' + result.result : '') +
+                      (line.note ? '  ' + line.note : '')
+                    );
+                  })
+                  .join('\n') || '',
+            }}
+          />
           <div className="save-indicator" title={saved}>
             {saved === t('已保存') ? <Check size={12} /> : <Circle size={10} />}
             <span>{saved}</span>

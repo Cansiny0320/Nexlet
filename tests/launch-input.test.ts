@@ -15,6 +15,31 @@ async function fixture() {
   await writeFile(file, '{"value":1}');
   return { root, file };
 }
+it('结果交接保留 HTML，文件重新授权且源插件退出后仍可读取', async () => {
+  const { file } = await fixture(),
+    inputs = new LaunchInputs();
+  const text = await inputs.publish(1, {
+    type: 'text',
+    text: '表格',
+    html: '<table><tr><td>表格</td></tr></table>',
+  });
+  expect(text).toMatchObject({
+    type: 'text',
+    from: 'result',
+    html: '<table><tr><td>表格</td></tr></table>',
+  });
+  const input = await inputs.capture(1, { type: 'files', paths: [file], from: 'drop' });
+  const granted = inputs.grant(10, inputs.get(1, input.id));
+  if (granted.type !== 'files') throw Error('files expected');
+  const handed = await inputs.publish(2, { type: 'files', resources: [granted.files[0].id] }, 10);
+  if (handed.type !== 'files') throw Error('files expected');
+  expect(handed.files[0].id).not.toBe(granted.files[0].id);
+  inputs.revoke(10);
+  const next = inputs.grant(20, inputs.get(2, handed.id));
+  if (next.type !== 'files') throw Error('files expected');
+  expect(Buffer.from(await inputs.read(20, next.files[0].id)).toString()).toBe('{"value":1}');
+  await expect(inputs.publish(2, { type: 'files', paths: [file] }, 10)).rejects.toThrow('授权');
+});
 it('文件只授权给选中的会话，新输入与新授权分别撤销旧引用', async () => {
   const { file } = await fixture(),
     inputs = new LaunchInputs();

@@ -21,7 +21,7 @@ export type PluginPermission =
   | 'network.request'
   | 'secrets'
   | SdkPermission;
-export type InputSource = 'input' | 'paste' | 'drop' | 'selection';
+export type InputSource = 'input' | 'paste' | 'drop' | 'selection' | 'capture' | 'result';
 
 export interface InputResource {
   id: string;
@@ -33,7 +33,7 @@ export interface InputResource {
 }
 
 export type PluginContext = { id: string; code: string; from: InputSource } & (
-  | { type: 'text'; payload: string }
+  | { type: 'text'; payload: string; html?: string }
   | { type: 'files'; payload: InputResource[] }
   | { type: 'image'; payload: InputResource }
 );

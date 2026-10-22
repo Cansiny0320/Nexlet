@@ -1,7 +1,11 @@
 import { t } from './i18n';
 import type { Command } from './types';
 
-export type InputSource = 'input' | 'paste' | 'drop' | 'selection' | 'capture';
+export type InputSource = 'input' | 'paste' | 'drop' | 'selection' | 'capture' | 'result';
+export type ToolResult =
+  | { type: 'text'; text: string; html?: string }
+  | { type: 'image'; data: string }
+  | { type: 'files'; paths: string[] };
 export interface InputResource {
   id: string;
   name: string;
@@ -11,7 +15,7 @@ export interface InputResource {
   mime?: string;
 }
 export type LaunchInput = { id: string; from: InputSource } & (
-  | { type: 'text'; text: string }
+  | { type: 'text'; text: string; html?: string }
   | { type: 'files'; files: InputResource[] }
   | { type: 'image'; image: InputResource }
 );
@@ -38,7 +42,7 @@ export interface SearchProgress {
   response: SearchResponse;
 }
 export type PluginContext = { id: string; code: string; from: InputSource } & (
-  | { type: 'text'; payload: string }
+  | { type: 'text'; payload: string; html?: string }
   | { type: 'files'; payload: InputResource[] }
   | { type: 'image'; payload: InputResource }
 );
@@ -50,7 +54,13 @@ export const REGEX_INPUT_LIMIT = 10_000;
 
 export function inputContext(input: LaunchInput, code: string): PluginContext {
   const base = { id: input.id, code, from: input.from };
-  if (input.type === 'text') return { ...base, type: 'text', payload: input.text };
+  if (input.type === 'text')
+    return {
+      ...base,
+      type: 'text',
+      payload: input.text,
+      ...(input.html ? { html: input.html } : {}),
+    };
   if (input.type === 'files') return { ...base, type: 'files', payload: input.files };
   return { ...base, type: 'image', payload: input.image };
 }

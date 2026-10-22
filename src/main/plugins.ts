@@ -24,6 +24,7 @@ import { PluginNetwork } from './plugin-network';
 import { PluginSecrets } from './plugin-secrets';
 import { PluginSdk } from './plugin-sdk';
 import type { Platform } from './platform';
+import type { ToolDrafts } from './tool-drafts';
 import { PluginStaging } from './plugin-staging';
 interface InstallOptions {
   source: 'marketplace' | 'local';
@@ -32,6 +33,7 @@ interface InstallOptions {
 }
 
 export class PluginManager {
+  drafts?: ToolDrafts;
   private installing = false;
   readonly network = new PluginNetwork((url, init) => net.fetch(url, init));
   readonly secrets: PluginSecrets;
@@ -40,7 +42,12 @@ export class PluginManager {
   updateOnLaunch:
     | ((record: PluginRecord, code: string, signal: AbortSignal) => Promise<PluginBundle | null>)
     | null = null;
-  returnToLauncher: ((text: string) => Promise<void>) | null = null;
+  returnToLauncher:
+    | ((
+        value: string | import('../shared/plugin-api').PluginResult,
+        caller?: number,
+      ) => Promise<void>)
+    | null = null;
   private root: string;
   private staging: PluginStaging;
   private backgroundUpdates = new Map<
@@ -125,6 +132,8 @@ export class PluginManager {
             'database.remove',
             'secrets.set',
             'backend.stop',
+            'session.save',
+            'session.saveImage',
           ].includes(method))
       )
         throw new Error(t('插件会话已结束'));
@@ -146,6 +155,42 @@ export class PluginManager {
         return value;
       };
       switch (method) {
+        case 'session.readImage':
+          return (
+            this.drafts?.readResource(
+              `${caller.detached ? 'window:' + caller.owner.id : 'main'}:plugin:${record.manifest.id}:${caller.code}`,
+            ) ?? null
+          );
+        case 'session.saveImage':
+          await this.drafts?.saveResource(
+            `${caller.detached ? 'window:' + caller.owner.id : 'main'}:plugin:${record.manifest.id}:${caller.code}`,
+            args,
+          );
+          return true;
+        case 'results.publish': {
+          if (!args || typeof args !== 'object' || !this.returnToLauncher)
+            throw Error(t('输入无效'));
+          setImmediate(() => {
+            if (!caller.closing && !caller.disposed)
+              void this.returnToLauncher!(
+                args as import('../shared/plugin-api').PluginResult,
+                caller.view.webContents.id,
+              ).catch((error) => this.changed('error:' + String(error.message || error)));
+          });
+          return true;
+        }
+        case 'session.read':
+          return (
+            this.drafts?.read(
+              `${caller.detached ? 'window:' + caller.owner.id : 'main'}:plugin:${record.manifest.id}:${caller.code}`,
+            ) ?? null
+          );
+        case 'session.save':
+          this.drafts?.save(
+            `${caller.detached ? 'window:' + caller.owner.id : 'main'}:plugin:${record.manifest.id}:${caller.code}`,
+            args,
+          );
+          return true;
         case 'search.returnToLauncher': {
           if (
             typeof args !== 'string' ||

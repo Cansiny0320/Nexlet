@@ -7,6 +7,8 @@ export const DETACHABLE_TOOLS = [
   'encoding',
   'uuid',
   'filesearch',
+  'snippets',
+  'workspaces',
 ] as const;
 export interface ToolSessionSnapshot {
   version: 1;

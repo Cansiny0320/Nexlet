@@ -61,13 +61,24 @@ export class Store {
     ).revision;
   }
   private cacheClip(item: ClipItem): ClipSummary {
-    const { hash: _, text, ...rest } = item;
+    const { hash: _, text, html, ocrText, ...rest } = item;
     let textLength = 0;
     for (const _ of text) textLength++;
-    const summary = { ...rest, text: text.slice(0, 600), textLength };
+    const summary = {
+      ...rest,
+      text: (ocrText ? text + '\n' + ocrText : text).slice(0, 600),
+      textLength,
+      ...(html ? { hasHtml: true } : {}),
+      ...(ocrText ? { hasOcr: true } : {}),
+    };
     this.db
       .prepare('INSERT OR REPLACE INTO clip_cache(id,kind,search,summary) VALUES(?,?,?,?)')
-      .run(item.id, item.kind, text.toLowerCase(), JSON.stringify(summary));
+      .run(
+        item.id,
+        item.kind,
+        (text + '\n' + (ocrText || '')).toLowerCase(),
+        JSON.stringify(summary),
+      );
     return summary;
   }
   /** Small batches run in the clipboard Worker; page reads fill their own missing rows first. */
@@ -141,7 +152,7 @@ export class Store {
     const q = query.trim().toLowerCase();
     if (q) {
       where.push(
-        "nexlet_query_active() AND CASE WHEN d.id IS NULL THEN nexlet_contains(json_extract((SELECT data FROM clips WHERE id=c.id),'$.text'),?) ELSE nexlet_cached_contains(d.search,?) END",
+        "nexlet_query_active() AND CASE WHEN d.id IS NULL THEN nexlet_contains(json_extract((SELECT data FROM clips WHERE id=c.id),'$.text') || char(10) || COALESCE(json_extract((SELECT data FROM clips WHERE id=c.id),'$.ocrText'),''),?) ELSE nexlet_cached_contains(d.search,?) END",
       );
       values.push(q, q);
     }
@@ -187,7 +198,7 @@ export class Store {
       .filter(
         (i) =>
           (kind === 'all' || (kind === 'favorite' ? i.favorite : i.kind === kind)) &&
-          (!q || i.text.toLowerCase().includes(q)),
+          (!q || (i.text + '\n' + (i.ocrText || '')).toLowerCase().includes(q)),
       );
   }
   clip(id: string): ClipItem | undefined {
@@ -249,6 +260,34 @@ export class Store {
       .prepare(`SELECT id FROM clips ${includeFavorites ? '' : 'WHERE favorite=0'}`)
       .all() as { id: string }[];
     this.deleteClips(rows.map((row) => row.id));
+  }
+  clipRange(start: number, end: number, includeFavorites = false): ClipIndex {
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start)
+      throw Error(t('清理时间范围无效'));
+    const rows = this.db
+      .prepare(
+        `SELECT id FROM clips WHERE created>=? AND created<? ${includeFavorites ? '' : 'AND favorite=0'} ORDER BY created DESC`,
+      )
+      .all(start, end) as { id: string }[];
+    return { ids: rows.map((row) => row.id), revision: this.clipRevision };
+  }
+  clearClipRange(start: number, end: number, includeFavorites: boolean, revision: number): number {
+    const preview = this.clipRange(start, end, includeFavorites);
+    if (revision !== preview.revision) throw Error(t('记录已变化，请重新预览清理范围'));
+    this.deleteClips(preview.ids);
+    return preview.ids.length;
+  }
+  setClipOcr(id: string, hash: string, text: string): boolean {
+    const item = this.clip(id);
+    if (!item || item.hash !== hash || item.kind !== 'image') return false;
+    if (text.length > 500000) throw Error(t('输入最多 50 万字符'));
+    if (text) item.ocrText = text;
+    else delete item.ocrText;
+    this.db
+      .prepare('UPDATE clips SET data=? WHERE id=? AND hash=?')
+      .run(JSON.stringify(item), id, hash);
+    this.cacheClip(item);
+    return true;
   }
   prune(now = Date.now()): void {
     const settings = this.settings();

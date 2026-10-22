@@ -1,5 +1,6 @@
 import { formatLocale, t } from '../shared/i18n';
 import { useToolState, useRestoreBarrier } from './tool-session';
+import type { OcrIndexTask } from '../shared/clipboard-ocr';
 import { CLIP_PAGE_SIZE, type ClipIndex, type ClipSummary } from '../shared/clipboard';
 import { VirtualList, type VirtualListHandle } from './VirtualList';
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
@@ -33,17 +34,66 @@ const filters = () =>
     ['favorite', t('收藏'), Star],
   ] as const;
 
+import { ActionMenu, useActionShortcut } from './ActionMenu';
+
 export function ClipboardPanel({ query, board }: { query: string; board: boolean }) {
   const { state, toast, dialog, navigate, detach, canDetach } = useApp();
   const [kind, setKind] = useToolState('kind', 'all'),
     [selected, setSelected] = useToolState<string[]>('selected', []),
     [cursor, setCursor] = useToolState('cursor', 0),
     [expanded, setExpanded] = useToolState<string | null>('expanded', null);
+  const [ocrTasks, setOcrTasks] = useState<OcrIndexTask[]>([]),
+    [ocrError, setOcrError] = useState('');
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      void api('clipOcr', { action: 'status' })
+        .then((tasks) => {
+          if (active) setOcrTasks(tasks);
+        })
+        .catch((error) => {
+          if (active) setOcrError(errorText(error));
+        });
+    load();
+    const off = window.nexlet.onChange((event) => {
+      if (event === 'ocr-index') load();
+    });
+    return () => {
+      active = false;
+      off();
+    };
+  }, []);
+  const ocr = async (action: 'run' | 'cancel' | 'clear' | 'import', ids: string[] = selected) => {
+    setOcrError('');
+    setContext(null);
+    try {
+      setOcrTasks(await api('clipOcr', action === 'import' ? { action } : { action, ids }));
+    } catch (error) {
+      setOcrError(errorText(error));
+    }
+  };
+  const activeOcr = ocrTasks.filter(
+    (task) => task.status === 'pending' || task.status === 'running',
+  );
+  const [clock, setClock] = useState(Date.now());
+  const timedPause = state.settings.clipboardPausedUntil > clock;
+  useEffect(() => {
+    const remaining = state.settings.clipboardPausedUntil - Date.now();
+    if (remaining > 0) {
+      const timer = setTimeout(() => setClock(Date.now()), remaining + 1);
+      return () => clearTimeout(timer);
+    }
+    setClock(Date.now());
+  }, [state.settings.clipboardPausedUntil]);
   const [savedCursorId, setSavedCursorId] = useToolState('cursorId', '');
   const [index, setIndex] = useState<ClipIndex>({ ids: [], revision: -1 }),
     [items, setItems] = useState(new Map<string, ClipSummary>()),
     [detail, setDetail] = useState<ClipItem | null>(null);
   const [context, setContext] = useState<{ x: number; y: number; ids: string[] } | null>(null);
+  useActionShortcut(() => {
+    const targets = selected.length ? selected : index.ids[cursor] ? [index.ids[cursor]] : [];
+    if (targets.length) setContext({ x: innerWidth - 240, y: 90, ids: targets });
+  });
   const virtual = useRef<VirtualListHandle>(null),
     loadId = useRef(0),
     loadedPages = useRef(new Set<number>()),
@@ -209,7 +259,17 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
   }, []);
   const action = useCallback(
     async (
-      name: 'copy' | 'paste' | 'delete' | 'station' | 'save' | 'clear' | 'favorite',
+      name:
+        | 'copy'
+        | 'paste'
+        | 'copyPlain'
+        | 'pastePlain'
+        | 'continue'
+        | 'delete'
+        | 'station'
+        | 'save'
+        | 'clear'
+        | 'favorite',
       ids = selected,
       extra: { value?: boolean; includeFavorites?: boolean } = {},
     ) => {
@@ -222,8 +282,8 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
               ? { action: name, includeFavorites: extra.includeFavorites }
               : { action: name, ids },
         );
-        if (name === 'copy') toast(t('已复制'));
-        if (name === 'paste') toast(t('已发送粘贴请求'));
+        if (name === 'copy' || name === 'copyPlain') toast(t('已复制'));
+        if (name === 'paste' || name === 'pastePlain') toast(t('已发送粘贴请求'));
         if (name === 'save' && result) toast(t('图片已保存'));
       } catch (e) {
         toast(errorText(e), true);
@@ -245,7 +305,12 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
   };
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
-      if (document.querySelector('.modal-backdrop')) return;
+      if (
+        e.isComposing ||
+        e.keyCode === 229 ||
+        document.querySelector('.modal-backdrop,[role=menu]')
+      )
+        return;
       const input = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
@@ -313,21 +378,59 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
           </button>
         ))}
         <span className="tabs-spacer" />
+        <button title={t('添加图片并识别')} onClick={() => void ocr('import')}>
+          <ImageIcon size={15} />
+          {t('添加图片')}
+        </button>
         <button
           className="pause-button"
-          title={state.settings.clipboardEnabled ? t('暂停记录') : t('恢复记录')}
-          aria-label={state.settings.clipboardEnabled ? t('暂停记录') : t('恢复记录')}
+          title={state.settings.clipboardEnabled && !timedPause ? t('暂停记录') : t('恢复记录')}
+          aria-label={
+            state.settings.clipboardEnabled && !timedPause ? t('暂停记录') : t('恢复记录')
+          }
           onClick={() =>
-            void api('settings', { clipboardEnabled: !state.settings.clipboardEnabled }).catch(
-              (e) => toast(errorText(e), true),
-            )
+            void api('settings', {
+              clipboardEnabled: timedPause ? true : !state.settings.clipboardEnabled,
+              clipboardPausedUntil: 0,
+            }).catch((e) => toast(errorText(e), true))
           }
         >
-          {state.settings.clipboardEnabled ? <Pause size={15} /> : <Play size={15} />}
+          {state.settings.clipboardEnabled && !timedPause ? (
+            <Pause size={15} />
+          ) : (
+            <Play size={15} />
+          )}
         </button>
       </div>
-      {!state.settings.clipboardEnabled && (
-        <div className="recording-paused">{t('已暂停记录新内容')}</div>
+      {(!state.settings.clipboardEnabled || timedPause) && (
+        <div className="recording-paused">
+          {timedPause
+            ? t('暂停至 {{v0}}', {
+                v0: new Date(state.settings.clipboardPausedUntil).toLocaleTimeString(),
+              })
+            : t('已暂停记录新内容')}
+        </div>
+      )}
+      {ocrError && (
+        <div className="settings-warning" role="alert">
+          {ocrError}
+        </div>
+      )}
+      {!!activeOcr.length && (
+        <div className="recording-paused">
+          {t('OCR 队列：{{v0}} 张图片', { v0: activeOcr.length })}
+          <button
+            className="button"
+            onClick={() =>
+              void ocr(
+                'cancel',
+                activeOcr.map((task) => task.id),
+              )
+            }
+          >
+            {t('取消识别')}
+          </button>
+        </div>
       )}
       <div className="clipboard-layout">
         <VirtualList
@@ -420,6 +523,18 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
                     )}
                   </div>
                 )}
+                {item.hasOcr && (
+                  <pre className="clip-ocr">
+                    {expanded === item.id && detail?.id === item.id
+                      ? detail.ocrText
+                      : item.text.split('\n').slice(1).join('\n')}
+                  </pre>
+                )}
+                {ocrTasks.find((task) => task.id === item.id)?.status === 'error' && (
+                  <p className="settings-warning" role="alert">
+                    {ocrTasks.find((task) => task.id === item.id)?.error}
+                  </p>
+                )}
                 <div className="clip-meta">
                   <span>
                     <time
@@ -431,6 +546,8 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
                     · {relativeTime(item.createdAt)}
                   </span>
                   <span>
+                    {item.hasHtml && <span>{t('富文本')}</span>}
+                    {item.hasOcr && <span>OCR</span>}
                     {item.favorite && <Star size={12} fill="currentColor" />}
                     {item.kind === 'text'
                       ? t('{{v0}} 字符', { v0: item.textLength, count: item.textLength })
@@ -504,11 +621,7 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
         </div>
       )}
       {context && (
-        <div
-          className="context-menu"
-          style={{ left: context.x, top: context.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <ActionMenu x={context.x} y={context.y} onClose={() => setContext(null)}>
           <button onClick={() => void action('copy', context.ids)}>
             <Copy size={15} />
             {t('复制')}
@@ -517,6 +630,43 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
             <Send size={15} />
             {t('执行粘贴')}
           </button>
+          {context.ids.every((id) => items.get(id)?.kind === 'text') && (
+            <>
+              <button onClick={() => void action('copyPlain', context.ids)}>
+                <Type size={15} />
+                {t('复制纯文本')}
+              </button>
+              <button
+                disabled={!state.canPaste}
+                onClick={() => void action('pastePlain', context.ids)}
+              >
+                <Send size={15} />
+                {t('粘贴纯文本')}
+              </button>
+            </>
+          )}
+          {context.ids.length === 1 && (
+            <button onClick={() => void action('continue', context.ids)}>
+              <ExternalLink size={15} />
+              {t('继续处理')}
+            </button>
+          )}
+          {context.ids.every((id) => items.get(id)?.kind === 'image') && (
+            <>
+              <button onClick={() => void ocr('run', context.ids)}>
+                <Type size={15} />
+                {t('识别图片文字')}
+              </button>
+              <button onClick={() => void ocr('cancel', context.ids)}>
+                <Pause size={15} />
+                {t('取消识别')}
+              </button>
+              <button onClick={() => void ocr('clear', context.ids)}>
+                <Trash2 size={15} />
+                {t('清除文字索引')}
+              </button>
+            </>
+          )}
           <button onClick={() => void action('station', context.ids)}>
             <Pin size={15} />
             {t('悬浮中转')}
@@ -545,7 +695,7 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
             <Trash2 size={15} />
             {t('删除记录')}
           </button>
-        </div>
+        </ActionMenu>
       )}
     </div>
   );

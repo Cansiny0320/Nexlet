@@ -10,7 +10,7 @@ import { Launcher } from './Launcher';
 import { brandIcon } from './tool-artwork';
 import { LaunchInputChip } from './LaunchInputChip';
 import { usePluginSearch, PluginSearchResults } from './PluginSearch';
-import { saveBeforeUpdate } from './update-save';
+import { saveBeforeUpdate, registerUpdateSave } from './update-save';
 import { retainSearchInputs } from './state-refresh';
 import { ToolBoundary } from './ToolBoundary';
 import { useTitlebarDrag } from './use-titlebar-drag';
@@ -33,6 +33,12 @@ const PluginsPanel = lazy(() =>
 const SettingsPanel = lazy(() =>
   import('./Settings').then((module) => ({ default: module.SettingsPanel })),
 );
+const SnippetsPanel = lazy(() =>
+  import('./Productivity').then((module) => ({ default: module.SnippetsPanel })),
+);
+const WorkspacesPanel = lazy(() =>
+  import('./Productivity').then((module) => ({ default: module.WorkspacesPanel })),
+);
 
 const params = new URLSearchParams(location.search);
 const detached = params.get('detached') === '1';
@@ -50,6 +56,33 @@ export function App() {
   const [view, setView] = useState(params.get('view') || 'launcher'),
     [query, setQuery] = useState(''),
     [payload, setPayload] = useState('');
+  const navigationGeneration = useRef(0);
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeDraft = useRef({ view, query, payload, session });
+  activeDraft.current = { view, query, payload, session };
+  const saveDraft = useCallback(async () => {
+    const current = activeDraft.current;
+    if (!BUILTIN_COMMANDS.some((command) => command.id === 'tool:' + current.view)) return;
+    await api('toolDraft', {
+      action: 'save',
+      view: current.view,
+      state: { values: current.session.values, query: current.query, payload: current.payload },
+    });
+  }, []);
+  useEffect(() => registerUpdateSave(saveDraft), [saveDraft]);
+  useEffect(() => {
+    const changed = () => {
+      if (draftTimer.current) clearTimeout(draftTimer.current);
+      draftTimer.current = setTimeout(() => {
+        void saveDraft().catch((error) => setNotification({ text: errorText(error), error: true }));
+      }, 400);
+    };
+    session.changed = changed;
+    changed();
+    return () => {
+      session.changed = undefined;
+    };
+  }, [session, view, query, payload, saveDraft]);
   const [launchInput, setLaunchInput] = useState<(LaunchInput & { preview?: string }) | null>(null),
     [inputSource, setInputSource] = useState<InputSource>('input');
   const captureGeneration = useRef(0),
@@ -101,19 +134,29 @@ export function App() {
   }, []);
   const navigate = useCallback(
     (next: string, initial = '') => {
+      void saveDraft().catch((error) => toast(errorText(error), true));
+      const generation = ++navigationGeneration.current;
       captureGeneration.current++;
       setCapturing(false);
       if (next !== 'plugin') void api('window', { action: 'exitPlugin' });
-      startNavigation(() => {
-        setLaunchInput(null);
-        setSession(createToolSession());
-        setView(next);
-        setPayload(initial);
-        setQuery(next === 'clipboard' ? initial : '');
-      });
+      const open = (draft: Record<string, unknown> | null = null) =>
+        startNavigation(() => {
+          if (generation !== navigationGeneration.current) return;
+          setLaunchInput(null);
+          setSession(createToolSession((draft?.values as Record<string, unknown>) || {}));
+          setView(next);
+          setPayload(draft ? String(draft.payload || '') : initial);
+          setQuery(draft ? String(draft.query || '') : next === 'clipboard' ? initial : '');
+        });
+      if (!initial && BUILTIN_COMMANDS.some((command) => command.id === 'tool:' + next))
+        void api('toolDraft', { action: 'read', view: next }).then(
+          (draft) => open(draft && typeof draft === 'object' ? draft : null),
+          () => open(),
+        );
+      else open();
       void api('clearInput');
     },
-    [startNavigation],
+    [startNavigation, saveDraft, toast],
   );
   const clearLaunchInput = useCallback(() => {
     captureGeneration.current++;
@@ -162,7 +205,13 @@ export function App() {
         latestUpdate.current = update;
         setState((current) => (current ? { ...current, update } : current));
       }
-
+      if (event === 'drafts-cleared') {
+        if (draftTimer.current) clearTimeout(draftTimer.current);
+        setSession(createToolSession());
+        setView('launcher');
+        setQuery('');
+        setPayload('');
+      }
       if (event === 'plugin-changed') void syncPlugin();
       if (event.startsWith('close:prepare:')) {
         const token = event.slice(14);
@@ -193,6 +242,7 @@ export function App() {
         navigate(value.view, value.payload || '');
       }
       if (event.startsWith('selection-input:')) {
+        void saveDraft().catch((error) => toast(errorText(error), true));
         const generation = ++captureGeneration.current;
         setCapturing(true);
         void api('selectionInput', event.slice(16))
@@ -212,7 +262,7 @@ export function App() {
       }
       if (event.startsWith('web-query:')) void openWebQuery(event.slice(10));
     });
-  }, [refresh, navigate, toast, syncPlugin, openWebQuery]);
+  }, [refresh, navigate, toast, syncPlugin, openWebQuery, saveDraft]);
   useEffect(() => {
     void api('window', { action: 'view', view }).catch((e) => toast(errorText(e), true));
     setTimeout(() => input.current?.focus(), 50);
@@ -304,6 +354,15 @@ export function App() {
   }, []);
   const toolReady = useCallback(() => {
     setReadySession(session);
+    const scroll = session.initial.__scroll as Record<string, number> | undefined;
+    if (scroll)
+      document
+        .querySelectorAll<HTMLElement>(
+          '.main-content .scroll-panel, .main-content textarea, .main-content .cm-scroller',
+        )
+        .forEach((element, index) => {
+          element.scrollTop = scroll[index] || 0;
+        });
     if (transfer && !transferDone.current) {
       transferDone.current = true;
       void api('toolSession', { action: 'ready', token: transfer }).catch(() => {});
@@ -596,8 +655,24 @@ export function App() {
               )}
             </div>
           </header>
-          <main className="main-content" inert={transferring}>
+          <main
+            className="main-content"
+            inert={transferring}
+            onScrollCapture={() => {
+              const scroll: Record<string, number> = {};
+              document
+                .querySelectorAll<HTMLElement>(
+                  '.main-content .scroll-panel, .main-content textarea, .main-content .cm-scroller',
+                )
+                .forEach((element, index) => {
+                  scroll[index] = element.scrollTop;
+                });
+              session.values.__scroll = scroll;
+              session.changed?.();
+            }}
+          >
             <ToolBoundary
+              key={session.id}
               session={session}
               onReady={toolReady}
               onError={toolError}
@@ -621,7 +696,7 @@ export function App() {
               )}
               {view === 'clipboard' && <ClipboardPanel query={query} board={board} />}
               {view === 'scratchpad' && <ScratchpadPanel initialExpression={payload} />}
-              {view === 'json' && <JsonTool key={payload} initial={payload} />}
+              {view === 'json' && <JsonTool initial={payload} />}
               {view === 'filesearch' && <FileSearch />}
               {['timestamp', 'encoding', 'uuid'].includes(view) && (
                 <ToolsPanel key={view + payload} tool={view} initial={payload} />
@@ -629,6 +704,8 @@ export function App() {
               {view === 'web' && <WebPanel />}
               {view === 'plugins' && <PluginsPanel />}
               {view === 'settings' && <SettingsPanel />}
+              {view === 'snippets' && <SnippetsPanel initial={payload} />}
+              {view === 'workspaces' && <WorkspacesPanel initial={payload} />}
             </ToolBoundary>
           </main>
           {closingTokens.length > 0 && (

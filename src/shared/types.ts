@@ -12,6 +12,8 @@ export interface ClipItem {
   hash: string;
   createdAt: number;
   favorite: boolean;
+  html?: string;
+  ocrText?: string;
   files?: string[];
   imagePath?: string;
   thumbnail?: string;
@@ -45,6 +47,10 @@ export interface Settings {
   hideOnBlur: boolean;
   autoCheckUpdates: boolean;
   clipboardEnabled: boolean;
+  restoreToolSessions: boolean;
+  clipboardPausedUntil: number;
+  clipboardExcludedApps: string[];
+  clipboardOcrFavorites: boolean;
   maxClipboardItems: number;
   retentionDays: number;
   searchPaths: string[];
@@ -55,7 +61,17 @@ export interface Command {
   id: string;
   name: string;
   subtitle: string;
-  kind: 'tool' | 'app' | 'shortcut' | 'plugin' | 'web' | 'match' | 'system' | 'local';
+  kind:
+    | 'tool'
+    | 'app'
+    | 'shortcut'
+    | 'plugin'
+    | 'web'
+    | 'match'
+    | 'system'
+    | 'local'
+    | 'snippet'
+    | 'workspace';
   keywords: string[];
   icon?: string;
   color?: string;
@@ -150,6 +166,7 @@ export interface AppState {
   shortcutError: string | null;
   catalogLoading: boolean;
   catalogRevision: number;
+  searchPreferenceRevision: number;
   nativeStatus: string | null;
   canPaste: boolean;
 }
@@ -160,6 +177,10 @@ export const DEFAULT_SETTINGS: Settings = {
   hideOnBlur: true,
   autoCheckUpdates: true,
   clipboardEnabled: true,
+  restoreToolSessions: false,
+  clipboardPausedUntil: 0,
+  clipboardExcludedApps: [],
+  clipboardOcrFavorites: false,
   maxClipboardItems: 500,
   retentionDays: 30,
   searchPaths: [],
@@ -167,6 +188,22 @@ export const DEFAULT_SETTINGS: Settings = {
   webShortcuts: [],
 };
 export const BUILTIN_COMMANDS: Command[] = [
+  {
+    id: 'tool:snippets',
+    name: '快捷短语',
+    subtitle: '分组管理常用文本与变量',
+    kind: 'tool',
+    keywords: ['snippet', '短语', '模板'],
+    color: '#699580',
+  },
+  {
+    id: 'tool:workspaces',
+    name: '工作区',
+    subtitle: '按顺序打开应用、目录与网站',
+    kind: 'tool',
+    keywords: ['workspace', '工作环境'],
+    color: '#558e9b',
+  },
   {
     id: 'tool:clipboard',
     name: '剪贴板',
@@ -270,6 +307,8 @@ export const HOST_ACTIONS = [
   'clipIndex',
   'clipPage',
   'clipDetail',
+  'clipCleanup',
+  'clipOcr',
   'clipAction',
   'pads',
   'savePad',
@@ -281,12 +320,20 @@ export const HOST_ACTIONS = [
   'pluginInspect',
   'pluginSession',
   'toolSession',
+  'toolDraft',
+  'productivity',
+  'configProfile',
+  'clearSearchPreferences',
+  'workspaceRun',
+  'snippetPreview',
+  'continueResult',
   'marketplace',
   'marketInstall',
   'fileSearch',
   'fileSearchStatus',
   'fileBrowse',
   'fileInfo',
+  'filePreview',
   'fileAction',
   'openData',
   'updateReady',

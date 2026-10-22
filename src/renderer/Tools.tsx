@@ -2,6 +2,7 @@ import { formatLocale, t } from '../shared/i18n';
 import type { WebShortcut } from '../shared/types';
 import { validateWebShortcut } from '../shared/web-shortcuts';
 import { useToolState } from './tool-session';
+import { ResultActions } from './ActionMenu';
 import { useState, useEffect } from 'react';
 import { Copy, RefreshCw, Plus, Trash2, Globe, Pencil } from 'lucide-react';
 import { api, useApp, errorText, PanelHeader, Empty, IconButton } from './common';
@@ -82,6 +83,7 @@ export function ToolsPanel({ tool, initial }: { tool: string; initial: string })
           })}
         />
         <div className="field-label">{t('Unix 时间戳 → 日期')}</div>
+        <ResultActions result={{ type: 'text', text: valid ? parsed.toISOString() : '' }} />
         <div className="form-row">
           <input
             aria-label={t('Unix 时间戳')}
@@ -199,6 +201,7 @@ export function ToolsPanel({ tool, initial }: { tool: string; initial: string })
             <Copy size={16} />
             {t('全部复制')}
           </button>
+          <ResultActions result={{ type: 'text', text: output }} />
         </div>
         <textarea
           className="code-editor uuid-output"
@@ -231,6 +234,7 @@ export function ToolsPanel({ tool, initial }: { tool: string; initial: string })
           {t('解码')}
         </button>
         <span className="flex-spacer" />
+        <ResultActions result={{ type: 'text', text: output }} />
         <button className="button" disabled={!output} onClick={() => void copy()}>
           <Copy size={16} />
           {t('复制结果')}

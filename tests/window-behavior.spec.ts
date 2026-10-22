@@ -186,7 +186,7 @@ test('登录启动留在后台，手动唤起后显示，自启动开关读回�
         enabled = options.openAtLogin;
         (globalThis as any).__loginWrites.push(options);
       };
-      (globalThis as any).__nexlet.main.webContents.send('host-change', 'state');
+      (globalThis as any).__nexlet.main.emit('focus');
     });
     const toggle = page.getByRole('switch', { name: '开机自启动', exact: true });
     await expect(toggle).toBeEnabled();

@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from '../src/shared/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const { createReader, reader, read, readText } = vi.hoisted(() => ({
@@ -57,7 +58,7 @@ describe('macOS change counter', () => {
 function captureFixture(sequence: () => number | null) {
   const addClip = vi.fn();
   const store = {
-    settings: () => ({ clipboardEnabled: true }),
+    settings: () => ({ ...DEFAULT_SETTINGS, clipboardEnabled: true }),
     addClip,
     prune: vi.fn(),
     hasClipHash: () => true,
