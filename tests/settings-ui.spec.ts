@@ -172,7 +172,7 @@ test('下拉框与输入框等高，Escape 关闭菜单并恢复焦点', async (
   await expect(page.getByRole('option', { name: '浅色', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('listbox')).toHaveCount(0);
-  await expect(page.getByRole('switch', { name: '记录剪贴板历史', exact: true })).toBeFocused();
+  await expect(page.getByRole('switch', { name: '重启后恢复工具状态', exact: true })).toBeFocused();
 });
 
 test('键盘选择主题和数值设置写入实际状态，重开页面保留', async () => {

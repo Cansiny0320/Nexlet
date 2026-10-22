@@ -120,7 +120,7 @@ test.afterAll(async () => {
 test('别名可检索；逐功能禁用拦截旧结果并能在管理页恢复', async () => {
   await home();
   await page.getByRole('button', { name: 'JSON 工具', exact: true }).click({ button: 'right' });
-  await page.getByRole('button', { name: '别名与快捷键', exact: true }).click();
+  await page.getByRole('menuitem', { name: '别名与快捷键', exact: true }).click();
   await page.getByLabel('功能别名').fill('结构化数据\n我的 JSON');
   await page.getByLabel('功能快捷键', { exact: true }).fill('Control+Alt+J');
   await page.getByRole('button', { name: '保存功能设置' }).click();
@@ -242,7 +242,7 @@ test('固定与最近不重复，固定排序和最近单项移除；列表选�
   await expect(page.locator('[data-command-id="tool:json"]')).toHaveCount(1);
   const before = (await call('state')).pinned;
   await page.getByRole('button', { name: 'JSON 工具', exact: true }).click({ button: 'right' });
-  await page.getByRole('button', { name: '固定项前移' }).click();
+  await page.getByRole('menuitem', { name: '固定项前移' }).click();
   const after = (await call('state')).pinned;
   expect(after.indexOf('tool:json')).toBe(before.indexOf('tool:json') - 1);
   // Isolate the keyboard layout transition from native cursor events on the shared desktop.
@@ -263,7 +263,7 @@ test('固定与最近不重复，固定排序和最近单项移除；列表选�
   await call('launch', { id: 'tool:encoding' });
   await home();
   await page.getByRole('button', { name: '编码转换', exact: true }).click({ button: 'right' });
-  await page.getByRole('button', { name: '从最近使用移除' }).click();
+  await page.getByRole('menuitem', { name: '从最近使用移除' }).click();
   expect((await call('state')).recent).not.toContain('tool:encoding');
   await page.getByRole('button', { name: '网格展示' }).click();
 });

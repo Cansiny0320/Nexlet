@@ -1,4 +1,4 @@
-Nexlet 0.2.41 新增 12 项效率功能，让文本、图片、文件和工具结果可以接着处理，并保留上次的工作状态。
+Nexlet 0.2.42 新增 12 项效率功能，让文本、图片、文件和工具结果可以接着处理，并保留上次的工作状态。
 
 ## 新增
 
@@ -21,23 +21,23 @@ Nexlet 0.2.41 新增 12 项效率功能，让文本、图片、文件和工具�
 - 已安装插件先打开，更新在后台准备；减少重复检查、状态刷新和快捷键注册。
 - Linux 文件搜索复用未变化的目录内容，macOS 减少空闲时的原生事件轮询。
 
-先更新 Nexlet，再从插件市场更新翻译、离线 OCR、图文转图片，或安装 AI 动作。新插件能力要求 Nexlet 0.2.41；AI 请求仅在主动运行时发送，API Key 不进入配置导出。
+先更新 Nexlet，再从插件市场更新翻译、离线 OCR、图文转图片，或安装 AI 动作。新插件能力要求 Nexlet 0.2.42；AI 请求仅在主动运行时发送，API Key 不进入配置导出。
 
-使用说明：[12 项效率功能](https://github.com/Cansiny0320/Nexlet/blob/v0.2.41/docs/productivity.md)。
+使用说明：[12 项效率功能](https://github.com/Cansiny0320/Nexlet/blob/v0.2.42/docs/productivity.md)。
 
 ## English
 
-Nexlet 0.2.41 adds snippets with variables, direct result handoff, JSONC configuration import/export with preview and undo, workspace launch sequences, searchable image text through offline OCR, customizable AI actions, tool drafts with optional restart restoration, rich clipboard history, keyboard action menus, typo-tolerant search with local preferences, recording controls, and bounded file previews.
+Nexlet 0.2.42 adds snippets with variables, direct result handoff, JSONC configuration import/export with preview and undo, workspace launch sequences, searchable image text through offline OCR, customizable AI actions, tool drafts with optional restart restoration, rich clipboard history, keyboard action menus, typo-tolerant search with local preferences, recording controls, and bounded file previews.
 
 Clipboard database and image work now run away from the main thread. Installed plugins open before background updates finish, and unchanged directories and application state avoid repeated work. Update Nexlet first, then update the companion plugins in the marketplace. AI actions send requests only when explicitly run; API keys are excluded from configuration exports.
 
 ## 下载
 
-- Windows x64：安装包 Nexlet-0.2.41-Windows-x64-Setup.exe；便携包 Nexlet-0.2.41-Windows-x64.exe。
-- Apple Silicon Mac：Nexlet-0.2.41-macOS-arm64.dmg。
-- Intel Mac：Nexlet-0.2.41-macOS-x64.dmg。
-- Linux x64：Nexlet-0.2.41-Linux-x86_64.AppImage、Nexlet-0.2.41-Linux-amd64.deb。
-- Linux arm64：Nexlet-0.2.41-Linux-arm64.AppImage、Nexlet-0.2.41-Linux-arm64.deb。
+- Windows x64：安装包 Nexlet-0.2.42-Windows-x64-Setup.exe；便携包 Nexlet-0.2.42-Windows-x64.exe。
+- Apple Silicon Mac：Nexlet-0.2.42-macOS-arm64.dmg。
+- Intel Mac：Nexlet-0.2.42-macOS-x64.dmg。
+- Linux x64：Nexlet-0.2.42-Linux-x86_64.AppImage、Nexlet-0.2.42-Linux-amd64.deb。
+- Linux arm64：Nexlet-0.2.42-Linux-arm64.AppImage、Nexlet-0.2.42-Linux-arm64.deb。
 - macOS ZIP、blockmap 和 latest*.yml 用于应用内更新；SHA256SUMS.txt 提供文件校验值。
 
 手动安装前请先完全退出旧版。现有本地数据继续使用原用户目录。
