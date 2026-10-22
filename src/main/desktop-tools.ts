@@ -16,8 +16,7 @@ import path from 'node:path';
 import { ScreenCapture } from './screen-capture';
 import { isHostDocument } from './host-origin';
 import type { DesktopToolState, ImageToolState } from '../shared/desktop-tools';
-import type { CaptureDestination } from '../shared/capture';
-import type { WindowRect } from '../shared/window-layout';
+import type { CaptureDestination, WindowRect } from '../shared/capture';
 import type { Command } from '../shared/types';
 interface Session {
   window: BrowserWindow;

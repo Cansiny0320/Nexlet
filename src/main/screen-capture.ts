@@ -7,8 +7,8 @@ import {
   type CaptureState,
   type CaptureFrame,
   type CaptureDestination,
+  type WindowRect,
 } from '../shared/capture';
-import type { WindowRect } from '../shared/window-layout';
 interface Frame extends CaptureFrame {
   image: NativeImage;
 }

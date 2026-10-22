@@ -1,5 +1,10 @@
 import { t } from './i18n';
-import type { WindowRect } from './window-layout';
+export interface WindowRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 export interface CaptureFrame {
   id: string;
   bounds: WindowRect;

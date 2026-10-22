@@ -12,7 +12,6 @@ import type { SelectionService, SelectionTarget, SelectionResult } from './selec
 import type { SelectionPlatform } from './selection-platform';
 import { revealWindow } from './window-visibility';
 interface Dependencies {
-  beforeOpen?: () => void;
   create: () => Promise<BrowserWindow>;
   config: () => PanelConfig;
   status: () => PanelStatus;
@@ -99,7 +98,6 @@ export class SuperPanelController {
     fixture?: SelectionResult,
   ) {
     if (this.executing || this.deps.busy() || !this.deps.config().enabled) return;
-    if (!fixture) this.deps.beforeOpen?.();
     const generation = ++this.generation;
     this.loading = true;
     this.executing = false;

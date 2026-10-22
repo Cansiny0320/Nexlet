@@ -2,7 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 
-test('系统设置生成图覆盖最近、固定和搜索，目录原生图不覆盖设计', async () => {
+test('系统设置内置图标覆盖最近、固定和搜索', async () => {
   test.skip(!['darwin', 'win32'].includes(process.platform), '系统设置入口仅支持 Windows 和 macOS');
   await mkdir('.tmp', { recursive: true });
   const data = await mkdtemp(path.resolve('.tmp/system-icons-'));
@@ -53,17 +53,6 @@ test('系统设置生成图覆盖最近、固定和搜索，目录原生图不�
       'system:settings:nonexistent',
     ]);
     expect(icons).toHaveLength(2);
-    if (process.platform === 'darwin') {
-      expect(icons.find((c: any) => c.id === 'system:settings:display').icon).toMatch(
-        /^data:image\/png;base64,/,
-      );
-      expect(icons.find((c: any) => c.id === 'system:settings:bluetooth').icon).toMatch(
-        /^data:image\/png;base64,/,
-      );
-      expect(icons.find((c: any) => c.id === 'system:settings:display').icon).not.toBe(
-        generatedDisplay,
-      );
-    }
     await page.locator('.launcher-input').fill('显示器');
     await expect(display).toHaveAttribute('src', generatedDisplay!);
     await call('settings', { theme: 'dark', hideOnBlur: false });

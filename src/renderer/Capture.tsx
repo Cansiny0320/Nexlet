@@ -1,8 +1,7 @@
 import { t } from '../shared/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Download, Pin, X } from 'lucide-react';
-import type { CaptureState, CaptureDestination } from '../shared/capture';
-import type { WindowRect } from '../shared/window-layout';
+import type { CaptureState, CaptureDestination, WindowRect } from '../shared/capture';
 import { errorText } from './common';
 export function Capture() {
   const [state, setState] = useState<CaptureState | null>(null),

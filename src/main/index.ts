@@ -2,9 +2,7 @@ import { hostProcedure, hostAuthorization, registerHostRpc, type HostRouter } fr
 import { localizeCommand } from '../shared/localized-command';
 import { t, currentLocale, resolveLocale, setLocale, validLanguage } from '../shared/i18n';
 import { CommandRegistry } from './command-registry';
-import { WindowActions } from './window-actions';
 import { DesktopTools, desktopCommands } from './desktop-tools';
-import { createWindowBackend } from './window-native';
 import { PanelConfigStore } from './panel-config';
 import { PanelTrigger } from './panel-trigger';
 import { SelectionService } from './selection';
@@ -132,7 +130,6 @@ async function bootstrap() {
   const panelConfig = new PanelConfigStore(store, () => registry.pinned());
   const selectionPlatform = new SelectionPlatform(platform, clips);
   const selection = new SelectionService(selectionPlatform);
-  const windowActions = new WindowActions(createWindowBackend(), () => screen.getAllDisplays());
   const systemExecutor = createSystemExecutor();
   if (testMode)
     systemExecutor.execute = async () => {
@@ -298,7 +295,6 @@ async function bootstrap() {
     testMode,
   );
   panel = new SuperPanelController(inputs, selection, selectionPlatform, {
-    beforeOpen: () => windowActions.remember(),
     create: createPanelWindow,
     config: () => panelConfig.read(),
     status: () => panelTrigger.read(),
@@ -458,7 +454,6 @@ async function bootstrap() {
     );
   }
   async function show() {
-    windowActions.remember();
     await platform.rememberTarget();
     if (main.isMinimized()) main.restore();
     position();
@@ -545,7 +540,6 @@ async function bootstrap() {
   }
   async function activateHotkey(id: string) {
     if (Object.values(hotkeyState()).some(Boolean) || panel.busy) return;
-    windowActions.remember();
     hotkeyRunning = true;
     try {
       let input: LaunchInput | undefined;
@@ -689,14 +683,6 @@ async function bootstrap() {
     const id = text(args.id, 250);
     registry.assertEnabled(id);
     const current = { settings: store.settings(), commands: registry.commands(sourceCommands()) };
-    if (id.startsWith('window:')) {
-      if (process.platform === 'linux') throw Error(t('Linux 暂不支持外部窗口布局'));
-      const result = windowActions.execute(id.slice(7));
-      window.hide();
-      if (result.warning) notify('error:' + result.warning);
-      recordRecent(id);
-      return { opened: true };
-    }
     const snapshot = args.inputId ? inputs.get(window.webContents.id, args.inputId) : undefined;
     const content =
       snapshot?.input.type === 'text'
@@ -1716,7 +1702,6 @@ async function bootstrap() {
       // Keep all services and windows alive until every editor confirms its save.
       await saveForClose([...hosts.keys()]);
       desktopTools.close();
-      windowActions.close();
       clearInterval(panelBusyTimer);
       panelTrigger.close();
       panel.close();
@@ -1748,7 +1733,6 @@ async function bootstrap() {
   if (testMode)
     (globalThis as any).__nexlet = {
       desktopTools,
-      windowActions,
       panel,
       panelConfig,
       panelTrigger,

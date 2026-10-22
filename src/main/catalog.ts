@@ -11,7 +11,6 @@ import type { CatalogCache } from './catalog-cache';
 import { loadMacCatalogIcons, loadMacCatalogNames } from './catalog-mac';
 import { readWindowsApplications, readWindowsApplicationSignature } from './catalog-windows';
 import { CatalogMonitor, readDirectorySnapshot, type DirectorySnapshot } from './catalog-monitor';
-import { loadMacSystemIcons } from './system-icons-mac';
 import { isAuxiliaryWindowsShortcut } from './catalog-shortcut-filter';
 
 function shortcutIdentity(shortcut?: {
@@ -53,7 +52,6 @@ export class Catalog {
   private icons = new Map<string, string>();
   private iconSources = new Map<string, string>();
   private aliases = new Map<string, string>();
-  private systemIcons?: Promise<Map<string, string>>;
   private fingerprints = new Map<string, string>();
   private iconLoads = new Map<string, { revision: number; promise: Promise<string | undefined> }>();
   private scanning?: Promise<void>;
@@ -338,11 +336,7 @@ export class Catalog {
       return Promise.all(
         items.map(async (item) => ({ ...item, icon: await this.cachedIcon(item) })),
       );
-    let systemIcons: Map<string, string> | undefined;
     if (process.platform === 'darwin') {
-      if (items.some((item) => item.kind === 'system' && item.id.startsWith('system:settings:'))) {
-        systemIcons = await (this.systemIcons ??= loadMacSystemIcons());
-      }
       const missing = items.filter(
         (item) => !this.icons.has(item.id) && item.path?.endsWith('.app'),
       );
@@ -354,7 +348,6 @@ export class Catalog {
     }
     return Promise.all(
       items.map(async (item) => {
-        if (systemIcons?.has(item.id)) return { ...item, icon: systemIcons.get(item.id) };
         let source = this.iconSources.get(item.id) || item.path;
         if (
           process.platform === 'linux' &&
