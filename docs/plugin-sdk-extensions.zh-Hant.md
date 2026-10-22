@@ -4,13 +4,13 @@
 
 本擴充套件沿用 `apiVersion: 1`，保持原介面不變，以 Nexlet API 覆蓋桌面外掛的能力分類。**不提供 uTools 外掛原始碼、介面名稱或安裝包相容層。** 請按所用介面設定最低宿主版本；舊版宿主可能不認識新增許可權。公開合同位於 `sdk/index.d.ts` 和 `src/shared/plugin-api.ts`，外掛倉型別由 `node scripts/sync-plugin-sdk.mjs` 生成。
 
-## 結果交接與工具草稿（v0.2.40）
+## 結果交接與工具草稿（v0.2.41）
 
 `nexlet.results.publish(result)` 接受 `{ type: 'text', text, html? }`、`{ type: 'image', data }`（data URL）或 `{ type: 'files', resources }`（目前外掛持有的檔案 token），回傳 `Promise<true>`。宿主返回啟動器，由使用者選下一個工具，不寫入系統剪貼簿。檔案會重新驗證並授予目的端權限，不接受任意路徑。文字 `PluginContext` 可含不可信的 `html`，顯示前必須清理。舊 `search.returnToLauncher(text)` 仍可使用。
 
 `nexlet.session.read()` / `save(state)` 讀寫依外掛、feature 及視窗隔離的 JSON 草稿；`readImage()` / `saveImage(Uint8Array)` 提供一個圖片槽。JSON 上限 4 MB、單張圖片 20 MiB、圖片快取總量 64 MiB。預設只保留本次執行期間；使用者在宿主設定啟用後，主視窗可跨重啟恢復，獨立視窗不持久化。草稿不進入設定匯出，不可儲存 API Key；金鑰應使用 `secrets`。
 
-`onEnter` 沒有明確新輸入時才恢復；在 `onOut` 回傳儲存的 Promise。關閉期間允許儲存狀態與圖片，但不接受新任務。恢復時不可自動重啟網路或計算工作，非同步結果應檢查請求代次。相容舊宿主須檢測 `nexlet.session` 與 `nexlet.results`；使用本節介面的外掛應宣告 `minHostVersion: "0.2.40"`。
+`onEnter` 沒有明確新輸入時才恢復；在 `onOut` 回傳儲存的 Promise。關閉期間允許儲存狀態與圖片，但不接受新任務。恢復時不可自動重啟網路或計算工作，非同步結果應檢查請求代次。相容舊宿主須檢測 `nexlet.session` 與 `nexlet.results`；使用本節介面的外掛應宣告 `minHostVersion: "0.2.41"`。
 
 ## 許可權和執行邊界
 

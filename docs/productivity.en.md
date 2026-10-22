@@ -2,7 +2,7 @@
 
 # Productivity features
 
-These features are available in Nexlet v0.2.40. Update the app, then update the companion plugins in the marketplace.
+These features are available in Nexlet v0.2.41. Update the app, then update the companion plugins in the marketplace.
 
 1. **Snippets**: create named, grouped text snippets with `{{date}}`, `{{date:YYYY-MM-DD HH:mm:ss}}`, `{{clipboard}}`, and `{{input:Name}}`. Escape a literal opening brace pair with `\{{`. Fill in values and preview before copying, pasting back, or continuing. Saved snippets are commands that support pins, aliases, and shortcuts.
 2. **Continue processing**: send results from built-in tools and supported plugins back to the launcher, then choose the next tool. Text, HTML, images, and files transfer directly. Reopen the source tool to recover its state.

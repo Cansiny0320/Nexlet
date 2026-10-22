@@ -50,7 +50,7 @@ Click the Nexlet icon at the top right of the launcher to open Settings. Choose 
 
 ## Everyday tools
 
-### New productivity features (v0.2.40)
+### New productivity features (v0.2.41)
 
 The current source adds snippets, workspaces, configuration files, AI actions, image text search, tool state restoration, and improvements to rich clipboard history, actions, search, recording controls, and file previews. See the [productivity guide](docs/productivity.en.md).
 

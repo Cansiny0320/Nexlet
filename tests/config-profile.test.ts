@@ -34,8 +34,9 @@ it('导出允许的配置，不包含秘密、草稿、历史或插件私有数�
 it('JSONC 差异按类别应用、事务回滚、撤销及过期预览保护', () => {
   store = new Store(directory);
   const profiles = new ConfigProfiles(store, () => []);
+  const sourcePlatform = process.platform === 'win32' ? 'darwin' : 'win32';
   const preview = profiles.preview(
-    '{ // editable\n"version":1,"platform":"win32","categories":{"settings":{"theme":"dark"},"snippets":[{"id":"a","name":"A","body":"hello","group":""}]}}',
+    `{ // editable\n"version":1,"platform":"${sourcePlatform}","categories":{"settings":{"theme":"dark"},"snippets":[{"id":"a","name":"A","body":"hello","group":""}]}}`,
   );
   expect(preview.warnings.length).toBeGreaterThan(0);
   expect(preview.changes.map((item) => item.category)).toEqual(['settings', 'snippets']);
@@ -54,6 +55,14 @@ it('JSONC 差异按类别应用、事务回滚、撤销及过期预览保护', (
   const stale = profiles.preview('{"version":1,"categories":{"settings":{"theme":"dark"}}}');
   store.set('settings', { theme: 'light' });
   expect(() => profiles.apply(stale.token, ['settings'])).toThrow();
+});
+it('同平台配置不产生跨平台警告', () => {
+  store = new Store(directory);
+  const profiles = new ConfigProfiles(store, () => []);
+  const preview = profiles.preview(
+    JSON.stringify({ version: 1, platform: process.platform, categories: {} }),
+  );
+  expect(preview.warnings).toEqual([]);
 });
 it('拒绝非法配置、未知敏感字段与任意插件数据库导入', () => {
   store = new Store(directory);
