@@ -151,6 +151,26 @@ test('download menu supports keyboard, shared choice, Escape and outside dismiss
   await ctx.close();
 });
 
+test('Mac first-open instructions stay collapsed until requested, including without JavaScript', async () => {
+  for (const javaScriptEnabled of [true, false]) {
+    const ctx = await context({ javaScriptEnabled });
+    const page = await ctx.newPage();
+    await page.goto(base + '/download/');
+    if (javaScriptEnabled)
+      await page.waitForFunction(() => document.documentElement.classList.contains('js'));
+    const guide = page.locator('details.mac-first-open');
+    assert.equal(await guide.getAttribute('open'), null);
+    await page.locator('.mac-first-open-hint a').click();
+    await page.locator('#mac-first-open').waitFor({ state: 'visible' });
+    assert.equal(await guide.getAttribute('open'), '');
+    assert.equal(await guide.locator('li').count(), 4);
+    await guide.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await guide.getAttribute('open'), null);
+    await ctx.close();
+  }
+});
+
 test('mobile navigation, skip link, FAQ and clipboard success/failure remain accessible', async () => {
   const ctx = await context({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();

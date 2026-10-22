@@ -9,50 +9,14 @@ export function HomePage() {
   return (
     <>
       <section className="home-hero shell">
-        <div className="hero-glow" />
         <div className="hero-heading">
-          <span className="pill">{t('为你的桌面而来')}</span>
           <h1>
-            {t('常用工具，')}
+            {'Nexlet'}
             <br />
-            <span>{t('随叫随到。')}</span>
+            <span>{t('桌面工具箱')}</span>
           </h1>
           <p>{t('应用搜索、剪贴板、计算与开发工具，一个入口。')}</p>
           <SplitDownload id="hero-downloads" />
-        </div>
-        <div className="scribble scribble-left" aria-hidden="true">
-          <span>
-            {t('一个入口')}
-            <br />
-            {t('更高效的桌面生活')}
-          </span>
-          <svg viewBox="0 0 70 65">
-            <path
-              d="M10 2c2 30 21 40 43 46M35 47l20 3-10-17"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <div className="scribble scribble-right" aria-hidden="true">
-          <span>
-            {t('唤醒灵感')}
-            <br />
-            {t('从 Nexlet 开始')}
-          </span>
-          <svg viewBox="0 0 70 65">
-            <path
-              d="M10 2c2 30 21 40 43 46M35 47l20 3-10-17"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
         </div>
         <div className="product-showcase" aria-label={t('Nexlet 搜索、剪贴板和计算稿纸界面示意')}>
           <div className="mock-window clipboard-window">
@@ -187,8 +151,7 @@ export function HomePage() {
       {'\n '}
       <section className="shell home-features" aria-labelledby="features-title">
         <div className="center-heading">
-          <h2 id="features-title">{t('小事顺手，大事专注。')}</h2>
-          <p>{t('把琐碎的操作交给 Nexlet，让你更专注在真正重要的事上。')}</p>
+          <h2 id="features-title">{t('常用功能')}</h2>
         </div>
         <div className="feature-grid">
           <article className="feature-card clipboard-feature">

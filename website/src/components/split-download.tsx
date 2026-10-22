@@ -38,10 +38,17 @@ export function SplitDownload({ id }: { id: string }) {
           </Menu.Trigger>
         </div>
         <p className="download-hint release-summary">
-          <ReleaseStatus /> · Nexlet <ReleaseVersion />
-        </p>
-        <p className="download-hint" data-download-hint>
-          {option?.label ? t(option.label) : t('选择平台')}
+          <ReleaseStatus /> · <ReleaseVersion />
+          {selected && (
+            <span data-download-hint>
+              {' · '}
+              {selected === 'windows-x64'
+                ? 'x64'
+                : selected === 'macos-arm64'
+                  ? 'Apple Silicon'
+                  : 'Intel'}
+            </span>
+          )}
         </p>
         <Menu.Portal>
           <Menu.Positioner

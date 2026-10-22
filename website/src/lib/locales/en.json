@@ -152,5 +152,14 @@
   "打开「系统设置 → 隐私与安全性」，向下找到 Nexlet 的拦截提示，点击「仍要打开」。": "Go to System Settings → Privacy & Security. Scroll down to the notice about Nexlet and click Open Anyway.",
   "按提示验证密码或 Touch ID，再确认「打开」。": "Authenticate with your password or Touch ID when prompted, then confirm Open.",
   "没有看到「仍要打开」？请重新尝试打开 Nexlet，再回到该设置页面。": "No Open Anyway button? Try opening Nexlet again, then return to this settings page.",
-  "查看 Apple 官方说明": "Read Apple’s instructions"
+  "查看 Apple 官方说明": "Read Apple’s instructions",
+  "桌面工具箱": "Desktop toolbox",
+  "常用功能": "Features",
+  "用 HTML、CSS 和 JavaScript 构建桌面工具。": "Build desktop tools with HTML, CSS and JavaScript.",
+  "开发流程": "Development steps",
+  "插件 API": "Plugin API",
+  "保存插件设置与数据。": "Save plugin settings and data.",
+  "读取或写入系统剪贴板文本。": "Read or write system clipboard text.",
+  "运行示例插件": "Run the sample plugin",
+  "查看便笺插件的源码与运行步骤。": "View the note plugin source and setup instructions."
 }

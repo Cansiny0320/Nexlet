@@ -265,35 +265,6 @@ svg.icon {
   font-weight: 600;
   margin-bottom: 12px;
 }
-.scribble {
-  position: absolute;
-  font-family: KaiTi, 'STKaiti', cursive;
-  color: #9a96ff;
-  font-size: 18px;
-  line-height: 1.55;
-  letter-spacing: 1px;
-  transform: rotate(-7deg);
-  pointer-events: none;
-}
-.scribble svg {
-  display: block;
-  width: 70px;
-  height: 65px;
-  margin: 9px 0 0 33px;
-}
-.scribble-right {
-  right: 0;
-  top: 88px;
-  transform: rotate(-8deg);
-}
-.scribble-right svg {
-  transform: scaleX(-1);
-  margin-left: 0;
-}
-.scribble-left {
-  left: 25px;
-  top: 84px;
-}
 .center-heading {
   text-align: center;
 }
@@ -484,28 +455,12 @@ svg.icon {
 .selection-label:not(:empty) + .selection-check {
   margin-left: 0;
 }
-.hero-glow {
-  position: absolute;
-  z-index: -1;
-  inset: 140px -60px 0;
-  background: radial-gradient(ellipse at 50% 62%, #c5c1ff60, transparent 65%);
-  filter: blur(14px);
-}
 .product-showcase {
   position: absolute;
   left: 0;
   right: 0;
   top: 237px;
   height: 320px;
-}
-.product-showcase:before {
-  content: '';
-  position: absolute;
-  inset: 58px -50px -25px;
-  background: linear-gradient(125deg, #f9f9ff 4%, #dcddff90 57%, #edf2ff55);
-  clip-path: polygon(0 0, 28% 27%, 67% 0, 100% 17%, 100% 68%, 88% 94%, 34% 100%, 8% 89%);
-  border-radius: 50%;
-  filter: blur(4px);
 }
 .mock-window {
   position: absolute;
@@ -967,23 +922,11 @@ svg.icon {
   height: 66px;
 }
 .download-banner,
-.source-banner,
 .plugin-start {
   background: linear-gradient(135deg, #efebff, #f2f2ff 45%, #e9e8ff);
   position: relative;
   isolation: isolate;
   overflow: visible;
-}
-.download-banner:before,
-.source-banner:before,
-.plugin-start:before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(33deg, #d2d2ff70, transparent 65%);
-  clip-path: polygon(0 15%, 24% 100%, 65% 100%, 92% 0, 100% 0, 100% 100%, 0 100%);
-  border-radius: inherit;
 }
 .download-banner {
   height: 160px;
@@ -1071,28 +1014,12 @@ svg.icon {
   margin-top: 7px;
   color: #526184;
 }
-.download-intro .scribble-left {
-  top: 67px;
-  left: 7px;
-}
-.download-intro .scribble-right {
-  top: 60px;
-  right: -8px;
-}
 .platform-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   position: relative;
   isolation: isolate;
-}
-.platform-grid:before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: 70px -55px -30px;
-  background: radial-gradient(ellipse, #d3d5ff80, transparent 70%);
-  filter: blur(15px);
 }
 .platform-card {
   height: auto;
@@ -1130,10 +1057,7 @@ svg.icon {
   height: 22px;
 }
 .package-label {
-  border: 1px solid #dedcff;
-  background: #f5f5ff;
   padding: 13px;
-  border-radius: 9px;
   margin-top: 12px;
   display: flex;
   justify-content: center;
@@ -1156,8 +1080,6 @@ svg.icon {
 }
 .mac-download-row {
   height: 59px;
-  border: 1px solid #e7e9f3;
-  border-radius: 10px;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -1199,9 +1121,18 @@ svg.icon {
   padding: clamp(20px, 4vw, 32px);
   scroll-margin-top: 100px;
 }
+.mac-first-open summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 .mac-first-open h2 {
   font-size: 24px;
-  margin: 0 0 12px;
+  margin: 0;
+}
+#mac-first-open {
+  scroll-margin-top: 100px;
 }
 .mac-first-open p {
   margin: 12px 0;
@@ -1400,37 +1331,6 @@ svg.icon {
 }
 details[open] > summary .icon {
   transform: rotate(180deg);
-}
-.source-banner {
-  height: 150px;
-  border-radius: 21px;
-  margin-top: 24px;
-  display: flex;
-  align-items: center;
-  gap: 29px;
-  padding: 28px 53px;
-}
-.source-banner .large-symbol {
-  width: 92px;
-  height: 93px;
-  border-radius: 18px;
-  background: #ffffff80;
-}
-.source-banner .large-symbol .icon {
-  width: 56px;
-  height: 56px;
-}
-.source-banner h2 {
-  font-size: 23px;
-}
-.source-banner p {
-  margin-top: 6px;
-  font-size: 14px;
-}
-.source-banner .button {
-  margin-left: auto;
-  font-size: 14px;
-  min-width: 232px;
 }
 .privacy-page main {
   position: relative;
@@ -1953,33 +1853,11 @@ details[open] > summary .icon {
 .actions .secondary .icon {
   color: var(--purple);
 }
-.language-pills {
-  display: flex;
-  gap: 8px;
-  margin-top: 18px;
-}
-.language-pills span {
-  padding: 4px 14px;
-  border-radius: 20px;
-  background: #f0efff;
-  color: var(--purple);
-  font-size: 12px;
-}
 .plugin-showcase {
   position: relative;
   height: 370px;
   padding-top: 27px;
   isolation: isolate;
-}
-.plugin-showcase:before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: -17px -30px 0 -15px;
-  transform: rotate(-12deg);
-  background: linear-gradient(150deg, #edf0ff88, #dcdfff99);
-  border-radius: 70% 11% 17% 0;
-  clip-path: polygon(0 20%, 100% 0, 100% 100%, 65% 66%, 0 90%, 13% 50%);
 }
 .code-editor {
   background: linear-gradient(130deg, #17212d, #202935);
@@ -2113,9 +1991,6 @@ details[open] > summary .icon {
   grid-template-columns: 30.5% 1fr;
   gap: 40px;
   padding: 26px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
 }
 .file-tree {
   padding: 17px 15px;
@@ -2266,9 +2141,7 @@ details[open] > summary .icon {
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  background: linear-gradient(120deg, #f4f7fc, #f4f5ff);
   padding: 10px 15px;
-  border-radius: 10px;
   font-size: 12px;
   min-height: 45px;
   color: var(--purple);
@@ -2415,12 +2288,6 @@ details[open] > summary .icon {
   }
   .download-intro h1 {
     font-size: 51px;
-  }
-  .scribble {
-    font-size: 15px;
-  }
-  .home-hero .scribble {
-    max-width: 130px;
   }
   .trust-card {
     padding: 15px;
@@ -2675,17 +2542,11 @@ details[open] > summary .icon {
   h2 {
     font-size: 27px;
   }
-  .scribble {
-    display: none;
-  }
   .home-hero {
     height: 642px;
   }
   .hero-heading {
     padding-top: 21px;
-  }
-  .hero-heading .pill {
-    font-size: 11px;
   }
   .hero-heading h1 {
     font-size: 56px;
@@ -2736,12 +2597,6 @@ details[open] > summary .icon {
     width: 82%;
     top: 152px;
     height: 220px;
-  }
-  .product-showcase:before {
-    inset: 45px -40px -60px;
-  }
-  .hero-glow {
-    inset: 250px -15px 0;
   }
   .home-features .center-heading {
     height: 105px;
@@ -2955,9 +2810,6 @@ details[open] > summary .icon {
   .platform-note {
     font-size: 11px;
   }
-  .platform-grid:before {
-    inset: 70px -10px 0;
-  }
   .release-meta {
     height: auto;
     padding: 24px 0 30px;
@@ -3048,35 +2900,6 @@ details[open] > summary .icon {
   .faq-list summary {
     font-size: 13px;
     padding: 13px;
-  }
-  .source-banner {
-    margin-top: 24px;
-    height: auto;
-    padding: 24px 19px;
-    display: grid;
-    grid-template-columns: 54px 1fr;
-    gap: 16px;
-  }
-  .source-banner .large-symbol {
-    width: 54px;
-    height: 58px;
-    border-radius: 13px;
-  }
-  .source-banner .large-symbol .icon {
-    width: 36px;
-    height: 36px;
-  }
-  .source-banner h2 {
-    font-size: 23px;
-  }
-  .source-banner p {
-    font-size: 11px;
-  }
-  .source-banner .button {
-    grid-column: 1/-1;
-    margin: 0;
-    font-size: 13px;
-    min-width: 0;
   }
   .privacy-hero {
     height: auto;
@@ -3282,13 +3105,6 @@ details[open] > summary .icon {
   .actions {
     gap: 12px;
   }
-  .language-pills {
-    margin-top: 18px;
-  }
-  .language-pills span {
-    font-size: 10px;
-    padding: 4px 12px;
-  }
   .plugin-showcase {
     height: 323px;
     padding-top: 0;
@@ -3327,9 +3143,6 @@ details[open] > summary .icon {
   .sample-plugin p {
     font-size: 11px;
     height: 53px;
-  }
-  .plugin-showcase:before {
-    inset: -15px -10px 0 0;
   }
   .plugin-directory {
     height: auto;
@@ -3604,36 +3417,6 @@ details[open] > summary .icon {
     gap: 13px;
   }
 }
-.download-banner:before,
-.source-banner:before,
-.plugin-start:before {
-  clip-path: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 170' preserveAspectRatio='none'%3E%3Cpath d='M0 74C146 12 266 116 381 170H0Z' fill='%23d8d7ff' fill-opacity='.6'/%3E%3Cpath d='M0 40C54 66 95 115 130 170H0Z' fill='%23eeeeff' fill-opacity='.7'/%3E%3Cpath d='M618 170C764 137 807 20 1000 45V170Z' fill='%23d9d8ff' fill-opacity='.65'/%3E%3Cpath d='M713 170C783 78 836 32 894 0H1000V170Z' fill='%23e6e5ff' fill-opacity='.55'/%3E%3C/svg%3E")
-    center/100% 100% no-repeat;
-}
-.product-showcase:before {
-  clip-path: none;
-  border-radius: 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 320' preserveAspectRatio='none'%3E%3Cpath d='M0 0C216 151 377 90 605 42S869 104 1000 28V245C715 352 295 330 0 225Z' fill='%23dedfff' fill-opacity='.48'/%3E%3Cpath d='M0 129C255 272 570 185 1000 75V250C647 352 229 316 0 217Z' fill='%23d4d7ff' fill-opacity='.3'/%3E%3C/svg%3E")
-    center/100% 100% no-repeat;
-  filter: blur(1px);
-}
-.plugin-showcase:before {
-  right: 0;
-  transform: rotate(-9deg);
-}
-.hero-glow {
-  left: -3vw;
-  right: -3vw;
-}
-.product-showcase:before {
-  left: -4vw;
-  right: -4vw;
-}
-.platform-grid:before {
-  left: -4vw;
-  right: -4vw;
-}
 @media (min-width: 1001px) {
   .plugins-hero h1 {
     font-size: 68px;
@@ -3738,9 +3521,6 @@ details[open] > summary .icon {
 .clipboard-feature .clip-row .dots {
   margin-left: 5px;
 }
-.product-showcase:before {
-  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
-}
 .website-disclosure:not([open]):not(:target) {
   display: none;
 }
@@ -3797,13 +3577,6 @@ details[open] > summary .icon {
   }
 }
 @media (max-width: 760px) {
-  .plugin-showcase:before {
-    right: 5px;
-    transform: rotate(-3deg);
-  }
-  .product-showcase:before {
-    bottom: 0;
-  }
   .plugin-capabilities h2 {
     text-wrap: balance;
   }
@@ -3815,19 +3588,6 @@ details[open] > summary .icon {
   * {
     transition: none !important;
   }
-}
-
-@font-face {
-  font-family: Nexlet Notes;
-  src: url('/assets/nexlet-notes.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-.scribble {
-  font-family: 'Nexlet Notes', cursive;
-  font-weight: 400;
-  letter-spacing: 0.1px;
-  color: #9995ff;
 }
 .download-file {
   border-radius: 7px 0 7px 7px;
@@ -4007,10 +3767,6 @@ h1 > span {
 .paper-lines > div {
   background: linear-gradient(120deg, #eeeff280, #fafbfd77);
 }
-.hero-glow {
-  background: radial-gradient(ellipse at 47% 58%, #c2c6ff77, transparent 64%);
-  filter: blur(23px);
-}
 .platform-card {
   background: linear-gradient(120deg, #fff 12%, #fafbffed 75%, #fefeff);
   box-shadow:
@@ -4086,8 +3842,6 @@ h1 > span {
     inset 0 1px 1px #fff;
 }
 .api-label {
-  background: linear-gradient(110deg, #f4f6ff, #f4f7fb);
-  box-shadow: inset 0 1px 2px #ffffffb0;
 }
 .file-tree > div > .icon {
   stroke-width: 2.2;
@@ -4111,14 +3865,6 @@ h1 > span {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1100 250' preserveAspectRatio='none'%3E%3Cpath d='M0 180C320 105 650 200 1100 70V250H0Z' fill='%23f0f3ff' fill-opacity='.65'/%3E%3Cpath d='M0 168C100 180 166 234 185 250H0Z' fill='%23e6eaff' fill-opacity='.65'/%3E%3C/svg%3E")
     center/100% 100% no-repeat;
 }
-.plugin-showcase:before {
-  inset: -26px -20px 0 -15px;
-  transform: none;
-  clip-path: none;
-  border-radius: 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 570 400' preserveAspectRatio='none'%3E%3Cpath d='M15 140C140 44 260 40 490 1Q550-9 550 35L527 211 82 395 142 218Z' fill='%23dfe3ff' fill-opacity='.66'/%3E%3Cpath d='M45 105C204-11 459 16 566 242Q575 275 548 307L367 350 419 162Z' fill='%23e9edff' fill-opacity='.48'/%3E%3C/svg%3E")
-    center/100% 100% no-repeat;
-}
 @media (min-width: 1001px) {
   h1 {
     font-weight: 850;
@@ -4131,22 +3877,8 @@ h1 > span {
   .home-hero .hero-heading > p {
     margin-top: 6px;
   }
-  .hero-heading .pill {
-    font-weight: 550;
-  }
   .hero-heading > p {
     font-size: 16px;
-  }
-  .scribble {
-    font-weight: 400;
-    letter-spacing: 0.2px;
-    opacity: 0.9;
-  }
-  .scribble-left {
-    left: 30px;
-  }
-  .scribble-right {
-    right: 2px;
   }
   .home-trust p {
     font-size: 12px;
@@ -4376,10 +4108,6 @@ h1 > span {
   }
 }
 @media (max-width: 760px) {
-  .plugin-showcase:before {
-    left: 0;
-    right: 0;
-  }
   .plugin-bottom {
     margin-top: 16px;
   }
@@ -4525,9 +4253,6 @@ html[lang='en'] .hero-title {
 }
 html[lang='zh-Hant'] {
   font-family: Arial, 'Nexlet Sans TC', 'Noto Sans TC', sans-serif;
-}
-html[lang='zh-Hant'] .scribble {
-  font-family: 'Nexlet Notes', 'Nexlet Sans TC', sans-serif;
 }
 html[lang='en'] .paper-lines p {
   position: static;

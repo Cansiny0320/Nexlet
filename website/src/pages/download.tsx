@@ -12,7 +12,6 @@ export function DownloadPage() {
           {t('下载 ')}
           <span>{'Nexlet'}</span>
         </h1>
-        <p>{t('适用于 Windows 和 macOS')}</p>
       </section>
       {'\n '}
       <section className="shell platform-grid" aria-label={t('选择平台下载安装包')}>
@@ -86,13 +85,12 @@ export function DownloadPage() {
         </p>
       </div>
       {'\n '}
-      <section
-        className="shell mac-first-open"
-        id="mac-first-open"
-        aria-labelledby="mac-first-open-title"
-      >
-        <h2 id="mac-first-open-title">{t('Mac 首次打开')}</h2>
-        <p>
+      <details className="shell mac-first-open" aria-labelledby="mac-first-open-title">
+        <summary>
+          <h2 id="mac-first-open-title">{t('Mac 首次打开')}</h2>
+          <Icon name="chevron" className="" />
+        </summary>
+        <p id="mac-first-open">
           {t(
             '当前 macOS 版本尚未经过 Apple 公证。确认安装包来自 Nexlet 官方 GitHub Release 后，请按以下步骤打开。',
           )}
@@ -109,7 +107,7 @@ export function DownloadPage() {
         </ol>
         <p>{t('没有看到「仍要打开」？请重新尝试打开 Nexlet，再回到该设置页面。')}</p>
         <a href="https://support.apple.com/102445">{t('查看 Apple 官方说明')}</a>
-      </section>
+      </details>
       <section className="shell onboarding">
         <div>
           <h2>{t('快速开始')}</h2>
@@ -198,18 +196,6 @@ export function DownloadPage() {
         </div>
       </section>
       {'\n '}
-      <section className="wide-shell source-banner">
-        <span className="large-symbol">
-          <Icon name="code" className="" />
-        </span>
-        <div>
-          <h2>{t('从源码构建')}</h2>
-        </div>
-        <a className="button secondary" href="https://github.com/Cansiny0320/Nexlet">
-          {t('查看构建文档 ')}
-          <Icon name="external" className="" />
-        </a>
-      </section>
     </>
   );
 }

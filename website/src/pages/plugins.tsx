@@ -9,13 +9,8 @@ export function PluginsPage() {
     <>
       <section className="shell plugins-hero">
         <div className="plugins-intro">
-          <span className="pill">{'NEXLET PLUGIN API V1'}</span>
-          <h1>
-            {t('把你的工具，')}
-            <br />
-            <span>{t('接进 Nexlet。')}</span>
-          </h1>
-          <p>{t('熟悉的 Web 技术，明确的桌面能力。')}</p>
+          <h1>{t('插件开发')}</h1>
+          <p>{t('用 HTML、CSS 和 JavaScript 构建桌面工具。')}</p>
           <div className="actions">
             <a
               className="button primary"
@@ -34,11 +29,6 @@ export function PluginsPage() {
               {t('查看示例 ')}
               <Icon name="external" className="" />
             </a>
-          </div>
-          <div className="language-pills">
-            <span>{'HTML'}</span>
-            <span>{'CSS'}</span>
-            <span>{'JavaScript'}</span>
           </div>
         </div>
         <div className="plugin-showcase">
@@ -117,8 +107,7 @@ export function PluginsPage() {
           </div>
         </div>
         <div>
-          <h2>{t('一个目录，就是起点。')}</h2>
-          <p>{t('只需几个文件，就能让你的创意在 Nexlet 中运行。')}</p>
+          <h2>{t('开发流程')}</h2>
           <ol className="plugin-steps">
             <li>
               <h3>
@@ -151,8 +140,7 @@ export function PluginsPage() {
       {'\n '}
       <section className="wide-shell plugin-capabilities">
         <div className="center-heading">
-          <h2>{t('能力有边界，扩展有余地。')}</h2>
-          <p>{t('Nexlet 提供一组清晰的桌面能力，让你的插件专注于创造真正有用的工具。')}</p>
+          <h2>{t('插件 API')}</h2>
         </div>
         <div className="capability-grid">
           <article>
@@ -162,7 +150,7 @@ export function PluginsPage() {
               </span>
               <div>
                 <h3>{t('独立存储')}</h3>
-                <p>{t('为你的插件提供独立的数据存储空间，用于保存设置与用户数据。')}</p>
+                <p>{t('保存插件设置与数据。')}</p>
               </div>
             </div>
             <div className="api-label">
@@ -179,7 +167,7 @@ export function PluginsPage() {
               </span>
               <div>
                 <h3>{t('剪贴板文本')}</h3>
-                <p>{t('读取和写入当前系统剪贴板文本，让工具与更多场景打通。')}</p>
+                <p>{t('读取或写入系统剪贴板文本。')}</p>
               </div>
             </div>
             <div className="api-label">
@@ -230,11 +218,7 @@ export function PluginsPage() {
             </span>
             <div>
               <h3>{t('权限在安装时确认')}</h3>
-              <p>
-                {t('插件在安装时申请系统能力，你始终掌握控制权。')}
-                <br />
-                {t('网络请求默认禁用，请将资源随包提供。')}
-              </p>
+              <p>{t('网络请求默认禁用，请将资源随包提供。')}</p>
             </div>
           </article>
         </div>
@@ -243,12 +227,8 @@ export function PluginsPage() {
             <Icon name="code" className="" />
           </span>
           <div>
-            <h2>{t('从第一个便笺插件开始。')}</h2>
-            <p>
-              {t('查看完整的示例项目，了解项目结构、核心 API')}
-              <br />
-              {t('和实现思路，快速上手开发属于你的工具。')}
-            </p>
+            <h2>{t('运行示例插件')}</h2>
+            <p>{t('查看便笺插件的源码与运行步骤。')}</p>
             <a
               className="button primary"
               href="https://github.com/Cansiny0320/Nexlet/tree/main/examples/hello-nexlet"

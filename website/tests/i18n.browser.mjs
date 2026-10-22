@@ -60,7 +60,7 @@ test('language links retain the page and switching never causes hydration errors
     .getByRole('link', { name: 'English', exact: true })
     .click();
   await page.waitForURL('**/en/plugins/');
-  await page.getByRole('heading', { name: 'Bring your tools to Nexlet.' }).waitFor();
+  await page.getByRole('heading', { name: 'Develop plugins', exact: true }).waitFor();
   await page
     .locator('.language-switch')
     .getByRole('link', { name: '繁體中文', exact: true })
