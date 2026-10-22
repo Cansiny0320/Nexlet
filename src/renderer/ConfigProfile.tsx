@@ -23,9 +23,7 @@ export function ConfigProfilePanel() {
   return (
     <section className="config-profile">
       <div className="settings-section-title">{t('配置导入导出')}</div>
-      <p className="subtle">
-        {t('配置文件可手动编辑，不包含 API Key、剪贴板历史、图片或工具草稿。')}
-      </p>
+      <p className="subtle">{t('不包含 API Key、剪贴板历史、图片或工具草稿。')}</p>
       <div className="tool-buttons">
         <button
           className="button"

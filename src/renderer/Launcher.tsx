@@ -327,18 +327,20 @@ export function Launcher({
               )}
             </section>
           )}
-          <section>
-            <div className="section-label">
-              {launchInput ? t('可处理此内容的功能') : t('匹配结果')}
-            </div>
-            {matching.length
-              ? renderCommands(matching)
-              : launchInput && (
-                  <div className="no-match">
-                    {result ? t('未找到可处理此内容的功能') : t('正在匹配…')}
-                  </div>
-                )}
-          </section>
+          {(matching.length > 0 || launchInput) && (
+            <section>
+              <div className="section-label">
+                {launchInput ? t('可处理此内容的功能') : t('匹配结果')}
+              </div>
+              {matching.length ? (
+                renderCommands(matching)
+              ) : (
+                <div className="no-match">
+                  {result ? t('未找到可处理此内容的功能') : t('正在匹配…')}
+                </div>
+              )}
+            </section>
+          )}
           {result?.warning && (
             <div className="match-warning" role="status">
               {result.warning}

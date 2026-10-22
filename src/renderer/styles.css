@@ -971,11 +971,6 @@ p {
   background: var(--surface);
   border-radius: 5px;
 }
-.builtin-list small {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 10px;
-}
 .editor-tool {
   display: flex;
   flex-direction: column;

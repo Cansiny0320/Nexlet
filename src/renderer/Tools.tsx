@@ -213,7 +213,6 @@ export function ToolsPanel({ tool, initial }: { tool: string; initial: string })
     );
   return (
     <div className="standard-panel editor-tool">
-      <PanelHeader title={t('编码转换')} />
       <div className="tool-buttons">
         <select
           aria-label={t('编码类型')}
@@ -324,7 +323,6 @@ export function WebPanel() {
   };
   return (
     <div className="standard-panel scroll-panel">
-      <PanelHeader title={t('网页快开')} />
       <form
         className="web-form"
         onSubmit={(e) => {

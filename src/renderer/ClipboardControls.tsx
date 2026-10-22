@@ -66,7 +66,7 @@ export function ClipboardControls() {
       <div className="setting-row">
         <div>
           <strong>{t('收藏图片后自动识别文字')}</strong>
-          <p>{t('使用已安装的离线 OCR 插件，仅在本机建立搜索索引。')}</p>
+          <p>{t('需安装离线 OCR 插件，索引仅保存在本机')}</p>
         </div>
         <Switch
           aria-label={t('收藏图片后自动识别文字')}

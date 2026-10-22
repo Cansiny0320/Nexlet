@@ -21,7 +21,7 @@ import {
   X,
   RefreshCw,
 } from 'lucide-react';
-import { api, useApp, errorText, PanelHeader } from './common';
+import { api, useApp, errorText } from './common';
 import { SettingsIconButton as IconButton } from './components/settings-icon-button';
 import type { Settings as SettingsType } from '../shared/types';
 
@@ -46,7 +46,6 @@ export function SettingsPanel() {
   const coexist = state.platform === 'darwin' ? 'Control+Alt+Space' : 'Ctrl+Alt+Space';
   return (
     <div className="standard-panel scroll-panel settings-panel">
-      <PanelHeader title={t('设置')} />
       <div className="settings-section-title">
         <Keyboard size={17} />
         {t('快捷键与窗口')}
@@ -166,7 +165,7 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('重启后恢复工具状态')}</strong>
-          <p>{t('输入与结果仅存储在本机，不包含在配置导出中')}</p>
+          <p>{t('输入与结果仅保存在本机，不随配置导出')}</p>
         </div>
         <Switch
           aria-label={t('重启后恢复工具状态')}
@@ -351,7 +350,7 @@ export function SettingsPanel() {
       <div className="setting-row">
         <div>
           <strong>{t('本地搜索偏好')}</strong>
-          <p>{t('仅根据普通指令搜索学习排序，不包含粘贴正文，也不会上传。')}</p>
+          <p>{t('仅在本机学习指令排序，不记录粘贴内容')}</p>
         </div>
         <button
           className="button"

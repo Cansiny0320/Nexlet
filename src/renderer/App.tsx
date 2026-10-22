@@ -562,7 +562,7 @@ export function App() {
             ) : (
               <div className="plugin-pill" title={t('拖动窗口')}>
                 {command && <ToolIcon command={command} size={20} />}
-                <span>
+                <span role="heading" aria-level={1}>
                   {view === 'plugin'
                     ? pluginInfo?.name || t('正在打开插件…')
                     : command

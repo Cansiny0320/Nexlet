@@ -11,7 +11,7 @@ import {
   type WorkspaceItem,
   type WorkspaceResult,
 } from '../shared/productivity';
-import { api, errorText, useApp, PanelHeader } from './common';
+import { api, errorText, useApp } from './common';
 import { useToolState, useRestoreBarrier } from './tool-session';
 import { ResultActions } from './ActionMenu';
 import './productivity.css';
@@ -115,7 +115,6 @@ export function SnippetsPanel({ initial }: { initial: string }) {
   };
   return (
     <div className="standard-panel productivity-panel">
-      <PanelHeader title={t('快捷短语')} description={t('预览变量替换结果，再复制或回贴')} />
       <div className="productivity-columns">
         <aside className="productivity-list">
           <button className="button" onClick={() => select(blankSnippet())}>
@@ -156,7 +155,7 @@ export function SnippetsPanel({ initial }: { initial: string }) {
                   onClick={() => select(item)}
                 >
                   <strong>{item.name}</strong>
-                  <small>{item.group || t('未分组')}</small>
+                  {item.group && <small>{item.group}</small>}
                 </button>
               ))}
           </div>
@@ -392,10 +391,6 @@ export function WorkspacesPanel({ initial }: { initial: string }) {
   };
   return (
     <div className="standard-panel productivity-panel">
-      <PanelHeader
-        title={t('工作区')}
-        description={t('保存一组启动项，按顺序打开；失败项目可单独重试')}
-      />
       <div className="productivity-columns">
         <aside className="productivity-list">
           <button

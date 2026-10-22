@@ -151,11 +151,11 @@ export function MarketPanel() {
           })}
         </div>
       )}
-      <div className="market-source">
-        {t('索引与插件包托管于 GitHub')}
-        {market?.fetchedAt &&
-          ` · ${market.cached ? t('缓存') : t('更新于')} ${new Date(market.fetchedAt).toLocaleString(formatLocale(), { hour12: false })}`}
-      </div>
+      {market?.cached && market.fetchedAt && (
+        <div className="market-source">
+          {t('缓存')} {new Date(market.fetchedAt).toLocaleString(formatLocale(), { hour12: false })}
+        </div>
+      )}
     </div>
   );
 }

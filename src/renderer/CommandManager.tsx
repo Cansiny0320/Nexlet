@@ -240,16 +240,18 @@ export function CommandManager() {
                 <strong>{command.name}</strong>
                 <small>{pref?.aliases?.join(' · ') || command.subtitle}</small>
               </span>
-              <span className="command-state">
-                {!known.has(command.id) ? t('不可用') : pref?.disabled ? t('已禁用') : t('已启用')}
-                {status?.desired && (
-                  <small>
-                    {status.effective
-                      ? formatShortcut(status.effective, state.platform)
-                      : status.inactive || status.error || t('未生效')}
-                  </small>
-                )}
-              </span>
+              {(!known.has(command.id) || pref?.disabled || status?.desired) && (
+                <span className="command-state">
+                  {!known.has(command.id) ? t('不可用') : pref?.disabled ? t('已禁用') : null}
+                  {status?.desired && (
+                    <small>
+                      {status.effective
+                        ? formatShortcut(status.effective, state.platform)
+                        : status.inactive || status.error || t('未生效')}
+                    </small>
+                  )}
+                </span>
+              )}
             </button>
           );
         })}

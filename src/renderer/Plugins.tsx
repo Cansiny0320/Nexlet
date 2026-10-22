@@ -104,14 +104,7 @@ export function PluginsPanel() {
                   <div className="plugin-info">
                     <strong>
                       {localizedLabels(plugin.manifest).name}
-                      <small>v{plugin.manifest.version}</small>
-                      <small>
-                        {plugin.development
-                          ? t('开发目录')
-                          : plugin.source === 'marketplace'
-                            ? t('市场')
-                            : t('本地')}
-                      </small>
+                      {plugin.development && <small>{t('开发目录')}</small>}
                     </strong>
                     <p>
                       {localizedLabels(plugin.manifest).description ||
@@ -168,6 +161,11 @@ export function PluginsPanel() {
                 {detail === plugin.manifest.id && (
                   <div className="plugin-details">
                     <p>
+                      v{plugin.manifest.version}
+                      {!plugin.development &&
+                        ` · ${plugin.source === 'marketplace' ? t('市场') : t('本地')}`}
+                    </p>
+                    <p>
                       <ShieldCheck size={15} />{' '}
                       {plugin.manifest.permissions.map((p) => permissionNames()[p]).join('、') ||
                         t('仅独立存储，无系统权限')}
@@ -194,17 +192,13 @@ export function PluginsPanel() {
               </div>
             ))
           )}
-          <div className="settings-section-title">
-            {t('预装工具')}
-            <span>{t('随应用提供，无需下载')}</span>
-          </div>
+          <div className="settings-section-title">{t('预装工具')}</div>
           <div className="builtin-list">
             {BUILTIN_COMMANDS.filter((c) => !['tool:settings', 'tool:plugins'].includes(c.id)).map(
               (command) => (
                 <button key={command.id} onClick={() => navigate(command.id.slice(5))}>
                   <ToolIcon command={command} size={28} />
                   <span>{t(command.name)}</span>
-                  <small>{t('预装')}</small>
                 </button>
               ),
             )}
