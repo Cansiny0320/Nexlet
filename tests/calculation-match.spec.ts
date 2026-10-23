@@ -56,7 +56,7 @@ test.afterEach(async () => {
 });
 
 for (const layout of ['grid', 'list'] as const) {
-  test(`${layout}: 输入公式后默认选择计算稿纸，回车带入原公式`, async () => {
+  test(`${layout}: 输入公式后默认选择计算稿纸，回车带入原公式并可直接续写`, async () => {
     const page = await app.firstWindow();
     await page.evaluate(
       (layout) => window.nexlet.call('commandConfig', { action: 'layout', value: layout }),
@@ -72,8 +72,20 @@ for (const layout of ['grid', 'list'] as const) {
     await expect(calculation).toHaveClass(/selected/);
     await expect(calculation.locator('img')).toBeVisible();
     await input.press('Enter');
-    await expect(page.getByRole('textbox', { name: '第 1 行计算公式' })).toHaveValue('1+1');
+    const first = page.getByRole('textbox', { name: '第 1 行计算公式' });
+    await expect(first).toHaveValue('1+1');
     await expect(page.locator('output').first()).toHaveText('2');
+    await expect(first).toBeFocused();
+    await page.keyboard.insertText('+3');
+    await expect(first).toHaveValue('1+1+3');
+    await expect(page.locator('output').first()).toHaveText('5');
+    await page.keyboard.press('Enter');
+    const second = page.getByRole('textbox', { name: '第 2 行计算公式' });
+    await expect(second).toBeFocused();
+    await expect(second).toHaveValue('5');
+    await page.keyboard.insertText('*2');
+    await expect(second).toHaveValue('5*2');
+    await expect(page.locator('output').nth(1)).toHaveText('10');
   });
 }
 

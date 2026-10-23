@@ -149,6 +149,7 @@ export function ScratchpadPanel({ initialExpression }: { initialExpression: stri
           const pad = newPad(initialExpression);
           queue(pad);
           setActive(pad.id);
+          focus(0, pad.lines[0].id);
         } else {
           const prior = active || localStorage.getItem('active-pad');
           setActive(list.some((p) => p.id === prior) ? prior! : list[0]?.id || '');
