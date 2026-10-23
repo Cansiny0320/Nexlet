@@ -176,16 +176,17 @@ test('最小化后唤起和重复启动都恢复窗口并取得焦点', async ()
         else app.emit(entry as any, {} as any, [], process.cwd());
       }, entry);
       await expect
-        .poll(() =>
-          app.evaluate(() => {
-            const w = (globalThis as any).__nexlet.main;
-            return {
-              minimized: w.isMinimized(),
-              visible: w.isVisible(),
-              focused: w.isFocused(),
-              topmost: w.isAlwaysOnTop(),
-            };
-          }),
+        .poll(
+          () =>
+            app.evaluate(() => {
+              const w = (globalThis as any).__nexlet.main;
+              return {
+                minimized: w.isMinimized(),
+                visible: w.isVisible(),
+                focused: w.isFocused(),
+                topmost: w.isAlwaysOnTop(),
+              };
+            }),
           { message: `唤起入口：${entry}` },
         )
         .toEqual({ minimized: false, visible: true, focused: true, topmost: false });

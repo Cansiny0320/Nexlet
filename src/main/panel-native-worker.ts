@@ -169,7 +169,12 @@ function mac() {
       return event;
     }
   }, koffi.pointer(callback));
-  const mask = [1, 2, 3, 4, 5, 6, 7, 25, 26, 27].reduce((n, type) => n | (1n << BigInt(type)), 0n);
+  // Active taps delay event delivery until the callback returns. Ordinary
+  // movement and left dragging must bypass the panel's synchronous callback.
+  const mask = [1, 3, 25, ...(config.mouse === 'right' ? [4, 7] : [26, 27])].reduce(
+    (n, type) => n | (1n << BigInt(type)),
+    0n,
+  );
   tap = tapCreate(1, 0, 0, mask, cb, null);
   if (!tap) {
     koffi.unregister(cb);
