@@ -16,6 +16,45 @@ function environment(data: string): Record<string, string> {
   return env;
 }
 
+for (const autostart of [false, true]) {
+  test(`macOS ${autostart ? '登录' : '普通'}启动隐藏 Dock，重复唤起仍可输入`, async () => {
+    test.skip(process.platform !== 'darwin', 'Dock 仅适用于 macOS');
+    await mkdir('.tmp', { recursive: true });
+    const data = await mkdtemp(path.resolve('.tmp/window-dock-'));
+    const app = await electron.launch({
+      args: [process.cwd(), ...(autostart ? ['--autostart'] : [])],
+      env: environment(data),
+    });
+    try {
+      const page = await app.firstWindow();
+      const search = page.locator('.launcher-input');
+      await expect(search).toBeAttached();
+      await expect.poll(() => app.evaluate(({ app }) => app.dock!.isVisible())).toBe(false);
+      expect(await app.evaluate(() => (globalThis as any).__nexlet.main.isVisible())).toBe(
+        !autostart,
+      );
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await app.evaluate(async () => {
+          const nexlet = (globalThis as any).__nexlet;
+          nexlet.main.hide();
+          await nexlet.show();
+        });
+        await expect(search).toBeVisible();
+        await expect
+          .poll(() => app.evaluate(() => (globalThis as any).__nexlet.main.isFocused()))
+          .toBe(true);
+        await expect(search).toBeFocused();
+        await search.fill('json');
+        await expect(search).toHaveValue('json');
+        await search.fill('');
+        expect(await app.evaluate(({ app }) => app.dock!.isVisible())).toBe(false);
+      }
+    } finally {
+      await app.close();
+    }
+  });
+}
+
 test('工具标题和独立拖动区可拖动，交互控件仍可点击', async () => {
   await mkdir('.tmp', { recursive: true });
   const data = await mkdtemp(path.resolve('.tmp/window-drag-'));
@@ -147,6 +186,7 @@ test('最小化后唤起和重复启动都恢复窗口并取得焦点', async ()
               topmost: w.isAlwaysOnTop(),
             };
           }),
+          { message: `唤起入口：${entry}` },
         )
         .toEqual({ minimized: false, visible: true, focused: true, topmost: false });
     }

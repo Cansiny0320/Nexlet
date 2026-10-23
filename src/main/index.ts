@@ -99,6 +99,7 @@ else void bootstrap();
 
 async function bootstrap() {
   await app.whenReady();
+  if (process.platform === 'darwin') app.dock?.hide();
   app.setAppUserModelId('app.nexlet.desktop');
   const store = new Store(app.getPath('userData'));
   const drafts = new ToolDrafts(store);
