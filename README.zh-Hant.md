@@ -106,8 +106,6 @@ JSON 工具支援雙欄編輯、樹狀檢視和差異比對，用紅色標記刪
 
 ![微信與支付寶贊助二維碼](.github/sponsorship/sponsorship-cats.png)
 
-[貓貓](.github/sponsorship/sponsorship-cats.png) · [一二布布](.github/sponsorship/sponsorship-yier-bubu.png) · [水豚嚕嚕](.github/sponsorship/sponsorship-lulu.png)
-
 ## 授權條款
 
 Nexlet 使用 [MIT License](LICENSE)。Everything、ES 與其他第三方元件保留各自的授權條款，見 [第三方元件說明](assets/vendor/everything/README.md)。

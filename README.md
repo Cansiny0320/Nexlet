@@ -106,8 +106,6 @@ JSON 工具支持双栏编辑、树形查看和差异对比，用红色标记删
 
 ![微信与支付宝赞助二维码](.github/sponsorship/sponsorship-cats.png)
 
-[猫猫](.github/sponsorship/sponsorship-cats.png) · [一二布布](.github/sponsorship/sponsorship-yier-bubu.png) · [水豚噜噜](.github/sponsorship/sponsorship-lulu.png)
-
 ## 许可证
 
 Nexlet 使用 [MIT License](LICENSE)。Everything、ES 与其他第三方组件保留各自许可证，见 [第三方组件说明](assets/vendor/everything/README.md)。

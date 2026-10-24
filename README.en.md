@@ -106,8 +106,6 @@ If this project is useful to you, you can support its continued development via 
 
 ![Support via WeChat Pay or Alipay](.github/sponsorship/sponsorship-cats.png)
 
-[Cats](.github/sponsorship/sponsorship-cats.png) · [Yier & Bubu](.github/sponsorship/sponsorship-yier-bubu.png) · [Capylulu](.github/sponsorship/sponsorship-lulu.png)
-
 ## License
 
 Nexlet is [MIT licensed](LICENSE). Everything, ES, and other bundled components retain their own licenses; see [third-party notices](assets/vendor/everything/README.md).
