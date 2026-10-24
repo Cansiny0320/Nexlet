@@ -100,6 +100,14 @@ JSON 工具支援雙欄編輯、樹狀檢視和差異比對，用紅色標記刪
 
 想參與專案，可以查看 [貢獻指南](CONTRIBUTING.zh-Hant.md)；想製作外掛，可以查看 [外掛 SDK](docs/plugin-sdk.zh-Hant.md) 和 [外掛倉庫](https://github.com/Cansiny0320/Nexlet-plugins)。
 
+## 贊助
+
+如果這個專案對你有幫助，歡迎透過微信或支付寶支持後續開發。感謝你的支持！
+
+![微信與支付寶贊助二維碼](.github/sponsorship/sponsorship-cats.png)
+
+[貓貓](.github/sponsorship/sponsorship-cats.png) · [一二布布](.github/sponsorship/sponsorship-yier-bubu.png) · [水豚嚕嚕](.github/sponsorship/sponsorship-lulu.png)
+
 ## 授權條款
 
 Nexlet 使用 [MIT License](LICENSE)。Everything、ES 與其他第三方元件保留各自的授權條款，見 [第三方元件說明](assets/vendor/everything/README.md)。

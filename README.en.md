@@ -100,6 +100,14 @@ Found a bug or have a suggestion? Open an [issue](https://github.com/Cansiny0320
 
 To contribute, see the [contribution guide](CONTRIBUTING.en.md). To make a plugin, see the [plugin SDK](docs/plugin-sdk.en.md) and [plugin repository](https://github.com/Cansiny0320/Nexlet-plugins).
 
+## Sponsorship
+
+If this project is useful to you, you can support its continued development via WeChat Pay or Alipay. Thank you!
+
+![Support via WeChat Pay or Alipay](.github/sponsorship/sponsorship-cats.png)
+
+[Cats](.github/sponsorship/sponsorship-cats.png) · [Yier & Bubu](.github/sponsorship/sponsorship-yier-bubu.png) · [Capylulu](.github/sponsorship/sponsorship-lulu.png)
+
 ## License
 
 Nexlet is [MIT licensed](LICENSE). Everything, ES, and other bundled components retain their own licenses; see [third-party notices](assets/vendor/everything/README.md).

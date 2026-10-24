@@ -100,6 +100,14 @@ JSON 工具支持双栏编辑、树形查看和差异对比，用红色标记删
 
 想参与项目，可以查看 [贡献指南](CONTRIBUTING.md)；想制作插件，可以查看 [插件 SDK](docs/plugin-sdk.md) 和 [插件仓库](https://github.com/Cansiny0320/Nexlet-plugins)。
 
+## 赞助
+
+如果这个项目对你有帮助，欢迎通过微信或支付宝支持后续开发。感谢你的支持！
+
+![微信与支付宝赞助二维码](.github/sponsorship/sponsorship-cats.png)
+
+[猫猫](.github/sponsorship/sponsorship-cats.png) · [一二布布](.github/sponsorship/sponsorship-yier-bubu.png) · [水豚噜噜](.github/sponsorship/sponsorship-lulu.png)
+
 ## 许可证
 
 Nexlet 使用 [MIT License](LICENSE)。Everything、ES 与其他第三方组件保留各自许可证，见 [第三方组件说明](assets/vendor/everything/README.md)。
