@@ -1,6 +1,26 @@
 import { t } from '../shared/i18n';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ArrowUpRight,
+  BoxSelect,
+  Circle,
+  Crop,
+  Droplets,
+  Grid2X2,
+  Highlighter,
+  Pencil,
+  Pin,
+  RectangleHorizontal,
+  Redo2,
+  ScanText,
+  ScrollText,
+  Square,
+  Trash2,
+  Type,
+  Undo2,
+  type LucideIcon,
+} from 'lucide-react';
+import {
   annotationBounds,
   annotationSvg,
   changeAnnotations,
@@ -16,17 +36,17 @@ import type { CaptureDestination } from '../shared/capture';
 import { ImageRecognition } from './ImageRecognition';
 import { errorText } from './common';
 
-const tools: [AnnotationKind | 'select', string][] = [
-  ['select', '选择'],
-  ['rectangle', '矩形'],
-  ['ellipse', '椭圆'],
-  ['arrow', '箭头'],
-  ['pen', '画笔'],
-  ['text', '文字'],
-  ['highlight', '高亮'],
-  ['mosaic', '马赛克'],
-  ['blur', '模糊'],
-  ['redact', '实色遮挡'],
+const tools: [AnnotationKind | 'select', string, LucideIcon][] = [
+  ['select', '选择', BoxSelect],
+  ['rectangle', '矩形', RectangleHorizontal],
+  ['ellipse', '椭圆', Circle],
+  ['arrow', '箭头', ArrowUpRight],
+  ['pen', '画笔', Pencil],
+  ['text', '文字', Type],
+  ['highlight', '高亮', Highlighter],
+  ['mosaic', '马赛克', Grid2X2],
+  ['blur', '模糊', Droplets],
+  ['redact', '实色遮挡', Square],
 ];
 export function CaptureEditor({
   initial,
@@ -162,35 +182,49 @@ export function CaptureEditor({
       onPointerDown={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
     >
-      <div className="capture-editor-tools">
-        {tools.map(([value, label]) => (
-          <button
-            key={value}
-            aria-pressed={tool === value}
+      <div className="capture-editor-title">{t('截图编辑')}</div>
+      <div className="capture-editor-tools" role="toolbar" aria-label={t('截图编辑')}>
+        <div className="capture-tool-group">
+          {tools.map(([value, label, Icon]) => (
+            <button
+              key={value}
+              className="capture-icon-button"
+              title={t(label)}
+              aria-label={t(label)}
+              aria-pressed={tool === value}
+              disabled={busy}
+              onClick={() => {
+                setTool(value);
+                setSelected('');
+                if (value === 'redact') setColor('#000000');
+              }}
+            >
+              <Icon size={18} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+        <div className="capture-tool-group capture-style-controls">
+          <input
+            aria-label={t('标注颜色')}
+            title={t('标注颜色')}
+            type="color"
             disabled={busy}
-            onClick={() => {
-              setTool(value);
-              setSelected('');
-              if (value === 'redact') setColor('#000000');
-            }}
-          >
-            {t(label)}
-          </button>
-        ))}
-        <input
-          aria-label={t('标注颜色')}
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
-        <input
-          aria-label={t('笔画粗细')}
-          type="number"
-          min={1}
-          max={30}
-          value={stroke}
-          onChange={(e) => setStroke(Math.max(1, Math.min(30, Number(e.target.value))))}
-        />
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+          />
+          <label className="capture-stroke">
+            <input
+              aria-label={t('笔画粗细')}
+              type="number"
+              disabled={busy}
+              min={1}
+              max={30}
+              value={stroke}
+              onChange={(e) => setStroke(Math.max(1, Math.min(30, Number(e.target.value))))}
+            />
+            <span aria-hidden="true">px</span>
+          </label>
+        </div>
         {tool === 'text' && (
           <input
             aria-label={t('标注文字')}
@@ -200,18 +234,35 @@ export function CaptureEditor({
             onChange={(e) => setText(e.target.value)}
           />
         )}
-        <button disabled={busy || !history.past.length} onClick={() => setHistory(undoAnnotations)}>
-          {t('撤销')}
-        </button>
-        <button
-          disabled={busy || !history.future.length}
-          onClick={() => setHistory(redoAnnotations)}
-        >
-          {t('重做')}
-        </button>
-        <button disabled={busy || !selected} onClick={remove}>
-          {t('删除标注')}
-        </button>
+        <div className="capture-tool-group capture-history-controls">
+          <button
+            className="capture-icon-button"
+            title={t('撤销')}
+            aria-label={t('撤销')}
+            disabled={busy || !history.past.length}
+            onClick={() => setHistory(undoAnnotations)}
+          >
+            <Undo2 size={18} aria-hidden="true" />
+          </button>
+          <button
+            className="capture-icon-button"
+            title={t('重做')}
+            aria-label={t('重做')}
+            disabled={busy || !history.future.length}
+            onClick={() => setHistory(redoAnnotations)}
+          >
+            <Redo2 size={18} aria-hidden="true" />
+          </button>
+          <button
+            className="capture-icon-button"
+            title={t('删除标注')}
+            aria-label={t('删除标注')}
+            disabled={busy || !selected}
+            onClick={remove}
+          >
+            <Trash2 size={18} aria-hidden="true" />
+          </button>
+        </div>
       </div>
       <div className="capture-editor-workspace">
         <div className="capture-editor-canvas">
@@ -401,32 +452,64 @@ export function CaptureEditor({
         <span>
           {bitmap.width} × {bitmap.height}
         </span>
-        <button disabled={busy} onClick={reset}>
-          {t('重新框选')}
-        </button>
-        <button disabled={busy} aria-pressed={long} onClick={() => setLong(!long)}>
-          {t('长截图')}
-        </button>
-        <button
-          disabled={busy}
-          aria-pressed={recognition}
-          onClick={() => setRecognition(!recognition)}
-        >
-          {t('OCR／翻译')}
-        </button>
-        <button disabled={busy} onClick={() => void finish('copy')}>
-          {t('复制')}
-        </button>
-        <button disabled={busy} onClick={() => void finish('save')}>
-          {t('保存')}
-        </button>
-        <button disabled={busy} onClick={() => void finish('pin')}>
-          {t('贴图')}
-        </button>
-        <button disabled={busy} onClick={() => void finish('launcher')}>
-          {t('继续处理')}
-        </button>
-        <button onClick={() => void window.desktopTools.call('cancel')}>{t('取消')}</button>
+        <div className="capture-tool-group capture-secondary-actions">
+          <button
+            className="capture-icon-button"
+            title={t('重新框选')}
+            aria-label={t('重新框选')}
+            disabled={busy}
+            onClick={reset}
+          >
+            <Crop size={17} aria-hidden="true" />
+          </button>
+          <button
+            className="capture-icon-button"
+            title={t('长截图')}
+            aria-label={t('长截图')}
+            disabled={busy}
+            aria-pressed={long}
+            onClick={() => setLong(!long)}
+          >
+            <ScrollText size={17} aria-hidden="true" />
+          </button>
+          <button
+            className="capture-icon-button"
+            title={t('OCR／翻译')}
+            aria-label={t('OCR／翻译')}
+            disabled={busy}
+            aria-pressed={recognition}
+            onClick={() => setRecognition(!recognition)}
+          >
+            <ScanText size={17} aria-hidden="true" />
+          </button>
+          <button
+            className="capture-icon-button"
+            title={t('贴图')}
+            aria-label={t('贴图')}
+            disabled={busy}
+            onClick={() => void finish('pin')}
+          >
+            <Pin size={17} aria-hidden="true" />
+          </button>
+          <button
+            className="capture-icon-button"
+            title={t('继续处理')}
+            aria-label={t('继续处理')}
+            disabled={busy}
+            onClick={() => void finish('launcher')}
+          >
+            <ArrowUpRight size={17} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="capture-tool-group capture-primary-actions">
+          <button onClick={() => void window.desktopTools.call('cancel')}>{t('取消')}</button>
+          <button disabled={busy} onClick={() => void finish('copy')}>
+            {t('复制')}
+          </button>
+          <button className="capture-primary" disabled={busy} onClick={() => void finish('save')}>
+            {t('保存')}
+          </button>
+        </div>
       </div>
       {busy && (
         <div role="status" className="capture-editor-status">

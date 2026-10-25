@@ -1,3 +1,6 @@
+import { Checkbox } from './components/ui/checkbox';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
 import { useEffect, useState } from 'react';
 import { t } from '../shared/i18n';
 import {
@@ -47,38 +50,38 @@ export function AccountSettingsPanel() {
     <section className="config-profile account-settings">
       <div className="settings-section-title">{t('账号与同步')}</div>
       {!state.user ? (
-        <button
-          className="button"
+        <Button
+          variant="outline"
           disabled={busy || !!state.login}
           onClick={() => void run({ action: 'login' })}
         >
           {t('使用 GitHub 登录')}
-        </button>
+        </Button>
       ) : (
         <div className="setting-row">
           <strong>{state.user.name}</strong>
           <div className="tool-buttons">
-            <button
-              className="button"
+            <Button
+              variant="outline"
               disabled={busy || state.running}
               onClick={() => void run({ action: 'sync' })}
             >
               {state.running ? t('正在同步…') : t('立即同步')}
-            </button>
-            <button
-              className="button"
+            </Button>
+            <Button
+              variant="outline"
               disabled={busy || !!state.login}
               onClick={() => void run({ action: 'login' })}
             >
               {t('重新登录')}
-            </button>
-            <button
-              className="button"
+            </Button>
+            <Button
+              variant="outline"
               disabled={busy}
               onClick={() => void run({ action: 'logout' })}
             >
               {t('退出登录')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -87,9 +90,9 @@ export function AccountSettingsPanel() {
           <p>
             {t('在浏览器中确认设备代码')} <strong>{state.login.code}</strong>
           </p>
-          <button className="button" onClick={() => void run({ action: 'cancel' })}>
+          <Button variant="outline" onClick={() => void run({ action: 'cancel' })}>
             {t('取消登录')}
-          </button>
+          </Button>
         </div>
       )}
       {(error || state.error) && (
@@ -110,8 +113,7 @@ export function AccountSettingsPanel() {
           <div className="sync-categories">
             {SYNC_CATEGORIES.map((kind) => (
               <label key={kind}>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={state.enabled.includes(kind)}
                   disabled={busy || state.running}
                   onChange={(e) =>
@@ -155,24 +157,24 @@ export function AccountSettingsPanel() {
                 </div>
               </div>
               <div className="tool-buttons">
-                <button
-                  className="button"
+                <Button
+                  variant="outline"
                   disabled={busy || state.running}
                   onClick={() =>
                     void run({ action: 'resolve', key: conflict.key, choice: 'local' })
                   }
                 >
                   {t('保留本机')}
-                </button>
-                <button
-                  className="button"
+                </Button>
+                <Button
+                  variant="outline"
                   disabled={busy || state.running}
                   onClick={() =>
                     void run({ action: 'resolve', key: conflict.key, choice: 'remote' })
                   }
                 >
                   {t('使用云端')}
-                </button>
+                </Button>
               </div>
             </details>
           ))}
@@ -199,8 +201,8 @@ export function AccountSettingsPanel() {
                   <span>
                     {plugin.id} · {plugin.version}
                   </span>
-                  <button
-                    className="button"
+                  <Button
+                    variant="outline"
                     onClick={() =>
                       void api('marketTasks', { action: 'enqueue', pluginId: plugin.id })
                         .then(() => toast(t('已加入下载任务，请在插件市场确认安装')))
@@ -208,7 +210,7 @@ export function AccountSettingsPanel() {
                     }
                   >
                     {t('下载')}
-                  </button>
+                  </Button>
                 </div>
               ))}
             </details>
@@ -221,21 +223,21 @@ export function AccountSettingsPanel() {
                   {device.current ? t('当前设备') : device.userAgent || t('其他设备')}
                   <p className="subtle">{new Date(device.createdAt).toLocaleString()}</p>
                 </div>
-                <button
-                  className="button"
+                <Button
+                  variant="outline"
                   disabled={busy}
                   onClick={() => void run({ action: 'revoke', id: device.id })}
                 >
                   {t('撤销登录')}
-                </button>
+                </Button>
               </div>
             ))}
           </details>
           <details>
             <summary>{t('删除云端账号')}</summary>
             <p className="subtle">{t('删除账号、全部会话和云端同步数据，保留本机内容。')}</p>
-            <button
-              className="button danger"
+            <Button
+              variant="destructive"
               disabled={busy}
               onClick={() =>
                 void (async () => {
@@ -252,7 +254,7 @@ export function AccountSettingsPanel() {
               }
             >
               {t('删除账号')}
-            </button>
+            </Button>
           </details>
         </>
       )}
@@ -277,20 +279,20 @@ function DeviceMapping({
       {mapping.path !== undefined && (
         <label>
           {t('本机路径')}
-          <input value={path} onChange={(e) => setPath(e.target.value)} />
+          <Input value={path} onChange={(e) => setPath(e.target.value)} />
         </label>
       )}
       <label>
         {t('本机快捷键')}
-        <input value={shortcut} onChange={(e) => setShortcut(e.target.value)} />
+        <Input value={shortcut} onChange={(e) => setShortcut(e.target.value)} />
       </label>
-      <button
-        className="button"
+      <Button
+        variant="outline"
         disabled={busy}
         onClick={() => void save({ action: 'mapping', id: mapping.id, path, shortcut })}
       >
         {t('应用本机映射')}
-      </button>
+      </Button>
     </div>
   );
 }

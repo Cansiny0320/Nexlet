@@ -1,3 +1,6 @@
+import { Checkbox } from './components/ui/checkbox';
+import { Button } from './components/ui/button';
+import { Textarea } from './components/ui/textarea';
 import { useState } from 'react';
 import { api, useApp, errorText } from './common';
 import { t } from '../shared/i18n';
@@ -25,8 +28,8 @@ export function ConfigProfilePanel() {
       <div className="settings-section-title">{t('配置导入导出')}</div>
       <p className="subtle">{t('不包含 API Key、剪贴板历史、图片或工具草稿。')}</p>
       <div className="tool-buttons">
-        <button
-          className="button"
+        <Button
+          variant="outline"
           disabled={busy}
           onClick={() =>
             void run(async () => {
@@ -35,9 +38,9 @@ export function ConfigProfilePanel() {
           }
         >
           {t('导出配置')}
-        </button>
-        <button
-          className="button"
+        </Button>
+        <Button
+          variant="outline"
           disabled={busy}
           onClick={() =>
             void run(async () => {
@@ -50,9 +53,9 @@ export function ConfigProfilePanel() {
           }
         >
           {t('打开配置文件')}
-        </button>
-        <button
-          className="button"
+        </Button>
+        <Button
+          variant="outline"
           disabled={busy}
           onClick={() =>
             void run(async () => {
@@ -71,12 +74,12 @@ export function ConfigProfilePanel() {
           }
         >
           {t('撤销上次导入')}
-        </button>
+        </Button>
       </div>
       <details>
         <summary>{t('编辑并预览导入')}</summary>
-        <textarea
-          className="profile-editor"
+        <Textarea
+          className="profile-editor min-h-52"
           aria-label={t('JSONC 配置')}
           value={text}
           spellCheck={false}
@@ -85,8 +88,8 @@ export function ConfigProfilePanel() {
             setPreview(null);
           }}
         />
-        <button
-          className="button"
+        <Button
+          variant="outline"
           disabled={busy || !text.trim()}
           onClick={() =>
             void run(async () => {
@@ -104,7 +107,7 @@ export function ConfigProfilePanel() {
           }
         >
           {t('预览差异')}
-        </button>
+        </Button>
       </details>
       {error && (
         <p className="settings-warning" role="alert">
@@ -123,8 +126,7 @@ export function ConfigProfilePanel() {
             <details key={change.category} className="profile-diff">
               <summary>
                 <label>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     disabled={change.category === 'plugins' || busy}
                     checked={selected.includes(change.category)}
                     onChange={(event) =>
@@ -150,8 +152,8 @@ export function ConfigProfilePanel() {
               </div>
             </details>
           ))}
-          <button
-            className="button primary"
+          <Button
+            variant="default"
             disabled={busy || !selected.length}
             onClick={() =>
               void run(async () => {
@@ -166,7 +168,7 @@ export function ConfigProfilePanel() {
             }
           >
             {t('应用选中类别')}
-          </button>
+          </Button>
         </div>
       )}
     </section>

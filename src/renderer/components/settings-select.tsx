@@ -13,12 +13,14 @@ export function SettingsSelect<Value extends string | number>({
   items,
   onValueChange,
   disabled = false,
+  className,
 }: {
   label: string;
   value: Value;
   items: { value: Value; label: string }[];
   onValueChange: (value: Value) => void;
   disabled?: boolean;
+  className?: string;
 }) {
   return (
     <Select
@@ -29,7 +31,7 @@ export function SettingsSelect<Value extends string | number>({
         if (value !== null) onValueChange(value);
       }}
     >
-      <SelectTrigger aria-label={label}>
+      <SelectTrigger aria-label={label} className={className}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent

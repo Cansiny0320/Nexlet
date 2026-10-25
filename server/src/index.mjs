@@ -21,6 +21,7 @@ export async function createApplication(env) {
     prefix = new URL(base).pathname;
   const html = await readFile(new URL('./device.html', import.meta.url));
   const script = await readFile(new URL('./device.js', import.meta.url));
+  const icon = await readFile(new URL('./device-icon.png', import.meta.url));
   const rates = new Map();
   const reply = (res, status, value) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
@@ -33,7 +34,7 @@ export async function createApplication(env) {
     res.setHeader('x-frame-options', 'DENY');
     res.setHeader(
       'content-security-policy',
-      "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+      "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
     );
     try {
       const url = new URL(req.url, base),
@@ -58,6 +59,10 @@ export async function createApplication(env) {
       if (rates.size > 10000)
         for (const [key, value] of rates) if (value.minute !== minute) rates.delete(key);
       if (bucket.count > 180 || rates.size > 20000) throw new SyncError(429, 'rate_limited');
+      if (req.method === 'GET' && route === '/device-icon.png') {
+        res.writeHead(200, { 'content-type': 'image/png' });
+        return res.end(icon);
+      }
       if (req.method === 'GET' && (route === '/device' || route === '/device.js')) {
         res.writeHead(200, {
           'content-type': route.endsWith('.js')

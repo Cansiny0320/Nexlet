@@ -9,6 +9,9 @@
 @source "./PanelSettings.tsx";
 @source "./CommandManager.tsx";
 @source "./UpdatePanel.tsx";
+@source "./AISettings.tsx";
+@source "./CapabilitySettings.tsx";
+@source "./ConfigProfile.tsx";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
@@ -63,6 +66,214 @@
 }
 
 @layer components {
+  .settings-panel {
+    background: var(--surface);
+  }
+  .settings-panel :is(.ai-settings, .capability-settings) .settings-section-title {
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 20px 0 12px;
+  }
+  .ai-settings-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  .settings-panel .ai-settings-heading .settings-section-title {
+    margin: 0;
+  }
+  .settings-panel .ai-settings-heading .setting-row {
+    border: 0;
+    padding: 0;
+    min-height: 32px;
+  }
+  .settings-panel .ai-settings-heading strong {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .settings-panel .ai-provider-summary {
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: color-mix(in srgb, var(--hover) 45%, var(--surface));
+  }
+  .settings-panel .capability-settings > .setting-row,
+  .settings-panel .ai-provider-editor > .setting-row {
+    display: grid;
+    grid-template-columns: minmax(100px, 150px) minmax(0, 1fr);
+    gap: 16px;
+    border: 0;
+    padding: 4px 0;
+    min-height: 40px;
+  }
+  .settings-panel
+    :is(.capability-settings > .setting-row, .ai-provider-editor > .setting-row)
+    [data-slot='select-trigger'] {
+    width: 100%;
+  }
+  .checkbox-control {
+    display: inline-grid;
+    place-items: center;
+    position: relative;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    vertical-align: middle;
+  }
+  .checkbox-control input {
+    appearance: none;
+    position: absolute;
+    inset: 0;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    cursor: pointer;
+  }
+  .checkbox-control input:checked {
+    background: var(--blue);
+    border-color: var(--blue);
+  }
+  .checkbox-control input:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+  }
+  .checkbox-control input:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .checkbox-control > svg {
+    position: relative;
+    color: white;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .checkbox-control input:checked + svg {
+    opacity: 1;
+  }
+  .settings-panel :is(.ai-settings, .capability-settings, .config-profile) details {
+    margin: 12px 0;
+    padding: 0;
+    border: 0;
+  }
+  .settings-panel :is(.ai-settings, .capability-settings, .config-profile) summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--hover) 45%, var(--surface));
+    font-size: 13px;
+    line-height: 20px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .settings-panel summary::-webkit-details-marker {
+    display: none;
+  }
+  .settings-panel :is(.ai-settings, .capability-settings, .config-profile) summary::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    margin-right: 2px;
+    transition: transform 0.15s;
+  }
+  .settings-panel
+    :is(.ai-settings, .capability-settings, .config-profile)
+    details[open]
+    > summary::before {
+    transform: rotate(45deg);
+  }
+  .settings-panel summary:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+  .settings-panel details[open] > summary {
+    margin-bottom: 12px;
+  }
+  .settings-panel .ai-provider-editor {
+    padding: 16px;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .settings-panel .ai-provider-editor > label {
+    grid-template-columns: minmax(100px, 150px) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    line-height: 32px;
+  }
+  .settings-panel .ai-provider-editor > .setting-row {
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+  }
+  .settings-panel .ai-provider-editor .tool-buttons {
+    margin-bottom: 0;
+    justify-content: flex-end;
+  }
+  .settings-panel .ai-provider-editor .ai-provider-utilities {
+    justify-content: flex-start;
+    margin-top: 16px;
+  }
+  .settings-panel .ai-provider-editor details label {
+    margin-top: 12px;
+  }
+  .settings-panel .provider-json {
+    min-height: 144px;
+    font:
+      13px/1.65 Consolas,
+      monospace;
+    resize: vertical;
+    margin-bottom: 12px;
+  }
+  .settings-panel .sync-mapping {
+    padding-inline: 12px;
+  }
+  .settings-panel .profile-diff summary label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .settings-panel .sync-comparison pre,
+  .settings-panel .profile-columns pre {
+    padding: 12px;
+    background: var(--hover);
+    border-radius: 8px;
+  }
+  @media (max-width: 520px) {
+    .settings-panel .capability-settings > .setting-row,
+    .settings-panel .ai-provider-editor > .setting-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
+    .settings-panel .ai-provider-editor > label {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+      line-height: 20px;
+    }
+    .settings-panel .ai-provider-editor > .setting-row [data-slot='select-trigger'] {
+      width: 100%;
+    }
+    .settings-panel .sync-categories,
+    .settings-panel .sync-comparison,
+    .settings-panel .profile-columns {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   .settings-panel .setting-row > :first-child {
     min-width: 0;
   }

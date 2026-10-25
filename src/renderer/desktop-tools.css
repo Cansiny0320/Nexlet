@@ -179,24 +179,72 @@
   color: #f5f6f8;
   overflow: hidden;
 }
+.capture-editor-title {
+  font-size: 17px;
+  font-weight: 600;
+  padding: 14px 18px 2px;
+  background: #292c31;
+}
+.capture-tool-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.capture-style-controls,
+.capture-history-controls {
+  border-left: 1px solid #ffffff20;
+  padding-left: 10px;
+  margin-left: 4px;
+}
 .capture-editor-tools,
 .capture-editor-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 9px 12px;
+  padding: 10px 18px;
   flex-shrink: 0;
   background: #292c31;
 }
 .capture-editor button,
 .image-recognition button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
   padding: 6px 9px;
   border: 1px solid #ffffff30;
-  border-radius: 5px;
+  border-radius: 6px;
+}
+.capture-editor .capture-icon-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.capture-editor button:hover:not(:disabled) {
+  background: #ffffff12;
+}
+.capture-editor button:focus-visible,
+.capture-editor input:focus-visible,
+.capture-editor select:focus-visible {
+  outline: 2px solid #75a7ff;
+  outline-offset: 2px;
+}
+.capture-editor button.capture-primary {
+  background: #528aef;
+  border-color: #528aef;
+  padding-inline: 20px;
+  color: white;
+}
+.capture-editor button.capture-primary:hover:not(:disabled) {
+  background: #447cdd;
 }
 .capture-editor button[aria-pressed='true'] {
-  background: #3a6088;
+  background: #528aef30;
+  border-color: #6098fa;
+  color: #91bcff;
 }
 .capture-editor button:disabled {
   opacity: 0.45;
@@ -211,12 +259,38 @@
   padding: 5px;
 }
 .capture-editor-tools input[type='number'] {
-  width: 60px;
+  width: 45px;
+  border: 0;
+  background: transparent;
+  padding-right: 0;
+}
+.capture-stroke {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding-right: 8px;
+  border: 1px solid #ffffff30;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.capture-stroke span {
+  color: #b7bdc8;
 }
 .capture-editor-tools input[type='color'] {
-  width: 32px;
-  height: 30px;
-  padding: 2px;
+  width: 34px;
+  height: 34px;
+  padding: 5px;
+}
+.capture-editor-tools input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.capture-editor-tools input[type='color']::-webkit-color-swatch {
+  border: 0;
+  border-radius: 3px;
+}
+.capture-editor-tools input:not([type='color']):not([type='number']) {
+  min-width: 150px;
+  flex: 1;
 }
 .capture-editor-workspace {
   flex: 1;
@@ -247,6 +321,12 @@
 .capture-editor-actions > span {
   margin-right: auto;
   font-size: 12px;
+}
+.capture-editor-actions {
+  border-top: 1px solid #ffffff12;
+}
+.capture-primary-actions {
+  margin-left: 8px;
 }
 .capture-editor-status {
   padding: 7px 12px;
@@ -284,6 +364,49 @@
   margin-block: 10px;
   width: 100%;
   resize: vertical;
+}
+.image-recognition select,
+.image-recognition textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+.capture-editor .image-recognition select,
+.capture-editor .image-recognition textarea {
+  background: #353940;
+  border-color: #ffffff30;
+}
+.image-recognition-controls select {
+  flex: 1 1 120px;
+  max-width: 100%;
+  min-height: 32px;
+}
+.image-recognition textarea {
+  min-height: 150px;
+  line-height: 1.65;
+}
+@media (max-width: 640px) {
+  .capture-editor-title {
+    padding-left: 12px;
+  }
+  .capture-editor-tools,
+  .capture-editor-actions {
+    padding-inline: 12px;
+  }
+  .capture-editor-side {
+    max-width: 48%;
+    padding: 8px;
+  }
+  .capture-primary-actions {
+    margin-left: auto;
+  }
+  .capture-editor-actions > span {
+    flex-basis: 100%;
+  }
 }
 .image-recognition p {
   font-size: 12px;

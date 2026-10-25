@@ -1,7 +1,10 @@
 import { t } from '../shared/i18n';
 import { localizedLabels } from '../shared/plugin-locales';
 import { useEffect, useState } from 'react';
-import { Puzzle, RefreshCw } from 'lucide-react';
+import { LayoutGrid, List, Puzzle, RefreshCw, Search } from 'lucide-react';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { SettingsSelect } from './components/settings-select';
 import {
   marketAvailability,
   type MarketEntry,
@@ -88,34 +91,41 @@ export function MarketPanel() {
   return (
     <div className="plugins-content">
       <div className="market-intro">
-        <input
-          aria-label={t('搜索插件')}
-          placeholder={t('搜索插件')}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <select
-          aria-label={t('插件分类')}
+        <div className="market-search">
+          <Search size={16} aria-hidden="true" />
+          <Input
+            aria-label={t('搜索插件')}
+            placeholder={t('搜索插件')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <SettingsSelect
+          label={t('插件分类')}
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="">{t('全部分类')}</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select aria-label={t('插件排序')} value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="name">{t('名称')}</option>
-          <option value="updated">{t('最近更新')}</option>
-        </select>
-        <button
+          onValueChange={setCategory}
+          items={[
+            { value: '', label: t('全部分类') },
+            ...categories.map((value) => ({ value, label: value })),
+          ]}
+        />
+        <SettingsSelect
+          label={t('插件排序')}
+          value={sort}
+          onValueChange={setSort}
+          items={[
+            { value: 'name', label: t('名称') },
+            { value: 'updated', label: t('最近更新') },
+          ]}
+        />
+        <Button
+          variant="outline"
           aria-pressed={layout === 'list'}
           onClick={() => setLayout(layout === 'grid' ? 'list' : 'grid')}
         >
+          {layout === 'grid' ? <List size={15} /> : <LayoutGrid size={15} />}
           {layout === 'grid' ? t('列表') : t('卡片')}
-        </button>
+        </Button>
         <IconButton title={t('刷新插件市场')} disabled={loading} onClick={() => void refresh(true)}>
           <RefreshCw size={15} />
         </IconButton>
@@ -238,41 +248,53 @@ export function MarketPanel() {
                 <p>{entry.description}</p>
                 <div className="market-card-bottom">
                   <span>v{entry.version}</span>
-                  {current ? (
-                    <button
-                      className="button small"
-                      disabled={!installed.enabled}
-                      onClick={() =>
-                        void api('launch', {
-                          id: `plugin:${entry.id}:${installed.manifest.features[0].code}`,
-                        }).catch((e) => toast(errorText(e), true))
-                      }
+                  <div className="market-card-actions">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-expanded={detail === entry.id}
+                      onClick={() => setDetail(detail === entry.id ? null : entry.id)}
                     >
-                      {installed.enabled ? t('打开') : t('已停用')}
-                    </button>
-                  ) : (
-                    <button
-                      className="button primary small"
-                      title={reason ?? ''}
-                      disabled={pending || !!reason}
-                      onClick={() => void task({ action: 'enqueue', pluginId: entry.id })}
-                    >
-                      {pending ? t('任务进行中') : installed ? t('更新') : t('安装')}
-                    </button>
-                  )}
-                  <button onClick={() => setDetail(detail === entry.id ? null : entry.id)}>
-                    {detail === entry.id ? t('收起') : t('详情')}
-                  </button>
+                      {detail === entry.id ? t('收起') : t('详情')}
+                    </Button>
+                    {current ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!installed.enabled}
+                        onClick={() =>
+                          void api('launch', {
+                            id: `plugin:${entry.id}:${installed.manifest.features[0].code}`,
+                          }).catch((e) => toast(errorText(e), true))
+                        }
+                      >
+                        {installed.enabled ? t('打开') : t('已停用')}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        title={reason ?? ''}
+                        disabled={pending || !!reason}
+                        onClick={() => void task({ action: 'enqueue', pluginId: entry.id })}
+                      >
+                        {pending ? t('任务进行中') : installed ? t('更新') : t('安装')}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 {reason && !current && <div className="market-unavailable">{reason}</div>}
-                <div className="market-platforms">
-                  {entry.platforms
-                    .map((p) => ({ win32: 'Windows', darwin: 'macOS', linux: 'Linux' })[p])
-                    .join(' · ')}
-                  {entry.minHostVersion && ` · Nexlet ≥ ${entry.minHostVersion}`}
-                  {entry.updatedAt && ' · ' + new Date(entry.updatedAt).toLocaleDateString()}
-                </div>
-                {detail === entry.id && <MarketDetails entry={entry} openLink={openLink} />}
+                {detail === entry.id && (
+                  <>
+                    <div className="market-platforms">
+                      {entry.platforms
+                        .map((p) => ({ win32: 'Windows', darwin: 'macOS', linux: 'Linux' })[p])
+                        .join(' · ')}
+                      {entry.minHostVersion && ` · Nexlet ≥ ${entry.minHostVersion}`}
+                      {entry.updatedAt && ' · ' + new Date(entry.updatedAt).toLocaleDateString()}
+                    </div>
+                    <MarketDetails entry={entry} openLink={openLink} />
+                  </>
+                )}
               </article>
             );
           })}

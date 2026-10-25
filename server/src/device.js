@@ -6,50 +6,69 @@ const language = /zh/i.test(navigator.language)
   : 2;
 const labels = [
   [
-    'Nexlet 设备登录',
-    '输入 Nexlet 显示的设备代码',
-    '只有在你自己的 Nexlet 客户端发起登录时才确认。',
+    '确认设备登录',
+    '设备代码',
+    '仅确认你本人发起的登录请求。',
     '使用 GitHub 登录',
-    '确认登录这台设备',
+    '确认登录',
     '拒绝',
     '请求失败，请重试',
     '已确认，请回到 Nexlet。',
     '已拒绝。',
-    '当前账号：',
+    '当前 GitHub 账号',
+    '核对设备代码，允许此设备登录你的账号。',
+    '请与 Nexlet 客户端显示的代码核对。',
   ],
   [
-    'Nexlet 裝置登入',
-    '輸入 Nexlet 顯示的裝置代碼',
-    '只有在你自己的 Nexlet 用戶端發起登入時才確認。',
+    '確認裝置登入',
+    '裝置代碼',
+    '僅確認你本人發起的登入請求。',
     '使用 GitHub 登入',
-    '確認登入這台裝置',
+    '確認登入',
     '拒絕',
     '請求失敗，請重試',
     '已確認，請回到 Nexlet。',
     '已拒絕。',
-    '目前帳號：',
+    '目前 GitHub 帳號',
+    '核對裝置代碼，允許此裝置登入你的帳號。',
+    '請與 Nexlet 用戶端顯示的代碼核對。',
   ],
   [
-    'Nexlet device sign-in',
-    'Enter the device code shown in Nexlet',
-    'Confirm only if you started sign-in in your own Nexlet client.',
+    'Confirm device sign-in',
+    'Device code',
+    'Confirm only a sign-in request you started.',
     'Sign in with GitHub',
-    'Confirm this device',
+    'Confirm sign-in',
     'Deny',
     'Request failed. Please retry.',
     'Confirmed. Return to Nexlet.',
     'Denied.',
-    'Account: ',
+    'Current GitHub account',
+    'Check the device code to allow this device to sign in.',
+    'Match this code with the one shown in your Nexlet client.',
   ],
 ][language];
 document.documentElement.lang = ['zh-CN', 'zh-Hant', 'en'][language];
-document.title = labels[0];
-['h1', '#code-label', 'small', '#login', '#approve', '#deny'].forEach((selector, i) => {
+document.title = 'Nexlet · ' + labels[0];
+['h1', '#code-label', '#safety-text', '#login', '#approve', '#deny'].forEach((selector, i) => {
   document.querySelector(selector).textContent = labels[i];
 });
+document.querySelector('#account-label').textContent = labels[9];
+document.querySelector('#description').textContent = labels[10];
+document.querySelector('#code-hint').textContent = labels[11];
 const code = document.querySelector('#code'),
-  message = document.querySelector('#message');
+  message = document.querySelector('#message'),
+  login = document.querySelector('#login'),
+  approve = document.querySelector('#approve'),
+  deny = document.querySelector('#deny');
+let busy = false,
+  completed = false;
 code.value = new URLSearchParams(location.search).get('user_code') || '';
+function setBusy(value) {
+  busy = value;
+  document.querySelector('main').setAttribute('aria-busy', String(value));
+  for (const control of [code, login, approve, deny]) control.disabled = value || completed;
+}
 async function call(path, body) {
   const response = await fetch(base + '/auth' + path, {
     method: body ? 'POST' : 'GET',
@@ -61,9 +80,19 @@ async function call(path, body) {
   return value;
 }
 function error(e) {
-  message.textContent = e.message;
+  message.dataset.state = 'error';
+  message.setAttribute('role', 'alert');
+  message.textContent = e.message || labels[6];
 }
-document.querySelector('#login').onclick = async () => {
+function clearMessage() {
+  message.textContent = '';
+  message.setAttribute('role', 'status');
+  delete message.dataset.state;
+}
+login.onclick = async () => {
+  if (busy || completed) return;
+  setBusy(true);
+  clearMessage();
   try {
     const result = await call('/sign-in/social', {
       provider: 'github',
@@ -72,27 +101,38 @@ document.querySelector('#login').onclick = async () => {
     if (result.url) location.assign(result.url);
   } catch (e) {
     error(e);
+  } finally {
+    setBusy(false);
   }
 };
 async function decide(approved) {
+  if (busy || completed) return;
+  const userCode = code.value;
+  setBusy(true);
+  clearMessage();
   try {
-    await call('/device?user_code=' + encodeURIComponent(code.value));
-    await call(approved ? '/device/approve' : '/device/deny', { userCode: code.value });
+    await call('/device?user_code=' + encodeURIComponent(userCode));
+    await call(approved ? '/device/approve' : '/device/deny', { userCode });
+    completed = true;
+    message.dataset.state = 'success';
     message.textContent = approved ? labels[7] : labels[8];
-    document.querySelector('#approve').disabled = true;
-    document.querySelector('#deny').disabled = true;
   } catch (e) {
     error(e);
+  } finally {
+    setBusy(false);
   }
 }
-document.querySelector('#approve').onclick = () => decide(true);
-document.querySelector('#deny').onclick = () => decide(false);
+approve.onclick = () => decide(true);
+deny.onclick = () => decide(false);
+setBusy(true);
 call('/get-session')
   .then((session) => {
     if (!session?.user) return;
-    document.querySelector('#identity').textContent = labels[9] + session.user.name;
-    document.querySelector('#login').hidden = true;
-    document.querySelector('#approve').hidden = false;
-    document.querySelector('#deny').hidden = false;
+    document.querySelector('#identity').textContent = session.user.name;
+    document.querySelector('#account').hidden = false;
+    login.hidden = true;
+    approve.hidden = false;
+    deny.hidden = false;
   })
-  .catch(error);
+  .catch(error)
+  .finally(() => setBusy(false));

@@ -1,48 +1,316 @@
 <!doctype html>
 <html lang="zh-CN">
-  <meta charset="utf-8" /><meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
-  /><title>Nexlet 设备登录</title>
-  <style>
-    body {
-      font: 16px system-ui;
-      max-width: 440px;
-      margin: 12vh auto;
-      padding: 24px;
-      color: #222;
-      background: #fafafa;
-    }
-    button,
-    input {
-      font: inherit;
-      padding: 10px;
-      margin: 8px 0;
-    }
-    button {
-      cursor: pointer;
-    }
-    input {
-      display: block;
-      width: 90%;
-    }
-    #message {
-      white-space: pre-wrap;
-    }
-    small {
-      display: block;
-      color: #555;
-    }
-  </style>
-  <h1>Nexlet 设备登录</h1>
-  <p id="identity"></p>
-  <label
-    ><span id="code-label">输入 Nexlet 显示的设备代码</span
-    ><input id="code" autocomplete="off" maxlength="20" /></label
-  ><small>只有在你自己的 Nexlet 客户端发起登录时才确认。</small>
-  <button id="login">使用 GitHub 登录</button
-  ><button id="approve" hidden>确认登录这台设备</button
-  ><button id="deny" hidden>拒绝</button>
-  <p id="message" role="status"></p>
-  <script src="./device.js" defer></script>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Nexlet 设备登录</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+        padding: 62px 24px 40px;
+        background: #f7f7fa;
+        color: #171b29;
+        font:
+          20px/1.5 'Segoe UI',
+          'Microsoft YaHei',
+          sans-serif;
+      }
+      main {
+        width: min(688px, 100%);
+        padding: 44px 46px 44px;
+        background: #fff;
+        border: 1px solid #dce0ea;
+        border-radius: 14px;
+        box-shadow: 0 12px 36px #252a4a05;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 36px;
+      }
+      .brand img {
+        flex: none;
+        width: 58px;
+        height: 58px;
+      }
+      .brand span {
+        font-size: 38px;
+        font-weight: 600;
+        letter-spacing: -1px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 40px;
+        line-height: 1.3;
+        letter-spacing: -0.6px;
+      }
+      #description {
+        margin: 0 0 28px;
+        color: #72798b;
+        font-size: 22px;
+        line-height: 1.5;
+      }
+      .account {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        padding: 20px 12px;
+        margin-bottom: 24px;
+        border-block: 1px solid #e1e4ec;
+      }
+      .account svg {
+        width: 48px;
+        height: 48px;
+        flex: none;
+      }
+      #account-label {
+        display: block;
+        color: #72798b;
+        font-size: 19px;
+      }
+      #identity {
+        display: block;
+        font-size: 24px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+      #code-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      input,
+      button {
+        font: inherit;
+      }
+      input {
+        width: 100%;
+        height: 80px;
+        padding: 16px 28px;
+        border: 1px solid #d5dae6;
+        border-radius: 10px;
+        background: #fff;
+        color: inherit;
+        font:
+          30px/1.5 Consolas,
+          'SFMono-Regular',
+          monospace;
+        letter-spacing: 0.2em;
+      }
+      input::placeholder {
+        color: #949bab;
+      }
+      input:focus-visible,
+      button:focus-visible {
+        outline: 3px solid #6265ed55;
+        outline-offset: 3px;
+      }
+      #code-hint {
+        margin: 10px 0 0;
+        color: #72798b;
+        font-size: 18px;
+      }
+      .actions {
+        display: flex;
+        gap: 16px;
+        margin-top: 24px;
+      }
+      button {
+        min-width: 0;
+        min-height: 68px;
+        padding: 12px 20px;
+        border: 1px solid #d5dae6;
+        border-radius: 10px;
+        background: #fff;
+        color: #242a3c;
+        font-size: 23px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #f5f6fa;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      #deny {
+        flex: 0 0 152px;
+      }
+      .primary {
+        flex: 1;
+        background: linear-gradient(135deg, #6461f4, #575cff);
+        border-color: #6262f4;
+        color: #fff;
+        font-weight: 600;
+      }
+      .primary:hover:not(:disabled) {
+        background: #5558df;
+      }
+      .safety {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 24px 0 0;
+        color: #72798b;
+      }
+      .safety svg {
+        flex: none;
+        width: 24px;
+        height: 24px;
+      }
+      .safety small {
+        font-size: 18px;
+      }
+      #message {
+        margin: 20px 0 0;
+        padding-top: 16px;
+        border-top: 1px solid #e1e4ec;
+        font-size: 18px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      #message:empty {
+        display: none;
+      }
+      #message[data-state='error'] {
+        color: #bc394a;
+      }
+      #message[data-state='success'] {
+        color: #288052;
+      }
+      @media (max-width: 640px) {
+        body {
+          padding: 24px 16px;
+          font-size: 16px;
+        }
+        main {
+          padding: 28px 24px;
+          border-radius: 12px;
+        }
+        .brand {
+          gap: 12px;
+          margin-bottom: 28px;
+        }
+        .brand img {
+          width: 44px;
+          height: 44px;
+        }
+        .brand span {
+          font-size: 28px;
+        }
+        h1 {
+          font-size: 28px;
+        }
+        #description {
+          font-size: 16px;
+          margin-bottom: 24px;
+        }
+        .account {
+          padding: 16px 0;
+          gap: 16px;
+        }
+        .account svg {
+          width: 36px;
+          height: 36px;
+        }
+        #account-label {
+          font-size: 14px;
+        }
+        #identity {
+          font-size: 18px;
+        }
+        input {
+          height: 58px;
+          padding: 12px 16px;
+          font-size: 23px;
+          letter-spacing: 0.15em;
+        }
+        #code-hint,
+        .safety small,
+        #message {
+          font-size: 14px;
+        }
+        .actions {
+          gap: 12px;
+        }
+        button {
+          min-height: 48px;
+          padding: 10px 12px;
+          font-size: 16px;
+        }
+        #deny {
+          flex-basis: 82px;
+        }
+        .safety {
+          align-items: flex-start;
+          gap: 8px;
+        }
+        .safety svg {
+          width: 18px;
+          height: 21px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-labelledby="heading">
+      <div class="brand">
+        <img src="./device-icon.png" alt="" width="58" height="58" />
+        <span>Nexlet</span>
+      </div>
+      <h1 id="heading">确认设备登录</h1>
+      <p id="description">核对设备代码，允许此设备登录你的账号。</p>
+      <div class="account" id="account" hidden>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 .75a11.25 11.25 0 0 0-3.558 21.923c.563.104.769-.244.769-.542 0-.267-.01-.974-.015-1.912-3.13.68-3.79-1.508-3.79-1.508-.512-1.3-1.25-1.646-1.25-1.646-1.022-.699.077-.685.077-.685 1.13.08 1.725 1.16 1.725 1.16 1.005 1.722 2.637 1.225 3.28.937.102-.728.394-1.225.716-1.507-2.499-.284-5.126-1.25-5.126-5.563 0-1.229.44-2.233 1.16-3.02-.116-.284-.503-1.43.11-2.98 0 0 .945-.302 3.094 1.153A10.8 10.8 0 0 1 12 6.18c.956.004 1.919.13 2.818.38 2.148-1.455 3.09-1.153 3.09-1.153.615 1.55.228 2.696.112 2.98.722.787 1.158 1.791 1.158 3.02 0 4.324-2.632 5.276-5.14 5.555.404.348.764 1.034.764 2.084 0 1.504-.014 2.718-.014 3.086 0 .3.203.65.774.54A11.25 11.25 0 0 0 12 .75Z"
+          />
+        </svg>
+        <div><span id="account-label">当前 GitHub 账号</span><strong id="identity"></strong></div>
+      </div>
+      <label for="code" id="code-label">设备代码</label>
+      <input
+        id="code"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        maxlength="20"
+        aria-describedby="code-hint"
+      />
+      <p id="code-hint">请与 Nexlet 客户端显示的代码核对。</p>
+      <div class="actions">
+        <button id="deny" hidden>拒绝</button>
+        <button id="approve" class="primary" hidden>确认登录</button>
+        <button id="login" class="primary" disabled>使用 GitHub 登录</button>
+      </div>
+      <p class="safety">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="4" y="10" width="16" height="11" rx="2" />
+          <path d="M8 10V6a4 4 0 0 1 8 0v4M12 14v3" />
+        </svg>
+        <small id="safety-text">仅确认你本人发起的登录请求。</small>
+      </p>
+      <p id="message" role="status" aria-live="polite"></p>
+    </main>
+    <script src="./device.js" defer></script>
+  </body>
 </html>

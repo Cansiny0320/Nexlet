@@ -1,3 +1,5 @@
+import { Textarea } from './components/ui/textarea';
+import { Input } from './components/ui/input';
 import { t } from '../shared/i18n';
 import { useEffect, useState } from 'react';
 import { api, errorText } from './common';
@@ -59,37 +61,41 @@ export function AISettingsPanel() {
     setEditing((old) => (old ? { ...old, ...value } : old));
   return (
     <section className="ai-settings">
-      <div className="settings-section-title">{t('AI 模型')}</div>
-      <div className="setting-row">
-        <strong>{t('默认模型')}</strong>
-        <SettingsSelect
-          label={t('默认模型')}
-          value={
-            state.defaultModel ? state.defaultModel.providerId + ':' + state.defaultModel.model : ''
-          }
-          items={[
-            { value: '', label: t('未选择') },
-            ...state.providers.flatMap((p) =>
-              p.models.map((model) => ({
-                value: p.id + ':' + model,
-                label: p.name + ' / ' + model,
-              })),
-            ),
-          ]}
-          onValueChange={(value) => {
-            const split = value.indexOf(':');
-            void run({
-              action: 'default',
-              value:
-                split < 0
-                  ? null
-                  : { providerId: value.slice(0, split), model: value.slice(split + 1) },
-            });
-          }}
-        />
+      <div className="ai-settings-heading">
+        <div className="settings-section-title">{t('AI 模型')}</div>
+        <div className="setting-row">
+          <strong>{t('默认模型')}</strong>
+          <SettingsSelect
+            label={t('默认模型')}
+            value={
+              state.defaultModel
+                ? state.defaultModel.providerId + ':' + state.defaultModel.model
+                : ''
+            }
+            items={[
+              { value: '', label: t('未选择') },
+              ...state.providers.flatMap((p) =>
+                p.models.map((model) => ({
+                  value: p.id + ':' + model,
+                  label: p.name + ' / ' + model,
+                })),
+              ),
+            ]}
+            onValueChange={(value) => {
+              const split = value.indexOf(':');
+              void run({
+                action: 'default',
+                value:
+                  split < 0
+                    ? null
+                    : { providerId: value.slice(0, split), model: value.slice(split + 1) },
+              });
+            }}
+          />
+        </div>
       </div>
       {state.providers.map((provider) => (
-        <div className="setting-row" key={provider.id}>
+        <div className="setting-row ai-provider-summary" key={provider.id}>
           <div>
             <strong>{provider.name}</strong>
             <p>{provider.models.join(' · ') || t('尚未添加模型')}</p>
@@ -149,7 +155,7 @@ export function AISettingsPanel() {
         >
           <label>
             {t('名称')}
-            <input
+            <Input
               required
               maxLength={100}
               value={editing.name}
@@ -158,31 +164,17 @@ export function AISettingsPanel() {
           </label>
           <label>
             {t('服务地址')}
-            <input
+            <Input
               required
               type="url"
               value={editing.baseUrl}
               onChange={(e) => patch({ baseUrl: e.target.value })}
             />
           </label>
-          <div className="setting-row">
-            <strong>{t('协议')}</strong>
-            <SettingsSelect
-              label={t('AI 协议')}
-              value={editing.protocol}
-              items={[
-                { value: 'chat-completions', label: 'Chat Completions' },
-                { value: 'responses', label: 'Responses' },
-                { value: 'anthropic', label: 'Anthropic Messages' },
-              ]}
-              onValueChange={(protocol) =>
-                patch({ protocol, reasoningEffort: undefined, thinkingBudgetTokens: undefined })
-              }
-            />
-          </div>
+
           <label>
             API Key
-            <input
+            <Input
               type="password"
               autoComplete="off"
               value={key}
@@ -196,13 +188,29 @@ export function AISettingsPanel() {
           </label>
           <label>
             {t('模型 ID（每行一个）')}
-            <textarea rows={3} value={models} onChange={(e) => setModels(e.target.value)} />
+            <Textarea rows={3} value={models} onChange={(e) => setModels(e.target.value)} />
           </label>
           <details>
             <summary>{t('模型能力与生成参数')}</summary>
             <div className="setting-row">
+              <strong>{t('协议')}</strong>
+              <SettingsSelect
+                label={t('AI 协议')}
+                value={editing.protocol}
+                items={[
+                  { value: 'chat-completions', label: 'Chat Completions' },
+                  { value: 'responses', label: 'Responses' },
+                  { value: 'anthropic', label: 'Anthropic Messages' },
+                ]}
+                onValueChange={(protocol) =>
+                  patch({ protocol, reasoningEffort: undefined, thinkingBudgetTokens: undefined })
+                }
+              />
+            </div>
+            <div className="setting-row">
               <strong>{t('图片输入')}</strong>
               <Switch
+                aria-label={t('图片理解')}
                 checked={editing.capabilities.images}
                 onCheckedChange={(images) =>
                   patch({ capabilities: { ...editing.capabilities, images } })
@@ -212,6 +220,7 @@ export function AISettingsPanel() {
             <div className="setting-row">
               <strong>{t('工具调用')}</strong>
               <Switch
+                aria-label={t('工具调用')}
                 checked={editing.capabilities.tools}
                 onCheckedChange={(tools) =>
                   patch({ capabilities: { ...editing.capabilities, tools } })
@@ -220,7 +229,7 @@ export function AISettingsPanel() {
             </div>
             <label>
               {t('输出 Token 上限')}
-              <input
+              <Input
                 type="number"
                 min={1}
                 max={200000}
@@ -230,7 +239,7 @@ export function AISettingsPanel() {
             </label>
             <label>
               {t('Temperature（留空使用服务默认值）')}
-              <input
+              <Input
                 type="number"
                 min={0}
                 max={editing.protocol === 'anthropic' ? 1 : 2}
@@ -243,7 +252,7 @@ export function AISettingsPanel() {
             </label>
             <label>
               {t('上下文 Token 上限（可选）')}
-              <input
+              <Input
                 type="number"
                 min={editing.maxOutputTokens + 1}
                 max={10000000}
@@ -263,7 +272,7 @@ export function AISettingsPanel() {
             {editing.protocol === 'anthropic' ? (
               <label>
                 {t('思考预算 Token（仅适用于支持手动预算的模型）')}
-                <input
+                <Input
                   type="number"
                   min={1024}
                   max={editing.maxOutputTokens - 1}
@@ -297,11 +306,71 @@ export function AISettingsPanel() {
                 {t('启用推理参数时不发送 Temperature。模型不支持时会显示服务错误。')}
               </p>
             )}
+            <div className="tool-buttons ai-provider-utilities">
+              {state.providers.some((p) => p.id === editing.id) && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      void run({ action: 'models', id: editing.id }).then((next) => {
+                        if (next?.availableModels)
+                          setModels(
+                            [
+                              ...new Set([
+                                ...models.split('\n').filter(Boolean),
+                                ...next.availableModels,
+                              ]),
+                            ].join('\n'),
+                          );
+                      })
+                    }
+                  >
+                    {t('获取模型')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy || !editing.models.length}
+                    onClick={() =>
+                      void run({ action: 'test', id: editing.id, model: editing.models[0] })
+                    }
+                  >
+                    {t('测试已保存配置')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      void run({ action: 'save', provider: editing, apiKey: null }).then((next) => {
+                        if (next) setKey('');
+                      })
+                    }
+                  >
+                    {t('清除 API Key')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      void run({ action: 'remove', id: editing.id }).then((next) => {
+                        if (next) {
+                          setEditing(null);
+                          setKey('');
+                        }
+                      })
+                    }
+                  >
+                    {t('删除供应商')}
+                  </Button>
+                </>
+              )}
+            </div>
           </details>
           <div className="tool-buttons">
-            <Button type="submit" disabled={busy}>
-              {t('保存')}
-            </Button>
             <Button
               type="button"
               variant="outline"
@@ -313,67 +382,9 @@ export function AISettingsPanel() {
             >
               {t('取消')}
             </Button>
-            {state.providers.some((p) => p.id === editing.id) && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    void run({ action: 'models', id: editing.id }).then((next) => {
-                      if (next?.availableModels)
-                        setModels(
-                          [
-                            ...new Set([
-                              ...models.split('\n').filter(Boolean),
-                              ...next.availableModels,
-                            ]),
-                          ].join('\n'),
-                        );
-                    })
-                  }
-                >
-                  {t('获取模型')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy || !editing.models.length}
-                  onClick={() =>
-                    void run({ action: 'test', id: editing.id, model: editing.models[0] })
-                  }
-                >
-                  {t('测试已保存配置')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    void run({ action: 'save', provider: editing, apiKey: null }).then((next) => {
-                      if (next) setKey('');
-                    })
-                  }
-                >
-                  {t('清除 API Key')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    void run({ action: 'remove', id: editing.id }).then((next) => {
-                      if (next) {
-                        setEditing(null);
-                        setKey('');
-                      }
-                    })
-                  }
-                >
-                  {t('删除供应商')}
-                </Button>
-              </>
-            )}
+            <Button type="submit" disabled={busy}>
+              {t('保存')}
+            </Button>
           </div>
         </form>
       )}

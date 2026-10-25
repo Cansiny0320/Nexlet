@@ -35,6 +35,17 @@ test('PostgreSQL: accounts, device grant, isolation, conflicts, retries, quota, 
     return { status: response.status, value: JSON.parse(text) };
   };
   try {
+    const devicePage = await fetch(url + '/device');
+    assert.equal(devicePage.status, 200);
+    assert.match(await devicePage.text(), /src="\.\/device-icon\.png"/);
+    assert.match(devicePage.headers.get('content-security-policy'), /img-src 'self'/);
+    const icon = await fetch(url + '/device-icon.png');
+    assert.equal(icon.status, 200);
+    assert.equal(icon.headers.get('content-type'), 'image/png');
+    assert.deepEqual(
+      [...new Uint8Array(await icon.arrayBuffer()).slice(0, 8)],
+      [137, 80, 78, 71, 13, 10, 26, 10],
+    );
     for (let i = 0; i < 2; i++) {
       const user = await ctx.internalAdapter.createUser({
         name: 'Fixture',

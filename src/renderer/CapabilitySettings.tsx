@@ -1,3 +1,5 @@
+import { Button } from './components/ui/button';
+import { Textarea } from './components/ui/textarea';
 import { t } from '../shared/i18n';
 import { useEffect, useState } from 'react';
 import { api, errorText } from './common';
@@ -17,7 +19,7 @@ export function CapabilitySettingsPanel() {
       .catch((e) => setError(errorText(e)));
   }, []);
   return (
-    <section>
+    <section className="capability-settings">
       <div className="settings-section-title">{t('OCR 与翻译')}</div>
       {(['ocr', 'translation'] as const).map((capability) => {
         const providers = state.providers.filter((p) => p.capability === capability);
@@ -37,6 +39,7 @@ export function CapabilitySettingsPanel() {
               )}
             </div>
             <SettingsSelect
+              className="w-full"
               label={capability === 'ocr' ? t('OCR 提供商') : t('翻译提供商')}
               value={missing ? '' : (state.defaults[capability] ?? '')}
               items={[
@@ -91,13 +94,22 @@ function ProviderConfiguration({
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   return (
-    <details>
+    <details className="provider-configuration">
       <summary>
         {name} · {t('配置')}
       </summary>
-      <textarea aria-label={name} rows={4} value={text} onChange={(e) => setText(e.target.value)} />
-      <button
-        className="button"
+      <Textarea
+        className="provider-json min-h-36"
+        aria-label={name}
+        spellCheck={false}
+        aria-invalid={!!error}
+        rows={6}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <Button
+        className="ml-auto flex"
+        variant="outline"
         disabled={busy}
         onClick={() => {
           setBusy(true);
@@ -109,7 +121,7 @@ function ProviderConfiguration({
         }}
       >
         {t('保存')}
-      </button>
+      </Button>
       {error && <p className="settings-warning">{error}</p>}
     </details>
   );
