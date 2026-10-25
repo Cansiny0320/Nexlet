@@ -37,12 +37,13 @@ export class CatalogMonitor {
     for (const [directory, previous] of snapshots) {
       const current = await readDirectorySnapshot(directory);
       if (this.closed || snapshots !== this.snapshots) return;
+      // Release deleted/replaced handles before a potentially slow catalog scan.
+      // Also retry failed watches when the directory itself is unchanged.
+      this.ensureWatcher(directory, current);
       if (current?.version !== previous?.version) {
         await this.refresh();
         return;
       }
-      // Retry a failed watch without rebuilding an unchanged catalog.
-      this.ensureWatcher(directory, current);
     }
     if (this.readSystemVersion) {
       const version = await this.readSystemVersion();
@@ -87,10 +88,28 @@ export class CatalogMonitor {
     this.watchers.delete(directory);
     if (!identity) return;
     try {
-      const watcher = watch(directory, { persistent: false }, this.schedule);
+      let checking = false;
+      const current = () => !this.closed && this.watchers.get(directory)?.watcher === watcher;
+      const watcher = watch(directory, { persistent: false }, () => {
+        if (!current() || checking) return;
+        checking = true;
+        // Windows may emit endless successful rename events for a deleted
+        // directory. Validate the handle's identity independently of scanning;
+        // waiting for an error or a completed scan can leave it spinning.
+        void readDirectorySnapshot(directory)
+          .then((snapshot) => {
+            if (!current()) return;
+            this.ensureWatcher(directory, snapshot);
+            this.schedule();
+          })
+          .finally(() => {
+            checking = false;
+          });
+      });
       watcher.on('error', () => {
+        if (!current()) return;
         watcher.close();
-        if (this.watchers.get(directory)?.watcher === watcher) this.watchers.delete(directory);
+        this.watchers.delete(directory);
         this.schedule();
       });
       this.watchers.set(directory, { watcher, identity });
