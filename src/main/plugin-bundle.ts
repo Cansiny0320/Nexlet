@@ -68,6 +68,8 @@ function finish(files: Map<string, Buffer>): PluginBundle {
   if (!config || config.length > 64 * 1024)
     throw new Error(t('插件根目录需要 plugin.json（小于 64 KB）'));
   const manifest = validateManifest(JSON.parse(config.toString('utf8')));
+  for (const provider of manifest.providers ?? [])
+    if (!files.has(provider.entry)) throw new Error(t('找不到提供商入口：') + provider.entry);
   if (!files.has(manifest.main)) throw new Error(t('找不到插件入口 HTML'));
   if (manifest.backend && !files.has(manifest.backend)) throw new Error(t('找不到插件后台入口'));
   if (manifest.icon) {

@@ -18,13 +18,24 @@ import { isHostDocument } from './host-origin';
 import type { DesktopToolState, ImageToolState } from '../shared/desktop-tools';
 import type { CaptureDestination, WindowRect } from '../shared/capture';
 import type { Command } from '../shared/types';
+import type { CapabilityProviders } from './capability-providers';
+import type { CaptureEditorState } from '../shared/capture-editor';
+import { findVerticalOverlap, imageSize, renderAnnotations, stitchImages } from './capture-image';
 interface Session {
+  editor?: {
+    rect: WindowRect;
+    bytes: Buffer;
+    segments: { bytes: Buffer; overlap: number; uncertain: boolean; height: number }[];
+  };
+  editorBusy?: boolean;
+  recognition?: AbortController;
   window: BrowserWindow;
   state: DesktopToolState;
   image?: NativeImage;
   zoom: number;
 }
 interface Dependencies {
+  capabilities?: CapabilityProviders;
   launcher: (image: Buffer | string) => Promise<void>;
   theme: () => string;
   enabled: (id: string) => void;
@@ -84,6 +95,7 @@ export class DesktopTools {
     window.webContents.on('will-navigate', (e) => e.preventDefault());
     window.webContents.on('will-attach-webview', (e) => e.preventDefault());
     window.on('closed', () => {
+      session.recognition?.abort();
       this.sessions.delete(owner);
     });
     if (overlay || pin) {
@@ -176,12 +188,72 @@ export class DesktopTools {
   }
   private async handle(s: Session, action: unknown, payload: unknown): Promise<unknown> {
     if (action === 'state') return s.state;
+    if (action === 'providers')
+      return this.deps.capabilities?.state() ?? { providers: [], defaults: {} };
+    if (action === 'recognitionCancel') {
+      s.recognition?.abort();
+      return true;
+    }
+    if (action === 'recognize' || action === 'translate') {
+      if (!this.deps.capabilities) throw new Error(t('提供商注册表未初始化'));
+      if (s.recognition) throw new Error(t('识别正在进行'));
+      const args = (payload ?? {}) as {
+        annotations?: unknown;
+        ocrProviderId?: string;
+        translationProviderId?: string;
+        targetLanguage?: string;
+      };
+      const source = s.editor?.bytes ?? s.image?.toPNG();
+      if (!source) throw new Error(t('请先选择截图区域'));
+      const controller = new AbortController();
+      s.recognition = controller;
+      try {
+        const bytes = await renderAnnotations(source, args.annotations ?? []);
+        const recognized = await this.deps.capabilities.run(
+          { capability: 'ocr', image: new Uint8Array(bytes), providerId: args.ocrProviderId },
+          controller.signal,
+        );
+        if (action === 'recognize') return recognized;
+        if (!recognized.text.trim()) throw new Error(t('图片中没有识别到文字'));
+        return await this.deps.capabilities.run(
+          {
+            capability: 'translation',
+            text: recognized.text,
+            providerId: args.translationProviderId,
+            targetLanguage: args.targetLanguage ?? 'zh-CN',
+          },
+          controller.signal,
+        );
+      } finally {
+        if (s.recognition === controller) s.recognition = undefined;
+      }
+    }
+    if (action === 'resultCopy' && typeof payload === 'string' && payload.length <= 500000) {
+      await clipboard.writeText(payload);
+      return true;
+    }
+    if (action === 'resultLaunch' && typeof payload === 'string' && payload.length <= 500000) {
+      await this.deps.launcher(payload);
+      if (s.state.kind === 'capture') this.capture.cancel();
+      else s.window.close();
+      return true;
+    }
     if (action === 'cancel') {
       if (s.state.kind === 'capture') this.capture.cancel();
       else s.window.close();
       return;
     }
     if (s.state.kind === 'capture') {
+      if (!this.capture.owns(s.window.webContents.id)) throw new Error(t('截图已结束'));
+      if (['edit', 'append', 'overlap', 'removeSegment', 'preview'].includes(String(action))) {
+        if (s.editorBusy) throw new Error(t('截图处理正在进行'));
+        s.editorBusy = true;
+        try {
+          return await this.editCapture(s, String(action), payload);
+        } finally {
+          s.editorBusy = false;
+        }
+      }
       if (
         action !== 'complete' ||
         !payload ||
@@ -189,10 +261,18 @@ export class DesktopTools {
         !this.capture.owns(s.window.webContents.id)
       )
         throw Error(t('截图操作无效'));
-      const { rect, destination } = payload as any;
+      const { rect, destination, annotations } = payload as {
+        rect: WindowRect;
+        destination?: CaptureDestination;
+        annotations?: unknown;
+      };
       if (destination !== undefined && !destinations.includes(destination))
         throw Error(t('截图目标无效'));
-      return this.capture.complete(rect, destination);
+      if (s.editorBusy) throw new Error(t('截图处理正在进行'));
+      const edited = s.editor
+        ? await renderAnnotations(s.editor.bytes, annotations ?? [])
+        : undefined;
+      return this.capture.complete(s.editor?.rect ?? rect, destination, edited);
     }
     if (!s.image) throw Error(t('请先选择图片'));
     if (action === 'copy' || action === 'save' || action === 'launch' || action === 'pin') {
@@ -224,6 +304,80 @@ export class DesktopTools {
       return;
     }
     throw Error(t('不支持的图片操作'));
+  }
+  private async editCapture(
+    s: Session,
+    action: string,
+    payload: unknown,
+  ): Promise<CaptureEditorState> {
+    const args = (payload ?? {}) as {
+      rect?: WindowRect;
+      index?: number;
+      overlap?: number;
+      annotations?: unknown;
+    };
+    if (action === 'edit') {
+      const bytes = this.capture.crop(args.rect!),
+        size = await imageSize(bytes);
+      s.editor = {
+        rect: args.rect!,
+        bytes,
+        segments: [{ bytes, overlap: 0, uncertain: false, height: size.height }],
+      };
+    }
+    const editor = s.editor;
+    if (!editor) throw new Error(t('请先选择截图区域'));
+    if (action === 'append') {
+      if (editor.segments.length >= 30) throw new Error(t('长截图最多 30 个片段'));
+      const bytes = await this.capture.sample(editor.rect),
+        match = await findVerticalOverlap(editor.segments.at(-1)!.bytes, bytes),
+        size = await imageSize(bytes);
+      if (match.duplicate) throw new Error(t('画面没有变化，请滚动后重新采集'));
+      const segments = [
+        ...editor.segments,
+        {
+          bytes,
+          overlap: match.overlap ?? 0,
+          uncertain: match.overlap === null,
+          height: size.height,
+        },
+      ];
+      const combined = await stitchImages(segments);
+      editor.segments = segments;
+      editor.bytes = combined;
+    }
+    if (action === 'overlap' || action === 'removeSegment') {
+      const index = args.index;
+      if (!Number.isInteger(index) || index! < 1 || index! >= editor.segments.length)
+        throw new Error(t('片段序号无效'));
+      const segments = editor.segments.map((segment) => ({ ...segment }));
+      if (action === 'removeSegment') {
+        segments.splice(index!, 1);
+        if (segments[index!]) {
+          segments[index!].overlap = 0;
+          segments[index!].uncertain = true;
+        }
+      } else {
+        segments[index!].overlap = args.overlap!;
+        segments[index!].uncertain = false;
+      }
+      const combined = await stitchImages(segments);
+      editor.segments = segments;
+      editor.bytes = combined;
+    }
+    const bytes =
+      action === 'preview'
+        ? await renderAnnotations(editor.bytes, args.annotations ?? [])
+        : editor.bytes;
+    return {
+      data: 'data:image/png;base64,' + bytes.toString('base64'),
+      ...(await imageSize(bytes)),
+      segments: editor.segments.map(({ height, overlap, uncertain }) => ({
+        height,
+        overlap,
+        uncertain,
+      })),
+    };
   }
   private resizePin(s: Session) {
     const size = s.image!.getSize(),
@@ -263,26 +417,26 @@ export function desktopCommands(): Command[] {
   const commands: Command[] = [
     {
       id: 'capture:region',
-      name: '截图',
-      subtitle: '框选区域，复制、保存或继续处理',
+      name: t('截图'),
+      subtitle: t('框选区域，复制、保存或继续处理'),
       kind: 'system',
-      keywords: ['截图', 'screenshot', 'capture', 'jt'],
+      keywords: [t('截图'), 'screenshot', 'capture', 'jt'],
       color: '#528aef',
     },
     {
       id: 'capture:screen',
-      name: '当前屏截图',
-      subtitle: '截取鼠标所在显示器；Linux 由系统选择屏幕',
+      name: t('当前屏截图'),
+      subtitle: t('截取鼠标所在显示器；Linux 由系统选择屏幕'),
       kind: 'system',
-      keywords: ['全屏截图', 'fullscreen'],
+      keywords: [t('全屏截图'), 'fullscreen'],
       color: '#528aef',
     },
     {
       id: 'image:pin',
-      name: '贴图',
-      subtitle: '将图片悬浮在屏幕上，随时对照',
+      name: t('贴图'),
+      subtitle: t('将图片悬浮在屏幕上，随时对照'),
       kind: 'system',
-      keywords: ['贴图', '图片置顶', 'pin'],
+      keywords: [t('贴图'), t('图片置顶'), 'pin'],
       matches: imageMatches,
       color: '#ba8951',
     },

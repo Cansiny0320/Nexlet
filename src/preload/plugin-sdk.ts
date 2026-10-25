@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { localeBridge } from './locale';
 import { ipcRenderer } from 'electron';
 import type {
@@ -8,7 +9,7 @@ import type {
 export const invoke = (method: string, args?: unknown) =>
   ipcRenderer.invoke('plugin-api', method, args);
 export const onSdkEvent = (event: string, callback: (value: any) => void) => {
-  if (typeof callback !== 'function') throw new Error('事件回调无效');
+  if (typeof callback !== 'function') throw new Error(t('事件回调无效'));
   const listener = (_: Electron.IpcRendererEvent, message: { event: string; value: unknown }) => {
     if (message.event === event) callback(message.value);
   };
@@ -16,6 +17,11 @@ export const onSdkEvent = (event: string, callback: (value: any) => void) => {
   return () => ipcRenderer.removeListener('plugin-sdk-event', listener);
 };
 export const sdk: PluginSdkExtensions = {
+  capabilities: {
+    list: () => invoke('capabilities.list'),
+    run: (options) => invoke('capabilities.run', options),
+    onProgress: (callback) => onSdkEvent('capabilities.progress', callback),
+  },
   results: { publish: (result) => invoke('results.publish', result) },
   session: {
     read: () => invoke('session.read'),
@@ -61,6 +67,9 @@ export const sdk: PluginSdkExtensions = {
     ffmpeg: (options) => invoke('media.ffmpeg', options),
   },
   ai: {
+    sharedModels: () => invoke('ai.sharedModels'),
+    generate: (options) => invoke('ai.generate', options),
+    onEvent: (callback) => onSdkEvent('ai.event', callback),
     configure: (config) => invoke('ai.configure', config),
     status: () => invoke('ai.status'),
     models: (options) => invoke('ai.models', options),

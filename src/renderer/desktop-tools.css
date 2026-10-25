@@ -171,3 +171,126 @@
   opacity: 0.4;
   cursor: default;
 }
+.capture-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #202226;
+  color: #f5f6f8;
+  overflow: hidden;
+}
+.capture-editor-tools,
+.capture-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  flex-shrink: 0;
+  background: #292c31;
+}
+.capture-editor button,
+.image-recognition button {
+  padding: 6px 9px;
+  border: 1px solid #ffffff30;
+  border-radius: 5px;
+}
+.capture-editor button[aria-pressed='true'] {
+  background: #3a6088;
+}
+.capture-editor button:disabled {
+  opacity: 0.45;
+}
+.capture-editor input,
+.capture-editor select,
+.capture-editor textarea {
+  color: inherit;
+  background: #353940;
+  border: 1px solid #ffffff30;
+  border-radius: 4px;
+  padding: 5px;
+}
+.capture-editor-tools input[type='number'] {
+  width: 60px;
+}
+.capture-editor-tools input[type='color'] {
+  width: 32px;
+  height: 30px;
+  padding: 2px;
+}
+.capture-editor-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.capture-editor-canvas {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.capture-editor-canvas svg {
+  touch-action: none;
+  user-select: none;
+}
+.capture-editor-side {
+  width: 300px;
+  max-width: 40%;
+  padding: 12px;
+  overflow: auto;
+  border-left: 1px solid #ffffff30;
+}
+.capture-editor-actions > span {
+  margin-right: auto;
+  font-size: 12px;
+}
+.capture-editor-status {
+  padding: 7px 12px;
+  background: #553533;
+}
+.capture-segments {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+.capture-segments > div {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff30;
+}
+.capture-segments label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.capture-segments input {
+  width: 80px;
+}
+.image-recognition {
+  padding: 10px;
+}
+.image-recognition-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.image-recognition textarea {
+  margin-block: 10px;
+  width: 100%;
+  resize: vertical;
+}
+.image-recognition p {
+  font-size: 12px;
+  margin-block: 8px;
+}
+.pin-recognition {
+  max-height: 55%;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+}

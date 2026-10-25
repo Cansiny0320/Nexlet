@@ -57,9 +57,9 @@ Manifest、feature 和市場條目可選宣告 `locales`，為不同語言提供
 
 公開目錄位於 [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins)。客戶端只從該倉庫的 `index.json` 讀取版本化目錄，從同一倉庫的 GitHub Releases 下載外掛包。條目包含平臺和最低 Nexlet 版本，安裝包 ID / 版本必須一致，不要求 Hash 欄位。
 
-市場安裝、更新複用本地包校驗，使用者點選安裝或更新後直接執行，不再彈出許可權確認框，成功後才替換安裝記錄。失敗保留舊版本與獨立資料；開發目錄不會被市場覆蓋，也不會自動降級。離線時可瀏覽已快取的目錄，首次連線失敗顯示可重試提示。
+Nexlet 0.2.47 的市場下載進入任務列表，支持進度、取消和重試；校驗完成後選擇安裝。首次安裝會顯示聲明的權限，更新新增權限或把已有本地提供商改為雲端時需要確認。成功後才替換安裝記錄，失敗保留舊版本和獨立數據。開發目錄不會被市場覆蓋，不自動降級；離線可查看已緩存目錄。
 
-市場安裝的外掛每次建立新會話前會重新檢查更新：索引檢查最多 2 秒，包下載最多 10 秒，有相容新版時自動更新後開啟，無需確認。斷網、超時、包校驗失敗或新版不包含本次功能時繼續開啟舊版，配置、持久金鑰和啟動輸入保留。已有會話（含分離視窗）再次喚起時不更新或重啟，關閉後下次開啟再檢查；重複啟動合併更新。本地匯入、開發目錄和已停用外掛不自動更新。檢查或下載期間退出、停用、解除安裝會取消待啟動操作。
+市場插件新建會話前仍檢查兼容更新，索引最多 2 秒、下載最多 10 秒。沒有新增權限且沒有本地轉雲變更時才自動激活；需要確認的版本留待用戶手動更新。斷網、超時、校驗失敗或缺少當前功能時繼續使用舊版。已有會話不重啟；本地導入、開發目錄和已停用插件不自動更新。
 
 ## API
 
@@ -181,3 +181,33 @@ await nexlet.secrets.set('apiKey', null); // 删除
 `persistent: true` 表示經系統 safeStorage 加密後落盤；無可用系統加密或 Linux 使用 `basic_text` 時，僅在當前外掛會話內儲存並返回 `false`，外掛應明確提示使用者。分離視窗保留臨時金鑰，退出會清除；無法解密舊資料會 reject，外掛應允許重新填寫。不要把金鑰放入普通 `storage`、日誌或 URL。解除安裝保留資料時也保留密文，選擇清理資料則同時清除密文與舊版遺留的 origin 授權。此能力是本機靜態儲存保護，不能阻止已獲授權的外掛讀取自己的金鑰。
 
 外掛壓縮檔最多 64 MiB，解壓合計 128 MiB，單個檔案/執行資源 32 MiB；市集下載與本機安裝遵循相同限制。`runtime.compute` 允許同源資源 fetch、動態程式碼、WASM 與本機 Worker，不開放 Node、任意檔案或直接外網存取。普通外掛維持原有嚴格 CSP。
+
+## 共享 AI 與 OCR／翻譯（Nexlet 0.2.47）
+
+聲明 `ai` 權限後，`ai.sharedModels()` 返回宿主模型配置，不含密鑰。`ai.generate({id, request})` 使用指定 providerId/model，省略時使用宿主默認模型；返回 text、toolCalls 和可用時的 usage。`ai.onEvent` 按任務 ID 提供 text、tool、usage、complete、failure 事件。拒絕、截斷、取消、斷流會失敗，不返回正常完成；工具調用僅返回數據，不執行。可用 `tasks.cancel(id)` 取消。舊 configure/models/chat/onChunk 保持原合同和私有配置。
+
+宿主分別編碼 Chat Completions、Responses 和 Anthropic Messages；Responses 默認 store=false。模型設置支持可選上下文上限、OpenAI low/medium/high 推理強度、適用 Anthropic 模型的手動思考預算。推理參數不會附帶 Temperature。上下文按文本 UTF-8 字節保守估算，圖片和精確 Token 限制仍由服務端校驗。修改地址或協議清除舊 Key；導入舊模型不會複製私有密鑰。
+
+聲明 `capabilities` 權限後可 list/run/onProgress。OCR 請求使用 Uint8Array 圖片（最多 20 MiB），返回 text 和可選 blocks（文字、點座標、置信度）；翻譯請求使用 text、targetLanguage 和可選 sourceLanguage。提供商 ID 為 `pluginId:providerId`，省略則使用用戶選定默認值。沒有默認值或提供商失敗時直接報告錯誤，不自動從本地切到雲端。調用最多 120 秒，同一提供商插件最多並行 3 項，退出消費會話或停用/升級提供商會取消任務。
+
+```js
+// manifest.permissions: ["ai", "capabilities"]
+const shared = await nexlet.ai.sharedModels();
+const id = crypto.randomUUID();
+const off = nexlet.ai.onEvent(({ id: taskId, event }) => {
+  if (taskId === id && event.type === 'text') appendText(event.delta);
+});
+try {
+  const result = await nexlet.ai.generate({ id, request: {
+    messages: [{ role: 'user', content: 'Summarize this text' }]
+  }});
+  showText(result.text);
+} finally { off(); }
+// await nexlet.tasks.cancel(id);
+const providers = await nexlet.capabilities.list();
+const result = await nexlet.capabilities.run({ id: crypto.randomUUID(), request: {
+  capability: 'translation', text: 'Hello', targetLanguage: 'zh-CN'
+}});
+```
+
+提供商在 manifest 的 providers 數組聲明 id/name/capability/locality/languages/entry，可選 configSchema；entry 必須為包內 HTML。隱藏沙箱加載入口，通過 `window.nexletProvider.listen` 接收 providerId/request/config，使用 progress/finish/fail 回覆。宿主校驗配置和結果。locality=local 不提供網絡或共享 AI；cloud 入口仍需聲明 network.request 或 ai 權限。入口示例見插件倉庫的 `plugins/ocr/provider.ts` 和 `plugins/translate/provider.js`。新配置在宿主設置中選擇，用戶賬號會話不對插件開放。

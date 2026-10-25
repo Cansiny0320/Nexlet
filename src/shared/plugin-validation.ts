@@ -3,6 +3,7 @@ import { t } from './i18n';
 import type { PluginManifest, PluginPermission } from './types';
 import { validateMatches } from './launch';
 import { SDK_PERMISSIONS } from './plugin-api';
+import type { CapabilityDefinition } from './capability-providers';
 
 export const KNOWN_PERMISSIONS: PluginPermission[] = [
   'clipboard.read',
@@ -38,6 +39,48 @@ function string(value: unknown, max: number, label: string): string {
     throw new Error(t('{{v0}}无效', { v0: label }));
   return value.trim();
 }
+function validateProviders(value: unknown): CapabilityDefinition[] {
+  if (!Array.isArray(value) || value.length > 10) throw new Error(t('提供商声明无效'));
+  const ids = new Set<string>();
+  return value.map((item) => {
+    if (!item || typeof item !== 'object') throw new Error(t('提供商声明无效'));
+    const id = string(item.id, 64, t('提供商 ID'));
+    if (!/^[a-zA-Z0-9_-]+$/.test(id) || ids.has(id)) throw new Error(t('提供商 ID 无效或重复'));
+    ids.add(id);
+    if (
+      !['ocr', 'translation'].includes(item.capability) ||
+      !['local', 'cloud'].includes(item.locality)
+    )
+      throw new Error(t('提供商类型无效'));
+    if (
+      !Array.isArray(item.languages) ||
+      item.languages.length > 200 ||
+      item.languages.some(
+        (language: unknown) => typeof language !== 'string' || !/^[\w*-]{1,32}$/.test(language),
+      )
+    )
+      throw new Error(t('提供商语言无效'));
+    const entry = safeEntryPath(string(item.entry, 240, t('提供商入口')));
+    if (!entry.endsWith('.html')) throw new Error(t('提供商入口必须为 HTML'));
+    if (
+      item.configSchema !== undefined &&
+      (!item.configSchema ||
+        item.configSchema.type !== 'object' ||
+        JSON.stringify(item.configSchema).length > 16384 ||
+        /"\$ref"\s*:\s*"(?!#)/.test(JSON.stringify(item.configSchema)))
+    )
+      throw new Error(t('提供商配置 schema 无效'));
+    return {
+      id,
+      name: string(item.name, 100, t('提供商名称')),
+      capability: item.capability,
+      locality: item.locality,
+      languages: [...item.languages],
+      entry,
+      ...(item.configSchema === undefined ? {} : { configSchema: item.configSchema }),
+    };
+  });
+}
 export function validateManifest(value: unknown): PluginManifest {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error(t('plugin.json 必须为对象'));
@@ -68,7 +111,7 @@ export function validateManifest(value: unknown): PluginManifest {
       ...(item.locales === undefined ? {} : { locales: validatePluginLocales(item.locales) }),
       code,
       name: string(item.name, 50, t('功能名称')),
-      keywords: item.keywords.map((k: unknown) => string(k, 50, '关键词')),
+      keywords: item.keywords.map((k: unknown) => string(k, 50, t('关键词'))),
       ...(item.matches === undefined ? {} : { matches: validateMatches(item.matches) }),
     };
   });
@@ -79,6 +122,7 @@ export function validateManifest(value: unknown): PluginManifest {
     throw new Error(t('后台入口需要 JavaScript 文件和 backend 权限'));
   if (icon && !/\.png$/i.test(icon)) throw new Error(t('插件图标需要 PNG 文件'));
   return {
+    ...(v.providers === undefined ? {} : { providers: validateProviders(v.providers) }),
     ...(v.locales === undefined ? {} : { locales: validatePluginLocales(v.locales) }),
     id,
     name,

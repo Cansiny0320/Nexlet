@@ -64,6 +64,7 @@ export interface PluginFeature {
 }
 
 export interface PluginManifest {
+  providers?: import('./capability-providers').CapabilityDefinition[];
   locales?: PluginLocales;
   id: string;
   name: string;

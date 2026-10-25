@@ -109,6 +109,7 @@ test('plugins receive application language without changing system locale or inp
     'const apply=locale=>document.querySelector("#locale").textContent=locale;nexlet.i18n.onChange(apply);nexlet.i18n.getLocale().then(apply);',
   );
   await app.evaluate(({ dialog }, plugin) => {
+    dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [plugin] });
   }, plugin);
   await page.evaluate(() => window.nexlet.call('pluginInstall', { development: true }));

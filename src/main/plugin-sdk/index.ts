@@ -21,9 +21,15 @@ import type { PluginSecrets } from '../plugin-secrets';
 import { net } from 'electron';
 import { PluginWindows, type WindowHooks } from './windows';
 import { PluginCommands } from './commands';
+import type { AIModels } from '../ai-models';
+import type { AIRequest } from '../../shared/ai';
+import type { CapabilityProviders } from '../capability-providers';
+import type { CapabilityRequest } from '../../shared/capability-providers';
 
 import { object, string, type SdkCaller, type SdkContext } from './context';
 export class PluginSdk {
+  sharedAI?: AIModels;
+  capabilities?: CapabilityProviders;
   readonly tasks = new PluginTasks();
   private owners = new Map<number, object>();
   readonly database: PluginDatabase;
@@ -103,6 +109,20 @@ export class PluginSdk {
       },
     };
     if (method === 'tasks.cancel') return this.tasks.cancel(caller.contents.id, value);
+    if (method.startsWith('capabilities.')) {
+      context.require('capabilities');
+      if (!this.capabilities) throw new Error(t('提供商注册表未初始化'));
+      if (method === 'capabilities.list') return this.capabilities.state();
+      if (method !== 'capabilities.run') throw new Error(t('未知提供商操作'));
+      const args = object(value),
+        id = string(args.id, 100),
+        capabilities = this.capabilities;
+      return this.tasks.run(context.contents.id, id, Number(args.timeoutMs ?? 120000), (signal) =>
+        capabilities.run(object(args.request) as unknown as CapabilityRequest, signal, (value) =>
+          context.emit('capabilities.progress', { id, value }),
+        ),
+      );
+    }
     if (method.startsWith('window.')) {
       if (!this.windows) throw new Error(t('窗口集成未配置'));
       return this.windows.invoke(context, method, value);
@@ -121,6 +141,22 @@ export class PluginSdk {
     if (method.startsWith('tools.')) return this.tools.invoke(context, method, value);
     if (method.startsWith('mcp.')) return this.mcp.invoke(context, method);
     if (method.startsWith('ai.')) {
+      if (method === 'ai.sharedModels' || method === 'ai.generate') {
+        context.require('ai');
+        if (!this.sharedAI) throw new Error(t('共享 AI 未初始化'));
+        if (method === 'ai.sharedModels') {
+          const { providers, defaultModel } = this.sharedAI.state();
+          return { providers, defaultModel };
+        }
+        const args = object(value),
+          id = string(args.id, 100);
+        const ai = this.sharedAI;
+        return this.tasks.run(context.contents.id, id, Number(args.timeoutMs ?? 120000), (signal) =>
+          ai.generate(object(args.request) as unknown as AIRequest, signal, (event) =>
+            context.emit('ai.event', { id, event }),
+          ),
+        );
+      }
       if (!this.ai) throw new Error(t('AI 集成未配置'));
       return this.ai.invoke(context, method, value);
     }
@@ -217,6 +253,7 @@ export class PluginSdk {
     this.mcp.closeSession(id);
   }
   stop(plugin: string): void {
+    this.capabilities?.stop(plugin);
     this.scheduler.stop(plugin);
     this.backends.stop(plugin);
     this.windows?.stop(plugin);

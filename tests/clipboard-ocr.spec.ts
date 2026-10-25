@@ -38,6 +38,13 @@ test('真实离线 OCR 可搜索、独立于可见会话，取消与删除后不
     }, pluginDirectory);
     await page.evaluate(() => window.nexlet.call('pluginInstall', { development: true }));
     await page.evaluate(() =>
+      window.nexlet.call('capabilitySettings', {
+        action: 'default',
+        capability: 'ocr',
+        id: 'org.nexlet.ocr:paddle',
+      }),
+    );
+    await page.evaluate(() =>
       window.nexlet.call('launch', { id: 'plugin:org.nexlet.ocr:recognize', mode: 'open' }),
     );
     const visible = await app.evaluate(async () => {

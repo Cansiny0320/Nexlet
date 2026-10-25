@@ -580,7 +580,9 @@ test('插件市场缓存、直接安装更新和失败保留旧数据', async ()
         : Buffer.from(bundle, 'base64');
     };
     dialog.showMessageBox = (async () => {
-      throw new Error('不应弹出安装或更新确认');
+      const g = globalThis as any;
+      g.__marketInstallPrompts = (g.__marketInstallPrompts || 0) + 1;
+      return { response: 1, checkboxChecked: false };
     }) as any;
   }, bundle);
   try {
@@ -601,9 +603,16 @@ test('插件市场缓存、直接安装更新和失败保留旧数据', async ()
     await expect(page.locator('.market-card')).toHaveCount(1);
     await page.screenshot({ path: path.join(root, 'test-results', 'marketplace.png') });
     await page.getByRole('button', { name: '安装', exact: true }).click();
+    await page.getByRole('button', { name: '查看权限并安装', exact: true }).click();
     await expect
       .poll(() => call('pluginInspect').then((p: any) => p[0]?.source))
       .toBe('marketplace');
+    expect(await app.evaluate(() => (globalThis as any).__marketInstallPrompts)).toBe(1);
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = (async () => {
+        throw new Error('Same-permission update must not prompt');
+      }) as any;
+    });
     await app.evaluate(() => {
       const n = (globalThis as any).__nexlet;
       n.store.set('plugin-data:org.nexlet.hello', { note: '更新必须保留' });

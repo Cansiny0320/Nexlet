@@ -30,10 +30,24 @@ test.skip(
   '需要相邻 Nexlet-plugins 源码（可设置 NEXLET_PLUGINS_DIR）；单仓 CI 不运行跨仓用例',
 );
 async function call(action: string, payload?: unknown) {
-  return page.evaluate(({ action, payload }) => (window as any).nexlet.call(action, payload), {
-    action,
-    payload,
-  });
+  if (action === 'pluginInstall')
+    await app.evaluate(() => {
+      (globalThis as any).__translationInstalling = true;
+    });
+  try {
+    return await page.evaluate(
+      ({ action, payload }) => (window as any).nexlet.call(action, payload),
+      {
+        action,
+        payload,
+      },
+    );
+  } finally {
+    if (action === 'pluginInstall')
+      await app.evaluate(() => {
+        (globalThis as any).__translationInstalling = false;
+      });
+  }
 }
 async function launch(payload = '') {
   await call('launch', { id: 'plugin:org.nexlet.translate:translate', payload });
@@ -126,8 +140,13 @@ test.beforeAll(async () => {
   await app.evaluate(({ dialog, clipboard, safeStorage, nativeTheme }, source) => {
     const g = globalThis as any;
     g.__translationPrompts = [];
+    g.__translationInstallPrompts = [];
     dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [source] })) as any;
     dialog.showMessageBox = (async (_owner: unknown, options: any) => {
+      if (g.__translationInstalling) {
+        g.__translationInstallPrompts.push(options ?? _owner);
+        return { response: 1, checkboxChecked: false };
+      }
       g.__translationPrompts.push(options);
       throw new Error('不应出现插件安装或联网确认弹窗');
     }) as any;
@@ -154,6 +173,7 @@ test.beforeAll(async () => {
     };
   }, source);
   await call('pluginInstall', { development: true });
+  expect(await app.evaluate(() => (globalThis as any).__translationInstallPrompts.length)).toBe(1);
   await launch('Hello from launcher');
 });
 test.afterAll(async () => {
@@ -241,7 +261,7 @@ test('Google 自动翻译支持带入、防抖、输入法、语言切换和撤�
   await plugin.clock.resume();
 });
 
-test('直接安装且不弹确认，带入文字后按需翻译和复制', async () => {
+test('首次安装确认权限后，带入文字按需翻译和复制', async () => {
   expect(received).toHaveLength(0);
   await expect(plugin.locator('#input')).toHaveValue('Hello from launcher');
   await configure();
@@ -276,6 +296,33 @@ test('直接安装且不弹确认，带入文字后按需翻译和复制', async
     true,
   );
   await plugin.screenshot({ path: path.join(root, 'test-results', 'translation.png') });
+});
+
+test('翻译工作区适配窗口高度，窄窗不产生横向溢出', async () => {
+  const bounds = await app.evaluate(() => (globalThis as any).__nexlet.main.getBounds());
+  try {
+    for (const [width, height] of [
+      [800, 600],
+      [1000, 800],
+      [520, 720],
+    ]) {
+      await app.evaluate(
+        (_, { width, height }) => {
+          (globalThis as any).__nexlet.main.setContentSize(width, height);
+        },
+        { width, height },
+      );
+      await expect
+        .poll(() => plugin.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+        .toBe(true);
+      if (width > 540)
+        await expect
+          .poll(() => plugin.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
+          .toBe(true);
+    }
+  } finally {
+    await app.evaluate((_, bounds) => (globalThis as any).__nexlet.main.setBounds(bounds), bounds);
+  }
 });
 
 test('首次联网与兼容旧 resetPermissions 调用均不弹窗，仍拒绝重定向', async () => {

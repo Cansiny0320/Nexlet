@@ -1,6 +1,14 @@
 // Generated from Nexlet/src/shared/plugin-api.ts.
+import type { AIConfiguration, AIEvent, AIRequest, AIResult } from './ai';
+import type {
+  CapabilityRequest,
+  CapabilityState,
+  OcrResult,
+  TranslationResult,
+} from './capability-providers';
 /** Public extension contract. No dependency on the host renderer API. */
 declare const SDK_PERMISSIONS: readonly [
+  'capabilities',
   'files',
   'process',
   'backend',
@@ -25,6 +33,20 @@ export type SdkJson =
   | SdkJson[]
   | {
       [key: string]: SdkJson;
+    };
+export type PluginResult =
+  | {
+      type: 'text';
+      text: string;
+      html?: string;
+    }
+  | {
+      type: 'image';
+      data: string;
+    }
+  | {
+      type: 'files';
+      resources: string[];
     };
 export interface TaskOptions {
   id: string;
@@ -60,6 +82,25 @@ export type BackendHandlers = Record<
   (args: unknown, context: BackendContext) => unknown | Promise<unknown>
 >;
 export interface PluginSdkExtensions {
+  capabilities: {
+    list(): Promise<CapabilityState>;
+    run(
+      options: TaskOptions & {
+        request: CapabilityRequest;
+      },
+    ): Promise<OcrResult | TranslationResult>;
+    onProgress(callback: (event: { id: string; value: number }) => void): () => void;
+  };
+  results: {
+    publish(result: PluginResult): Promise<true>;
+  };
+  /** Session drafts are local; restart retention is controlled by the host setting. */
+  session: {
+    read(): Promise<Record<string, SdkJson> | null>;
+    save(state: Record<string, SdkJson>): Promise<true>;
+    readImage(): Promise<Uint8Array | null>;
+    saveImage(data: Uint8Array): Promise<true>;
+  };
   /** Application UI language; system.info().locale remains the OS locale. */
   i18n: {
     getLocale(): Promise<'zh-CN' | 'zh-Hant' | 'en'>;
@@ -159,6 +200,14 @@ export interface PluginSdkExtensions {
     }>;
   };
   ai: {
+    /** Shared host settings. Credentials are never returned to plugins. */
+    sharedModels(): Promise<AIConfiguration>;
+    generate(
+      options: TaskOptions & {
+        request: AIRequest;
+      },
+    ): Promise<AIResult>;
+    onEvent(callback: (event: { id: string; event: AIEvent }) => void): () => void;
     configure(config: ProviderConfig | null): Promise<{
       configured: boolean;
       persistent: boolean;

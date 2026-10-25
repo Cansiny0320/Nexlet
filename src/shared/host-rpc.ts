@@ -81,6 +81,9 @@ export type ClipActionInput =
     }
   | { action: 'favorite'; ids: string[]; value: boolean };
 export interface HostInputs {
+  capabilitySettings: import('./capability-providers').CapabilitySettingsAction;
+  aiSettings: import('./ai').AISettingsAction;
+  accountSync: import('./account-sync').AccountAction;
   state: void;
   selectionInput: string;
   panel:
@@ -155,6 +158,12 @@ export interface HostInputs {
   pluginInspect: void;
   marketplace: boolean | void;
   marketInstall: string;
+  marketTasks:
+    | { action: 'list' }
+    | { action: 'enqueue'; pluginId: string }
+    | { action: 'cancel' | 'retry' | 'install'; id: string };
+  marketLink: string;
+  marketPreview: { id: string; index: number };
   fileSearch: string;
   fileSearchStatus: void;
   fileBrowse: { path: string; filter?: string; cursor?: string };
@@ -164,6 +173,9 @@ export interface HostInputs {
   openData: void;
 }
 export interface HostOutputs {
+  capabilitySettings: import('./capability-providers').CapabilitySettingsState;
+  aiSettings: import('./ai').AISettingsState;
+  accountSync: import('./account-sync').AccountState;
   state: AppState;
   selectionInput: LaunchInput & { preview?: string };
   panel: (PanelState & { theme: string }) | PanelConfig | PanelStatus | boolean;
@@ -212,6 +224,9 @@ export interface HostOutputs {
   pluginInspect: PluginRecord[];
   marketplace: MarketState;
   marketInstall: boolean;
+  marketTasks: import('./marketplace').MarketTask[];
+  marketLink: boolean;
+  marketPreview: string;
   fileSearch: FileSearchResult;
   fileSearchStatus: FileSearchIndexStatus;
   fileBrowse: DirectoryPage;

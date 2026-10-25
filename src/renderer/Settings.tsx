@@ -10,6 +10,9 @@ import { ConfigProfilePanel } from './ConfigProfile';
 import { PanelSettings } from './PanelSettings';
 import { CommandManager } from './CommandManager';
 import { UpdatePanel } from './UpdatePanel';
+import { AISettingsPanel } from './AISettings';
+import { CapabilitySettingsPanel } from './CapabilitySettings';
+import { AccountSettingsPanel } from './AccountSettings';
 import { useState, useEffect } from 'react';
 import {
   Keyboard,
@@ -363,6 +366,9 @@ export function SettingsPanel() {
           {t('清除搜索偏好')}
         </button>
       </div>
+      <AISettingsPanel />
+      <AccountSettingsPanel />
+      <CapabilitySettingsPanel />
       <ConfigProfilePanel />
       <UpdatePanel />
     </div>

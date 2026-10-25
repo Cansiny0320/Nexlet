@@ -16,6 +16,7 @@ import { MarketPanel } from './Marketplace';
 import { api, useApp, errorText, ToolIcon, IconButton } from './common';
 
 const permissionNames = (): Record<string, string> => ({
+  capabilities: t('调用 OCR／翻译提供商（使用所选本地或云端服务）'),
   'clipboard.read': t('读取剪贴板'),
   'clipboard.write': t('写入剪贴板'),
   'shell.openExternal': t('打开外部链接'),

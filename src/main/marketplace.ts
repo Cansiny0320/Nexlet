@@ -5,6 +5,9 @@ import type { Store } from './store';
 import type { PluginManager } from './plugins';
 import { readPluginZip, type PluginBundle } from './plugin-bundle';
 import type { PluginRecord } from '../shared/types';
+import { MarketTasks } from './market-tasks';
+import { pluginConsentChanges } from '../shared/plugin-consent';
+import sharp from 'sharp';
 import {
   MARKET_INDEX_URL,
   validateMarketIndex,
@@ -14,13 +17,14 @@ import {
 } from '../shared/marketplace';
 
 interface DownloadOptions {
+  onProgress?: (received: number, total?: number) => void;
   timeoutMs?: number;
   signal?: AbortSignal;
 }
 export function downloadBounded(
   url: string,
   max: number,
-  { timeoutMs = 25000, signal }: DownloadOptions = {},
+  { timeoutMs = 25000, signal, onProgress }: DownloadOptions = {},
 ): Promise<Buffer> {
   if (signal?.aborted) return Promise.reject(new Error(t('插件启动已取消')));
   return new Promise((resolve, reject) => {
@@ -82,6 +86,8 @@ export function downloadBounded(
           return;
         }
         chunks.push(Buffer.from(chunk));
+        const length = Number(response.headers['content-length']);
+        onProgress?.(total, Number.isFinite(length) && length > 0 ? length : undefined);
       });
       response.on('error', (error) => fail(error));
       response.on('aborted', () => fail(new Error(t('下载连接中断，请重试'))));
@@ -96,13 +102,69 @@ export function downloadBounded(
   });
 }
 export class Marketplace {
+  readonly tasks: MarketTasks;
   private pending = false;
   private nextCheck = new Map<string, number>();
+  async preview(id: string, index: number): Promise<string> {
+    if (!Number.isInteger(index) || index < 0 || index >= 6) throw new Error(t('预览序号无效'));
+    const entry = (await this.list()).entries.find((entry) => entry.id === id),
+      url = entry?.screenshots?.[index];
+    if (!url) throw new Error(t('预览不存在'));
+    const bytes = await this.download(url, 4 * 1024 * 1024, { timeoutMs: 15000 });
+    const pipeline = sharp(bytes, { limitInputPixels: 16_000_000 }),
+      metadata = await pipeline.metadata();
+    if (!['png', 'jpeg', 'webp'].includes(metadata.format ?? '') || (metadata.pages ?? 1) > 1)
+      throw new Error(t('预览格式不支持'));
+    const image = await pipeline
+      .resize({ width: 1000, height: 800, fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer();
+    return 'data:image/png;base64,' + image.toString('base64');
+  }
   constructor(
     private store: Store,
     private plugins: PluginManager,
     private download = downloadBounded,
-  ) {}
+    changed: () => void = () => {},
+  ) {
+    this.tasks = new MarketTasks(
+      (id, signal, onProgress) => this.prepareInstall(id, signal, onProgress),
+      (bundle) => this.plugins.installBundle(bundle, { source: 'marketplace' }),
+      (id) => this.plugins.records().find((p) => p.manifest.id === id)?.manifest.permissions ?? [],
+      changed,
+    );
+  }
+  private async prepareInstall(
+    id: string,
+    signal: AbortSignal,
+    onProgress: (received: number, total?: number) => void,
+  ): Promise<PluginBundle> {
+    const index = await this.list(),
+      entry = index.entries.find((e) => e.id === id);
+    signal.throwIfAborted();
+    if (!entry) throw new Error(t('插件条目不存在，请刷新市场'));
+    const existing = this.plugins.records().find((p) => p.manifest.id === id);
+    const reason = marketAvailability(
+      entry,
+      process.platform,
+      app.getVersion(),
+      existing
+        ? { development: existing.development, version: existing.manifest.version }
+        : undefined,
+    );
+    if (reason) throw new Error(reason);
+    const bundle = readPluginZip(
+      await this.download(entry.download, PLUGIN_ARCHIVE_LIMIT, {
+        signal,
+        onProgress,
+        timeoutMs: 120000,
+      }),
+    );
+    signal.throwIfAborted();
+    if (bundle.manifest.id !== id || bundle.manifest.version !== entry.version)
+      throw new Error(t('插件包 ID 或版本与市场条目不一致'));
+    return bundle;
+  }
   async prepareUpdate(
     record: PluginRecord,
     code: string,
@@ -141,6 +203,7 @@ export class Marketplace {
         signal.aborted ||
         bundle.manifest.id !== entry.id ||
         bundle.manifest.version !== entry.version ||
+        pluginConsentChanges(record.manifest, bundle.manifest).length > 0 ||
         !bundle.manifest.features.some((f) => f.code === code)
       )
         return null;

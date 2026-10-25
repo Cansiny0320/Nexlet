@@ -130,3 +130,73 @@
 .builtin-list > button:hover {
   background: var(--hover);
 }
+.market-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.market-list .market-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 2fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.market-list .market-details,
+.market-list .market-unavailable,
+.market-list .market-platforms {
+  grid-column: 1 / -1;
+}
+.market-intro {
+  flex-wrap: wrap;
+}
+.market-detail-link {
+  text-align: left;
+  font: inherit;
+}
+.market-details {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 10px;
+  font-size: 12px;
+}
+.market-details details {
+  margin-block: 8px;
+}
+.market-readme {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.market-tasks {
+  margin-bottom: 16px;
+}
+.market-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.market-task > div {
+  flex: 1;
+  min-width: 0;
+}
+.market-task strong,
+.market-task span,
+.market-task progress {
+  display: block;
+}
+.market-task progress {
+  width: 100%;
+  margin-top: 5px;
+}
+.market-task p {
+  overflow-wrap: anywhere;
+  margin-block: 6px;
+}
+.market-previews img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-block: 8px;
+}

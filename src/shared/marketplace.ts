@@ -1,10 +1,18 @@
 import { validatePluginLocales, type PluginLocales } from './plugin-locales';
 import { t } from './i18n';
 import { valid, gte, gt } from 'semver';
+import { KNOWN_PERMISSIONS } from './plugin-validation';
+import type { PluginPermission } from './types';
 
 export const MARKET_INDEX_URL =
   'https://raw.githubusercontent.com/Cansiny0320/Nexlet-plugins/main/index.json';
 export interface MarketEntry {
+  updatedAt?: string;
+  readme?: string;
+  source?: string;
+  screenshots?: string[];
+  changelog?: { version: string; date?: string; notes: string }[];
+  permissions?: PluginPermission[];
   locales?: PluginLocales;
   id: string;
   name: string;
@@ -26,6 +34,72 @@ export interface MarketState {
   fetchedAt: number | null;
   cached: boolean;
   error: string | null;
+}
+export interface MarketTask {
+  id: string;
+  pluginId: string;
+  name: string;
+  version?: string;
+  state: 'queued' | 'downloading' | 'ready' | 'installing' | 'done' | 'failed' | 'cancelled';
+  received: number;
+  total?: number;
+  error?: string;
+  permissions?: PluginPermission[];
+  addedPermissions?: PluginPermission[];
+}
+export function validateMarketDetails(value: Record<string, unknown>): Partial<MarketEntry> {
+  const result: Partial<MarketEntry> = {};
+  const url = (value: unknown) => {
+    if (typeof value !== 'string' || value.length > 2048) throw new Error(t('市场链接无效'));
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.hash)
+      throw new Error(t('市场链接必须为 HTTPS'));
+    return parsed.href;
+  };
+  const date = (value: unknown) => {
+    if (typeof value !== 'string' || value.length > 40 || !Number.isFinite(Date.parse(value)))
+      throw new Error(t('市场日期无效'));
+    return value;
+  };
+  if (value.updatedAt !== undefined) result.updatedAt = date(value.updatedAt);
+  if (value.readme !== undefined) {
+    if (typeof value.readme !== 'string' || value.readme.length > 30000)
+      throw new Error(t('插件说明过长'));
+    result.readme = value.readme;
+  }
+  if (value.source !== undefined) result.source = url(value.source);
+  if (value.screenshots !== undefined) {
+    if (!Array.isArray(value.screenshots) || value.screenshots.length > 6)
+      throw new Error(t('预览图数量无效'));
+    result.screenshots = value.screenshots.map(url);
+  }
+  if (value.changelog !== undefined) {
+    if (!Array.isArray(value.changelog) || value.changelog.length > 20)
+      throw new Error(t('版本日志过长'));
+    result.changelog = value.changelog.map((item) => {
+      if (
+        !item ||
+        !valid(item.version) ||
+        typeof item.notes !== 'string' ||
+        item.notes.length > 4000
+      )
+        throw new Error(t('版本日志无效'));
+      return {
+        version: item.version,
+        notes: item.notes,
+        ...(item.date === undefined ? {} : { date: date(item.date) }),
+      };
+    });
+  }
+  if (value.permissions !== undefined) {
+    if (
+      !Array.isArray(value.permissions) ||
+      value.permissions.some((p) => !KNOWN_PERMISSIONS.includes(p))
+    )
+      throw new Error(t('市场权限声明无效'));
+    result.permissions = [...new Set(value.permissions)] as PluginPermission[];
+  }
+  return result;
 }
 export function isMarketDownload(value: string): boolean {
   try {
@@ -88,6 +162,7 @@ export function validateMarketIndex(value: unknown): MarketIndex {
     )
       throw new Error(t('插件图标无效'));
     return {
+      ...validateMarketDetails(v),
       ...(v.locales === undefined ? {} : { locales: validatePluginLocales(v.locales) }),
       id,
       name: str(v.name, 50),

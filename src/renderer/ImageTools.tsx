@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight, Copy, Download, Minus, Pin, Plus, RotateCw, X } from 'lucide-react';
 import { errorText, IconButton } from './common';
 import type { ImageToolState } from '../shared/desktop-tools';
+import { ImageRecognition } from './ImageRecognition';
 export function ImageTools() {
+  const [recognition, setRecognition] = useState(false);
   const [state, setState] = useState<ImageToolState | null>(null),
     [message, setMessage] = useState('');
   useEffect(() => {
@@ -41,6 +43,13 @@ export function ImageTools() {
           <Pin size={15} /> {t('贴图')}
         </span>
         <div className="image-window-actions">
+          <button
+            aria-label={t('OCR 与翻译')}
+            aria-pressed={recognition}
+            onClick={() => setRecognition(!recognition)}
+          >
+            OCR
+          </button>
           <IconButton title={t('缩小')} onClick={() => void action('zoom', -0.1)}>
             <Minus size={15} />
           </IconButton>
@@ -76,6 +85,11 @@ export function ImageTools() {
       >
         {state.image && <img src={state.image} alt={t('悬浮图片')} draggable={false} />}
       </div>{' '}
+      {recognition && (
+        <div className="pin-recognition">
+          <ImageRecognition />
+        </div>
+      )}
       {message && (
         <div className="pin-message" role="status">
           {message}

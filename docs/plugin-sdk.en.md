@@ -55,9 +55,9 @@ Optional `locales` on manifest, feature, and marketplace metadata maps language 
 
 The public catalog is [Nexlet-plugins](https://github.com/Cansiny0320/Nexlet-plugins). The client reads its versioned `index.json` and downloads packages only from that repository's GitHub Releases. Entries specify platforms and minimum Nexlet version. Package ID and version must match; a hash field is not required.
 
-Install/update reuse local package validation and run directly after the user clicks, without another permission dialog. Installation records change only after success. Failure keeps the old version and data; development directories are not overwritten and versions are never automatically downgraded. Cached catalogs remain readable offline; a first-load failure offers retry.
+In Nexlet 0.2.47, downloads appear in a task list with progress, cancellation and retry. Select Install after validation. First installs show declared permissions; updates adding permissions or changing an existing local provider to cloud require confirmation. Installation records change only after success. Failure preserves the previous version and data; development directories are not overwritten and downgrades are not automatic. Cached catalogs remain readable offline.
 
-Before each new session, marketplace plugins check for updates: at most two seconds for the catalog and ten seconds for download. Compatible versions install automatically. Offline, timeout, invalid package, or a missing requested feature keeps the old version, configuration, persistent secrets, and input. Existing sessions, including detached windows, do not update or restart until reopened. Duplicate launches share the check. Local imports, development directories, and disabled plugins do not auto-update. Exit, disable, or uninstall cancels a pending launch.
+Before each new session, marketplace plugins check for compatible updates: at most two seconds for the catalog and ten seconds for download. Only updates without added permissions or local-to-cloud changes activate automatically; others require a manual update. Offline, timeout, invalid package or a missing feature keeps the old version. Existing sessions do not restart. Local imports, development directories and disabled plugins do not auto-update.
 
 ## API
 
@@ -178,3 +178,33 @@ await nexlet.secrets.set('apiKey', null); // 删除
 `persistent: true` means system safeStorage encryption was used before writing to disk. Without system encryption, or with Linux `basic_text`, data remains only in the current session and returns `false`; clearly inform users. Detaching retains temporary secrets; exit clears them. Failure to decrypt old data rejects, so allow reentry. Never put keys in ordinary storage, logs, or URLs. Keeping data on uninstall keeps ciphertext; deleting data removes ciphertext and legacy origin grants. This protects local data at rest, but cannot stop an authorized plugin from reading its own keys.
 
 Plugin archives allow 64 MiB compressed, 128 MiB expanded and 32 MiB per file/runtime resource. Marketplace downloads and local installs share these limits. `runtime.compute` permits same-origin fetch, dynamic code, WASM and local Workers without Node, arbitrary files or direct external network access. Other plugins retain their strict CSP.
+
+## Shared AI and OCR/translation (Nexlet 0.2.47)
+
+The ai permission enables sharedModels(), generate({id, request}) and onEvent(). Configuration never contains credentials. Omit providerId/model to use the host default. Results contain text, toolCalls and optional usage; events carry the task ID and text/tool/usage/complete/failure. Refusal, truncation, cancellation and interrupted streams reject. Tool calls are data and never execute automatically. Cancel with tasks.cancel(id). Legacy configure/models/chat/onChunk and private settings remain unchanged.
+
+Chat Completions, Responses and Anthropic Messages use separate encoders; Responses defaults to store=false. Optional settings include a context limit, OpenAI low/medium/high reasoning effort, and manual thinking budgets for supported Anthropic models. Reasoning options omit Temperature. Text context is conservatively estimated from UTF-8 bytes; image accounting and exact token limits remain server-side. Changing the endpoint or protocol clears its key. Importing legacy model definitions never copies private keys.
+
+The capabilities permission enables list/run/onProgress. OCR accepts a Uint8Array image up to 20 MiB and returns text with optional blocks (text, coordinates, confidence). Translation accepts text, targetLanguage and optional sourceLanguage. Provider IDs are pluginId:providerId; omitting one selects the explicit user default. Missing or failed providers report errors without automatic local-to-cloud fallback. Requests time out after 120 seconds, with three concurrent requests per provider plugin. Consumer exit or provider disable/update cancels requests.
+
+```js
+// manifest.permissions: ["ai", "capabilities"]
+const shared = await nexlet.ai.sharedModels();
+const id = crypto.randomUUID();
+const off = nexlet.ai.onEvent(({ id: taskId, event }) => {
+  if (taskId === id && event.type === 'text') appendText(event.delta);
+});
+try {
+  const result = await nexlet.ai.generate({ id, request: {
+    messages: [{ role: 'user', content: 'Summarize this text' }]
+  }});
+  showText(result.text);
+} finally { off(); }
+// await nexlet.tasks.cancel(id);
+const providers = await nexlet.capabilities.list();
+const result = await nexlet.capabilities.run({ id: crypto.randomUUID(), request: {
+  capability: 'translation', text: 'Hello', targetLanguage: 'zh-CN'
+}});
+```
+
+Provider manifests declare a providers array with id/name/capability/locality/languages/entry and optional configSchema. The entry is a package-local HTML file loaded in a hidden sandbox. window.nexletProvider.listen receives providerId/request/config; progress/finish/fail reply to the host. Configuration and results are validated. Local providers cannot use network or shared AI; cloud providers still need network.request or ai permission. See plugins/ocr/provider.ts and plugins/translate/provider.js in the plugin repository. Users select providers in host settings. Account sessions are never exposed to plugins.

@@ -280,6 +280,7 @@ test('文件和目录选区仅交给选中的插件；面板关闭后资源仍�
   );
   await writeFile(path.join(fixture, 'app.js'), 'nexlet.onEnter(value=>{window.context=value;});');
   await app.evaluate(({ dialog }, fixture) => {
+    dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
     dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [fixture] })) as any;
   }, fixture);
   await call(main, 'pluginInstall', { development: true });

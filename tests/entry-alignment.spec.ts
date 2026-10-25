@@ -109,6 +109,7 @@ test.beforeAll(async () => {
       (globalThis as any).__entryPaths.push(target);
       return '';
     };
+    dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
     dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [fixture] })) as any;
   }, fixture);
   await call('pluginInstall', { development: true });

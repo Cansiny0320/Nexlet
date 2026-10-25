@@ -26,6 +26,7 @@ import { PluginSdk } from './plugin-sdk';
 import type { Platform } from './platform';
 import type { ToolDrafts } from './tool-drafts';
 import { PluginStaging } from './plugin-staging';
+import { pluginConsentChanges } from '../shared/plugin-consent';
 interface InstallOptions {
   source: 'marketplace' | 'local';
   developmentDirectory?: string;
@@ -340,6 +341,26 @@ export class PluginManager {
     bundle: PluginBundle,
     options: { source: 'marketplace' | 'local'; developmentDirectory?: string },
   ): Promise<boolean> {
+    const previous = this.records().find((record) => record.manifest.id === bundle.manifest.id);
+    const changes = pluginConsentChanges(previous?.manifest, bundle.manifest);
+    if (!previous || changes.length) {
+      const answer = await dialog.showMessageBox({
+        type: 'question',
+        title: previous ? t('确认插件新增权限') : t('安装插件'),
+        message: bundle.manifest.name + ' ' + bundle.manifest.version,
+        detail:
+          (changes.length ? changes.join('\n') : t('此插件未申请额外权限。')) +
+          t('\n\n插件源码和声明应来自你信任的来源。'),
+        buttons: [t('取消'), previous ? t('允许并更新') : t('安装')],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      if (answer.response !== 1) return false;
+      const current = this.records().find((record) => record.manifest.id === bundle.manifest.id);
+      if (current?.directory !== previous?.directory || current?.enabled !== previous?.enabled)
+        throw new Error(t('插件状态已改变，请重新安装'));
+    }
     await this.cancelUpdate(bundle.manifest.id);
     return this.replaceBundle(bundle, options);
   }

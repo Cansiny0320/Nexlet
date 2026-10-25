@@ -51,6 +51,7 @@ test('onOut flushes local documents and credentials but cannot start new work', 
     const page = await app.firstWindow();
     await expect(page.getByLabel('搜索功能、应用或快捷方式')).toBeVisible();
     await app.evaluate(({ dialog }, plugin) => {
+      dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [plugin] });
     }, plugin);
     await page.evaluate(() => window.nexlet.call('pluginInstall', { development: true }));

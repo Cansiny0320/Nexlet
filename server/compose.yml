@@ -1,0 +1,37 @@
+name: nexlet
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexlet
+      POSTGRES_USER: nexlet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexlet -d nexlet']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+    networks: [internal]
+  app:
+    build: .
+    image: nexlet-account:local
+    restart: unless-stopped
+    env_file: .env
+    ports: ['127.0.0.1:3201:3201']
+    depends_on:
+      db: { condition: service_healthy }
+    read_only: true
+    tmpfs: ['/tmp:size=32m']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 512m
+    networks: [internal, outbound]
+volumes:
+  database:
+networks:
+  internal: { internal: true }
+  outbound: {}

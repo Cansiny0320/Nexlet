@@ -155,7 +155,7 @@ export class ScreenCapture {
   owns(id: number) {
     return this.active?.window?.webContents.id === id;
   }
-  async complete(rect: WindowRect, destination?: CaptureDestination) {
+  crop(rect: WindowRect): Buffer {
     const current = this.active;
     if (!current) throw Error(t('截图已结束'));
     const plan = capturePlan(rect, current.frames),
@@ -175,6 +175,52 @@ export class ScreenCapture {
     const image = nativeImage.createFromBitmap(bitmap, plan.size),
       png = image.toPNG();
     if (png.length > 20 * 1024 * 1024) throw Error(t('截图超过 20 MB，请缩小区域'));
+    return png;
+  }
+  async sample(rect: WindowRect): Promise<Buffer> {
+    const current = this.active;
+    if (!current?.window || process.platform === 'linux')
+      throw new Error(t('此平台暂不支持在长截图中重新采集，请使用普通截图'));
+    current.window.hide();
+    try {
+      // The user scrolls manually while the overlay is hidden. No input is synthesized.
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      if (this.active !== current) throw new Error(t('截图已取消'));
+      const displays = screen.getAllDisplays();
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: {
+          width: Math.max(...displays.map((d) => Math.ceil(d.bounds.width * d.scaleFactor))),
+          height: Math.max(...displays.map((d) => Math.ceil(d.bounds.height * d.scaleFactor))),
+        },
+      });
+      if (this.active !== current) throw new Error(t('截图已取消'));
+      const frames = sources
+        .filter((s) => !s.thumbnail.isEmpty())
+        .map((source) => {
+          const display = displays.find((d) => String(d.id) === source.display_id);
+          if (!display) throw new Error(t('无法确定截图对应的显示器'));
+          const image = nativeImage.createFromBuffer(source.thumbnail.toPNG());
+          return { id: source.id, bounds: display.bounds, pixels: image.getSize(), image };
+        });
+      const original = current.frames;
+      try {
+        current.frames = frames;
+        return this.crop(rect);
+      } finally {
+        current.frames = original;
+      }
+    } finally {
+      if (this.active === current && !current.window.isDestroyed()) {
+        current.window.show();
+        current.window.focus();
+      }
+    }
+  }
+  async complete(rect: WindowRect, destination?: CaptureDestination, edited?: Buffer) {
+    const current = this.active;
+    if (!current) throw new Error(t('截图已结束'));
+    const png = edited ?? this.crop(rect);
     this.active = null;
     current.window?.destroy();
     for (const w of current.previous)

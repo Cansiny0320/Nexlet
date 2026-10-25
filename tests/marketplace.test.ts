@@ -1,5 +1,26 @@
 import { expect, it } from 'vite-plus/test';
-import { validateMarketIndex, marketAvailability } from '../src/shared/marketplace';
+import {
+  validateMarketIndex,
+  marketAvailability,
+  validateMarketDetails,
+} from '../src/shared/marketplace';
+it('validates bounded optional metadata without breaking old catalog entries', () => {
+  expect(
+    validateMarketDetails({
+      readme: 'plain text',
+      screenshots: ['https://example.com/a.png'],
+      permissions: ['ai'],
+    }),
+  ).toMatchObject({ readme: 'plain text', permissions: ['ai'] });
+  for (const bad of [
+    { readme: 'x'.repeat(30001) },
+    { source: 'javascript:alert(1)' },
+    { screenshots: ['https://user:pass@example.com/image'] },
+    { permissions: ['unknown'] },
+    { updatedAt: 'not a date' },
+  ])
+    expect(() => validateMarketDetails(bad)).toThrow();
+});
 
 const entry = {
   id: 'org.nexlet.hello',

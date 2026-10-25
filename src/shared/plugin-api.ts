@@ -1,5 +1,13 @@
+import type { AIConfiguration, AIEvent, AIRequest, AIResult } from './ai';
+import type {
+  CapabilityRequest,
+  CapabilityState,
+  OcrResult,
+  TranslationResult,
+} from './capability-providers';
 /** Public extension contract. No dependency on the host renderer API. */
 export const SDK_PERMISSIONS = [
+  'capabilities',
   'files',
   'process',
   'backend',
@@ -55,6 +63,13 @@ export type BackendHandlers = Record<
   (args: unknown, context: BackendContext) => unknown | Promise<unknown>
 >;
 export interface PluginSdkExtensions {
+  capabilities: {
+    list(): Promise<CapabilityState>;
+    run(
+      options: TaskOptions & { request: CapabilityRequest },
+    ): Promise<OcrResult | TranslationResult>;
+    onProgress(callback: (event: { id: string; value: number }) => void): () => void;
+  };
   results: { publish(result: PluginResult): Promise<true> };
   /** Session drafts are local; restart retention is controlled by the host setting. */
   session: {
@@ -143,6 +158,10 @@ export interface PluginSdkExtensions {
     ): Promise<{ code: number; stdout: string; stderr: string }>;
   };
   ai: {
+    /** Shared host settings. Credentials are never returned to plugins. */
+    sharedModels(): Promise<AIConfiguration>;
+    generate(options: TaskOptions & { request: AIRequest }): Promise<AIResult>;
+    onEvent(callback: (event: { id: string; event: AIEvent }) => void): () => void;
     configure(config: ProviderConfig | null): Promise<{ configured: boolean; persistent: boolean }>;
     status(): Promise<ProviderStatus>;
     models(options: TaskOptions): Promise<{ id: string; [key: string]: unknown }[]>;

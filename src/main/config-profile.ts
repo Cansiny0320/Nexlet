@@ -147,7 +147,7 @@ const plain = (value: unknown) => JSON.stringify(value, null, 2);
 function unique(items: { id: string }[]) {
   if (new Set(items.map((item) => item.id)).size !== items.length) throw Error(t('配置 ID 重复'));
 }
-function validateProfile(value: unknown): ConfigProfile {
+export function validateProfile(value: unknown): ConfigProfile {
   if (!validate(value))
     throw Error(
       t('配置格式无效') +

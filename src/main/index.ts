@@ -19,7 +19,13 @@ import { ToolHandoffs } from './tool-handoff';
 import { ToolDrafts } from './tool-drafts';
 import { Productivity } from './productivity';
 import { SearchPreferences } from './search-preferences';
-import { ConfigProfiles } from './config-profile';
+import { ConfigProfiles, validateProfile } from './config-profile';
+import { AccountSync } from './account-sync';
+import { StoreSyncAdapter } from './sync-adapter';
+import { AIModels } from './ai-models';
+import { CapabilityProviders } from './capability-providers';
+import { capabilityRunner } from './capability-runner';
+import { HostSecrets } from './host-secrets';
 import type { ProfileCategory } from '../shared/config-profile';
 import { WorkspaceRunner } from './workspaces';
 import { executeWorkspaceItem } from './workspace-executor';
@@ -30,6 +36,8 @@ import { LINUX_DESKTOP_NAME } from './linux-startup';
 import { createUpdateTransport } from './update-transport';
 import { AppUpdates, UpdateSaveBarrier } from './updater';
 import {
+  safeStorage,
+  net,
   webContents,
   app,
   BrowserWindow,
@@ -102,6 +110,8 @@ async function bootstrap() {
   if (process.platform === 'darwin') app.dock?.hide();
   app.setAppUserModelId('app.nexlet.desktop');
   const store = new Store(app.getPath('userData'));
+  const hostSecrets = new HostSecrets(store, safeStorage);
+  const aiModels = new AIModels(store, hostSecrets, (url, init) => net.fetch(url, init));
   const drafts = new ToolDrafts(store);
   const productivity = new Productivity(store);
   const searchPreferences = new SearchPreferences(store);
@@ -171,7 +181,12 @@ async function bootstrap() {
   const registry = new CommandRegistry(store, (ids) => catalog.resolveIds(ids));
   const panelConfig = new PanelConfigStore(store, () => registry.pinned());
   const profiles = new ConfigProfiles(store, () => plugins.records());
-  const ocrRunner = new OcrIndexRunner(() => plugins.records());
+  const capabilities = new CapabilityProviders(
+    store,
+    () => plugins.records(),
+    capabilityRunner(aiModels, (url, init) => net.fetch(url, init)),
+  );
+  const ocrRunner = new OcrIndexRunner(capabilities);
   const clipboardOcr = new ClipboardOcr(
     clipStore,
     (item, signal, progress) => ocrRunner.recognize(item, signal, progress),
@@ -200,6 +215,8 @@ async function bootstrap() {
   });
   const matcher = new ContentMatcher();
   const plugins = new PluginManager(store, notify, inputs, platform);
+  plugins.sdk.sharedAI = aiModels;
+  plugins.sdk.capabilities = capabilities;
   plugins.drafts = drafts;
   const returnToLauncher = async (
     value: Buffer | string | import('../shared/plugin-api').PluginResult,
@@ -218,12 +235,13 @@ async function bootstrap() {
     main.webContents.send('host-change', 'plugin-changed');
   };
   const desktopTools = new DesktopTools(html, {
+    capabilities,
     theme: () => store.settings().theme,
     enabled: (id) => registry.assertEnabled(id),
     launcher: (value) => returnToLauncher(value),
   });
   plugins.returnToLauncher = returnToLauncher;
-  const marketplace = new Marketplace(store, plugins);
+  const marketplace = new Marketplace(store, plugins, undefined, () => notify('market-tasks'));
   plugins.updateOnLaunch = (record, code, signal) =>
     marketplace.prepareUpdate(record, code, signal);
   const files = new EverythingSearch(() => store.settings().fileSearchPaths);
@@ -615,7 +633,7 @@ async function bootstrap() {
             view === 'superpanel'
               ? t('Nexlet · 超级面板')
               : 'Nexlet · ' +
-                  t(BUILTIN_COMMANDS.find((c) => c.id === 'tool:' + view)?.name || '工具'),
+                  t(BUILTIN_COMMANDS.find((c) => c.id === 'tool:' + view)?.name || t('工具')),
           );
       }
     }
@@ -1023,11 +1041,112 @@ async function bootstrap() {
     window.hide();
     return { opened: true };
   }
+  let syncedSettings = store.settings();
+  const accountSync = new AccountSync(
+    store,
+    hostSecrets,
+    new StoreSyncAdapter(store, aiModels, () => plugins.records()),
+    (url, init) => net.fetch(url, init),
+    (url) => shell.openExternal(url),
+    () => notify('account-sync'),
+    async () => {
+      syncShortcuts();
+      await settingsChanged(syncedSettings, store.settings());
+      syncedSettings = store.settings();
+      notify('pads');
+      notify('clips');
+      notify('productivity');
+    },
+    async (input) => {
+      const mappings = store.get<
+        Record<
+          string,
+          { preference: { shortcut?: string }; entry?: { id: string; name: string; path: string } }
+        >
+      >('sync-device-mappings', {});
+      const mapping = mappings[input.id];
+      if (!mapping) throw new Error(t('设备映射已变化，请刷新'));
+      const next = structuredClone(registry.read());
+      if (mapping.entry) {
+        if (!input.path || !path.isAbsolute(input.path) || !existsSync(input.path))
+          throw new Error(t('请选择本机存在的绝对路径'));
+        const entry = { ...mapping.entry, path: input.path };
+        next.localEntries = [...next.localEntries.filter((e) => e.id !== entry.id), entry];
+      }
+      next.commands[input.id] = { ...next.commands[input.id], shortcut: input.shortcut ?? '' };
+      validateProfile({
+        version: 1,
+        categories: {
+          commands: {
+            version: 1,
+            commands: next.commands,
+            localEntries: next.localEntries,
+            layout: next.layout,
+          },
+        },
+      });
+      next.revision++;
+      shortcuts.apply(bindings(next), () => registry.save(next));
+      delete mappings[input.id];
+      store.set('sync-device-mappings', mappings);
+      notify();
+    },
+  );
+  if (!testMode) accountSync.start();
   const closeHostRpc = registerHostRpc(ipcMain, (event) => {
     const { window, authorize } = hostAuthorization(event, hosts, html, () =>
       t('不允许的调用来源'),
     );
     const router: HostRouter = {
+      accountSync: hostProcedure<'accountSync'>(authorize, (payload) =>
+        accountSync.action(payload),
+      ),
+      capabilitySettings: hostProcedure<'capabilitySettings'>(authorize, async (payload) => {
+        if (payload.action === 'read') return capabilities.settings();
+        if (payload.action === 'default') {
+          capabilities.setDefault(payload.capability, payload.id);
+          return capabilities.settings();
+        }
+        if (payload.action === 'configure') {
+          capabilities.configure(payload.id, payload.value);
+          return capabilities.settings();
+        }
+        throw new Error(t('未知提供商设置操作'));
+      }),
+      aiSettings: hostProcedure<'aiSettings'>(authorize, async (payload) => {
+        const signal = AbortSignal.timeout(30000);
+        switch (payload.action) {
+          case 'read':
+            return aiModels.state();
+          case 'importLegacy':
+            return aiModels.importLegacy();
+          case 'save':
+            return aiModels.save(payload.provider, payload.apiKey);
+          case 'remove':
+            return aiModels.remove(payload.id);
+          case 'default':
+            return aiModels.setDefault(payload.value);
+          case 'models':
+            return {
+              ...aiModels.state(),
+              availableModels: await aiModels.models(payload.id, signal),
+            };
+          case 'test': {
+            const result = await aiModels.generate(
+              {
+                providerId: payload.id,
+                model: payload.model,
+                messages: [{ role: 'user', content: 'Reply with OK.' }],
+              },
+              signal,
+              () => {},
+            );
+            return { ...aiModels.state(), testResult: result.text };
+          }
+          default:
+            throw new Error(t('未知 AI 设置操作'));
+        }
+      }),
       state: hostProcedure<'state'>(authorize, async () => {
         return state();
       }),
@@ -1910,7 +2029,6 @@ async function bootstrap() {
         {
           const args = inputObject(payload);
           if (typeof args.enabled !== 'boolean') throw new Error(t('状态无效'));
-          if (args.id === 'org.nexlet.ocr' && !args.enabled) clipboardOcr.cancel();
           await plugins.toggle(text(args.id, 100), args.enabled);
           return true;
         }
@@ -1918,7 +2036,6 @@ async function bootstrap() {
       pluginRemove: hostProcedure<'pluginRemove'>(authorize, async (payload) => {
         {
           const args = inputObject(payload);
-          if (args.id === 'org.nexlet.ocr') clipboardOcr.cancel();
           await plugins.remove(text(args.id, 100), args.deleteData === true);
           return true;
         }
@@ -1932,6 +2049,25 @@ async function bootstrap() {
       marketInstall: hostProcedure<'marketInstall'>(authorize, async (payload) => {
         return withDialog(() => marketplace.install(text(payload, 100)));
       }),
+      marketTasks: hostProcedure<'marketTasks'>(authorize, async (payload) => {
+        if (payload.action === 'enqueue') marketplace.tasks.enqueue(text(payload.pluginId, 100));
+        else if (payload.action === 'cancel') marketplace.tasks.cancel(text(payload.id, 100));
+        else if (payload.action === 'retry') marketplace.tasks.retry(text(payload.id, 100));
+        else if (payload.action === 'install')
+          await withDialog(() => marketplace.tasks.install(text(payload.id, 100)));
+        else if (payload.action !== 'list') throw new Error(t('未知安装任务操作'));
+        return marketplace.tasks.list();
+      }),
+      marketLink: hostProcedure<'marketLink'>(authorize, async (payload) => {
+        const url = new URL(text(payload, 2048));
+        if (url.protocol !== 'https:' || url.username || url.password)
+          throw new Error(t('市场链接无效'));
+        await shell.openExternal(url.href);
+        return true;
+      }),
+      marketPreview: hostProcedure<'marketPreview'>(authorize, async (payload) =>
+        marketplace.preview(text(payload.id, 100), payload.index),
+      ),
       fileSearch: hostProcedure<'fileSearch'>(authorize, async (payload) => {
         return files.search(event.sender.id, text(payload, 1024));
       }),
@@ -2059,6 +2195,7 @@ async function bootstrap() {
       // Keep all services and windows alive until every editor confirms its save.
       await saveForClose([...hosts.keys()]);
       workspaces.close();
+      accountSync.close();
       clipboardOcr.close();
       desktopTools.close();
       clearInterval(panelBusyTimer);
@@ -2067,6 +2204,7 @@ async function bootstrap() {
       updates.setAutomaticChecks(false);
       await clips.close();
       shortcuts.close();
+      marketplace.tasks.close();
       matcher.close();
       if (tray && !tray.isDestroyed()) tray.destroy();
       await Promise.allSettled([plugins.close(), files.close(), clipStore.close()]);

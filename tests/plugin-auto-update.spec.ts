@@ -104,7 +104,8 @@ test.beforeEach(async () => {
         n = g.__nexlet;
       g.__auto = { version: '1.0.0', hits: [], mode: 'ok', bundles: args.bundles };
       dialog.showMessageBox = (async () => {
-        throw Error('自动更新不应弹确认');
+        g.__auto.installPrompts = (g.__auto.installPrompts || 0) + 1;
+        return { response: 1, checkboxChecked: false };
       }) as any;
       safeStorage.isEncryptionAvailable = () => true;
       safeStorage.encryptString = (text: string) => Buffer.from(text);
@@ -154,6 +155,12 @@ test.beforeEach(async () => {
     },
   );
   await call('marketInstall', id);
+  expect(await app.evaluate(() => (globalThis as any).__auto.installPrompts)).toBe(1);
+  await app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = (async () => {
+      throw Error('自动更新不应弹确认');
+    }) as any;
+  });
   await configure({ version: '1.1.0', hits: [] });
 });
 test.afterEach(async () => {

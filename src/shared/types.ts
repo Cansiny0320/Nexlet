@@ -90,6 +90,7 @@ export type PluginPermission =
   | 'secrets'
   | import('./plugin-api').SdkPermission;
 export interface PluginManifest {
+  providers?: import('./capability-providers').CapabilityDefinition[];
   locales?: PluginLocales;
   id: string;
   name: string;
@@ -286,6 +287,7 @@ export const BUILTIN_COMMANDS: Command[] = [
   },
 ];
 export const HOST_ACTIONS = [
+  'accountSync',
   'state',
   'panel',
   'selectionInput',
@@ -300,6 +302,8 @@ export const HOST_ACTIONS = [
   'pin',
   'window',
   'settings',
+  'aiSettings',
+  'capabilitySettings',
   'startup',
   'rescan',
   'pickSearchPath',
@@ -329,6 +333,9 @@ export const HOST_ACTIONS = [
   'continueResult',
   'marketplace',
   'marketInstall',
+  'marketTasks',
+  'marketLink',
+  'marketPreview',
   'fileSearch',
   'fileSearchStatus',
   'fileBrowse',

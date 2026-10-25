@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Nexlet 设备登录</title>
+  <style>
+    body {
+      font: 16px system-ui;
+      max-width: 440px;
+      margin: 12vh auto;
+      padding: 24px;
+      color: #222;
+      background: #fafafa;
+    }
+    button,
+    input {
+      font: inherit;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    button {
+      cursor: pointer;
+    }
+    input {
+      display: block;
+      width: 90%;
+    }
+    #message {
+      white-space: pre-wrap;
+    }
+    small {
+      display: block;
+      color: #555;
+    }
+  </style>
+  <h1>Nexlet 设备登录</h1>
+  <p id="identity"></p>
+  <label
+    ><span id="code-label">输入 Nexlet 显示的设备代码</span
+    ><input id="code" autocomplete="off" maxlength="20" /></label
+  ><small>只有在你自己的 Nexlet 客户端发起登录时才确认。</small>
+  <button id="login">使用 GitHub 登录</button
+  ><button id="approve" hidden>确认登录这台设备</button
+  ><button id="deny" hidden>拒绝</button>
+  <p id="message" role="status"></p>
+  <script src="./device.js" defer></script>
+</html>

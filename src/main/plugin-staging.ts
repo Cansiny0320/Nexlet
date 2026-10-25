@@ -7,6 +7,7 @@ import { t } from '../shared/i18n';
 import type { PluginRecord } from '../shared/types';
 import type { PluginBundle } from './plugin-bundle';
 import type { Store } from './store';
+import { pluginConsentChanges } from '../shared/plugin-consent';
 
 interface StagedUpdate {
   baseDirectory: string;
@@ -31,6 +32,7 @@ export class PluginStaging {
       staged.baseDirectory !== previous.directory ||
       staged.hostVersion !== app.getVersion() ||
       !gt(staged.record.manifest.version, previous.manifest.version) ||
+      pluginConsentChanges(previous.manifest, staged.record.manifest).length > 0 ||
       !staged.record.manifest.features.some((feature) => feature.code === code)
     )
       return null;

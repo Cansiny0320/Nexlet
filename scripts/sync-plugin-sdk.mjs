@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, rm, readdir, copyFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +39,10 @@ try {
   const declaration = await readFile(path.join(temporary, 'plugin-api.d.ts'), 'utf8');
   const index = await readFile(path.join(root, 'sdk/index.d.ts'));
   await mkdir(destination, { recursive: true });
+  for (const name of await readdir(temporary)) {
+    if (name.endsWith('.d.ts') && name !== 'plugin-api.d.ts')
+      await copyFile(path.join(temporary, name), path.join(destination, name));
+  }
   await writeFile(
     path.join(destination, 'extensions.d.ts'),
     '// Generated from Nexlet/src/shared/plugin-api.ts.\n' +

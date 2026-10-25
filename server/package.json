@@ -1,0 +1,17 @@
+{
+  "name": "nexlet-account-sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "better-auth": "1.7.12",
+    "pg": "8.23.1"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Download, Pin, X } from 'lucide-react';
 import type { CaptureState, CaptureDestination, WindowRect } from '../shared/capture';
 import { errorText } from './common';
+import { CaptureEditor } from './CaptureEditor';
+import type { CaptureEditorState } from '../shared/capture-editor';
 export function Capture() {
+  const [editor, setEditor] = useState<CaptureEditorState | null>(null);
   const [state, setState] = useState<CaptureState | null>(null),
     [rect, setRect] = useState<WindowRect | null>(null),
     [dragging, setDragging] = useState(false),
@@ -19,7 +22,7 @@ export function Capture() {
     return () => window.removeEventListener('keydown', key);
   }, []);
   async function finish(destination?: CaptureDestination) {
-    if (!rect || busy) return;
+    if (!rect || busy || editor) return;
     setBusy(true);
     try {
       await window.desktopTools.call('complete', {
@@ -37,7 +40,33 @@ export function Capture() {
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
-  }, [rect, busy, state]);
+  }, [rect, busy, state, editor]);
+  async function edit() {
+    if (!rect || !state || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      setEditor(
+        await window.desktopTools.call<CaptureEditorState>('edit', {
+          rect: { ...rect, x: rect.x + state.bounds.x, y: rect.y + state.bounds.y },
+        }),
+      );
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (editor)
+    return (
+      <CaptureEditor
+        initial={editor}
+        reset={() => {
+          setEditor(null);
+          setRect(null);
+        }}
+      />
+    );
   if (!state) return <div className="capture-loading">{t('正在准备截图…')}</div>;
   const area = state.bounds;
   return (
@@ -70,7 +99,7 @@ export function Capture() {
         start.current = null;
         setDragging(false);
       }}
-      onDoubleClick={() => void finish()}
+      onDoubleClick={() => void edit()}
     >
       {state.frames.map((f) => (
         <img
@@ -108,6 +137,14 @@ export function Capture() {
               }}
               onPointerDown={(e) => e.stopPropagation()}
             >
+              <button
+                title={t('编辑截图')}
+                aria-label={t('编辑截图')}
+                disabled={busy}
+                onClick={() => void edit()}
+              >
+                {t('编辑')}
+              </button>
               <button
                 title={t('复制截图')}
                 aria-label={t('复制截图')}

@@ -98,6 +98,7 @@ test('empty plugin search exits the session through the normal close lifecycle',
   const page = await app.firstWindow();
   await expect(page.locator('.launcher-input')).toBeVisible();
   await app.evaluate(({ dialog }, plugin) => {
+    dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false });
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [plugin] });
   }, plugin);
   await page.evaluate(() => window.nexlet.call('pluginInstall', { development: true }));
