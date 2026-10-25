@@ -1,10 +1,15 @@
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 
 test('shared models, sandboxed OCR and screenshot redaction work without desktop interaction', async () => {
+  test.skip(
+    !existsSync(path.resolve('../Nexlet-plugins/.build/plugins/ocr/plugin.json')),
+    'Requires the built OCR companion plugin in the adjacent Nexlet-plugins checkout',
+  );
   test.setTimeout(120000);
   const directory = await mkdtemp(path.join(tmpdir(), 'nexlet-alignment-'));
   const env: Record<string, string> = {
