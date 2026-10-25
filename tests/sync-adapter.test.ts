@@ -76,6 +76,40 @@ it('projects explicit fields and excludes keys, tokens, plugin databases and sou
   expect(data).toContain('Hello');
   expect(data).not.toMatch(/sensitive|private-database|private-api-key|nested-key|C:\\\\private/);
 });
+it.each([true, false])(
+  'exports file names from every platform, including text-only clips (files: %s)',
+  (withFiles) => {
+    const { store, adapter } = fixture();
+    const files = [
+      'C:\\private\\windows.txt',
+      '\\\\server\\private\\network.txt',
+      '/home/private/unix.txt',
+    ];
+    store.addClip({
+      id: 'paths',
+      hash: 'paths',
+      kind: 'files',
+      text: files.join('\n'),
+      ...(withFiles ? { files } : {}),
+      createdAt: 1,
+      favorite: false,
+    });
+    expect(adapter.snapshot(['clipboardHistory'])).toEqual([
+      {
+        kind: 'clipboardHistory',
+        id: 'paths',
+        value: {
+          kind: 'files',
+          text: 'windows.txt\nnetwork.txt\nunix.txt',
+          files: ['windows.txt', 'network.txt', 'unix.txt'],
+          createdAt: 1,
+          favorite: false,
+        },
+      },
+    ]);
+  },
+);
+
 it('syncs only the declared note field and preserves unrelated plugin storage on deletion', () => {
   const { store, adapter } = fixture();
   store.set('plugin-data:org.nexlet.hello', { note: 'My note', private: 'excluded' });

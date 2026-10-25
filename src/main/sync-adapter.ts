@@ -119,9 +119,8 @@ export class StoreSyncAdapter implements SyncAdapter {
           'favorite',
         ]);
         if (clip.kind === 'files') {
-          value.files = clip.files?.length
-            ? clip.files.map((file) => path.basename(file))
-            : clip.text.split('\n').filter(Boolean);
+          const files = clip.files?.length ? clip.files : clip.text.split(/\r?\n/).filter(Boolean);
+          value.files = files.map((file) => path.win32.basename(file));
           value.text = (value.files as string[]).join('\n');
         }
         if (clip.kind === 'image') {
