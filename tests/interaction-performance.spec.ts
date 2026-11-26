@@ -251,7 +251,7 @@ test('剪贴板虚拟滚动、跨页多选、全文展开与独立窗口恢复',
   await popup.close();
 });
 
-test('浏览历史时收到新记录保留当前可见位置，不跳回旧选中项', async () => {
+test('剪贴板收到新记录时回到顶部并选中最新记录', async () => {
   const page = await application.firstWindow();
   await application.evaluate(() => {
     const n = (globalThis as any).__nexlet;
@@ -267,63 +267,30 @@ test('浏览历史时收到新记录保留当前可见位置，不跳回旧选�
   });
   await page.getByRole('button', { name: '剪贴板', exact: true }).first().click();
   await expect(page.locator('[data-clip-id="scroll-199"]')).toBeVisible();
-  await page.locator('.clipboard-list').evaluate((node) => {
-    node.scrollTop = 9000;
-  });
-  await expect
-    .poll(() =>
-      page
-        .locator('.clip-item')
-        .evaluateAll((nodes) =>
-          nodes.some((node) => Number(node.getAttribute('data-clip-id')?.split('-')[1]) < 130),
-        ),
-    )
-    .toBe(true);
-  await expect(page.locator('.clip-placeholder')).toHaveCount(0);
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
-  const anchor = await page.locator('.clip-item').evaluateAll((nodes) => {
-    const top = document.querySelector('.clipboard-list')!.getBoundingClientRect().top;
-    const node = nodes.find((node) => node.getBoundingClientRect().top >= top)!;
-    return { id: node.getAttribute('data-clip-id'), top: node.getBoundingClientRect().top };
-  });
-  await application.evaluate(() => {
-    const n = (globalThis as any).__nexlet,
-      original = n.clipStore.clipPage.bind(n.clipStore);
-    (globalThis as any).__pageRefreshes = 0;
-    n.clipStore.clipPage = (...args: any[]) => {
-      (globalThis as any).__pageRefreshes++;
-      return original(...args);
-    };
-    n.store.addClip({
-      id: 'newest',
-      hash: 'newest',
-      kind: 'text',
-      text: 'new history',
-      createdAt: Date.now() + 1000,
-      favorite: false,
-    });
-    n.main.webContents.send('host-change', 'clips');
-  });
-  await expect
-    .poll(() => application.evaluate(() => (globalThis as any).__pageRefreshes))
-    .toBeGreaterThan(0);
-  await expect(page.locator('.clip-placeholder')).toHaveCount(0);
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
-  expect(await page.locator('.clipboard-list').evaluate((node) => node.scrollTop)).toBeGreaterThan(
-    8000,
-  );
-  await expect(page.locator(`[data-clip-id="${anchor.id}"]`)).toBeAttached();
-  expect(
-    Math.abs(
-      (await page
-        .locator(`[data-clip-id="${anchor.id}"]`)
-        .evaluate((node) => node.getBoundingClientRect().top)) - anchor.top,
-    ),
-  ).toBeLessThan(2);
+  const list = page.locator('.clipboard-list');
+  for (const top of [0, 9000]) {
+    await list.evaluate((node, top) => {
+      node.scrollTop = top;
+    }, top);
+    await expect.poll(() => list.evaluate((node) => node.scrollTop)).toBe(top);
+    const id = 'new-history-' + top;
+    await application.evaluate((_, id) => {
+      const n = (globalThis as any).__nexlet;
+      n.store.addClip({
+        id,
+        hash: id,
+        kind: 'text',
+        text: id,
+        createdAt: Date.now() + 1000,
+        favorite: false,
+      });
+      n.main.webContents.send('host-change', 'clips');
+    }, id);
+    const newest = page.locator(`[data-clip-id="${id}"]`);
+    await expect(newest).toBeInViewport();
+    await expect(newest).toHaveAttribute('aria-selected', 'true');
+    expect(await list.evaluate((node) => node.scrollTop)).toBe(0);
+  }
 });
 
 test('图片异步加载及展开收起后重新测量行高，不覆盖相邻记录', async () => {

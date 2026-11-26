@@ -96,6 +96,7 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
   });
   const virtual = useRef<VirtualListHandle>(null),
     loadId = useRef(0),
+    previousIds = useRef(new Set<string>()),
     loadedPages = useRef(new Set<number>()),
     pendingPages = useRef(new Set<string>());
   const cursorId = useRef(savedCursorId);
@@ -140,16 +141,21 @@ export function ClipboardPanel({ query, board }: { query: string; board: boolean
       pendingPages.current.clear();
       const nextCursor = next.ids.indexOf(cursorId.current),
         available = new Set(next.ids);
+      const hasNewHistory =
+        !resetScroll.current && next.ids.some((id) => !previousIds.current.has(id));
+      previousIds.current = available;
       setItems((old) => new Map([...old].filter(([id]) => available.has(id))));
       setSelected((old) => {
+        if (hasNewHistory) return next.ids.slice(0, 1);
         const kept = old.filter((value) => available.has(value));
         return kept.length ? kept : next.ids.slice(0, 1);
       });
-      const position =
-        nextCursor >= 0
+      const position = hasNewHistory
+        ? 0
+        : nextCursor >= 0
           ? nextCursor
           : Math.max(0, Math.min(cursorRef.current, next.ids.length - 1));
-      if (resetScroll.current) {
+      if (hasNewHistory || resetScroll.current) {
         scrollTarget.current = position;
         resetScroll.current = false;
       }

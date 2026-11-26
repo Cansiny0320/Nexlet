@@ -130,7 +130,7 @@ export function VirtualList({
         if (!node || index < 0 || index >= ids.length) return;
         const top = offsets[index],
           bottom = offsets[index + 1];
-        if (top < node.scrollTop) node.scrollTop = top;
+        if (index === 0 || top < node.scrollTop) node.scrollTop = top;
         else if (bottom > node.scrollTop + node.clientHeight)
           node.scrollTop = bottom - node.clientHeight;
         updateViewport();

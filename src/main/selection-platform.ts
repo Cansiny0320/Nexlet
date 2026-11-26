@@ -29,6 +29,9 @@ export class SelectionPlatform implements SelectionBackend {
   async target() {
     return this.native?.target() || null;
   }
+  pasteMac(pid: number) {
+    return this.native?.paste?.(pid);
+  }
   async same(target: SelectionTarget) {
     const current = await this.target();
     return !!current && target.pid === current.pid && target.handle === current.handle;

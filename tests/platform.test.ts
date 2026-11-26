@@ -29,19 +29,37 @@ describe('macOS 自动回贴权限', () => {
     expect(runCommand).not.toHaveBeenCalled();
   });
 
-  it('授权后再次回贴会重新检查权限并执行粘贴', async () => {
-    const platform = new Platform(() => undefined);
+  it('授权后会重新检查权限，原生快捷键不可用时回退脚本', async () => {
+    const paste = vi.fn().mockResolvedValue(false);
+    const platform = new Platform(() => undefined, undefined, paste);
     platform.target = { pid: 42 };
     await expect(platform.paste()).rejects.toThrow('辅助功能');
+    expect(paste).not.toHaveBeenCalled();
 
     accessibility.mockReturnValue(true);
     await expect(platform.paste()).resolves.toBeUndefined();
     expect(accessibility).toHaveBeenCalledTimes(2);
+    expect(paste).toHaveBeenCalledOnce();
     expect(runCommand).toHaveBeenLastCalledWith(
       '/usr/bin/osascript',
       ['-e', 'tell application "System Events" to keystroke "v" using command down'],
       { timeout: 5000 },
     );
+  });
+
+  it('有原生桥接时直接委托回贴，无需启动脚本', async () => {
+    const paste = vi.fn().mockResolvedValue(true);
+    const platform = new Platform(() => undefined, undefined, paste);
+    platform.target = { pid: 42 };
+    accessibility.mockReturnValue(true);
+
+    await expect(platform.paste()).resolves.toBeUndefined();
+    expect(paste).toHaveBeenCalledWith(42);
+    expect(runCommand).not.toHaveBeenCalled();
+
+    paste.mockRejectedValueOnce(Error('无法恢复原应用焦点，内容已复制'));
+    await expect(platform.paste()).rejects.toThrow('无法恢复原应用焦点');
+    expect(runCommand).not.toHaveBeenCalled();
   });
 
   it('初始化和没有目标窗口时不会请求权限', async () => {

@@ -5,6 +5,7 @@ export interface NativeSelection {
   target(): SelectionTarget | null;
   direct(target: SelectionTarget): SelectionContent | null | undefined;
   copy(target: SelectionTarget): void;
+  paste?(pid: number): Promise<boolean>;
   keysReleased(): boolean;
   activate(target: SelectionTarget): boolean;
   trusted(): boolean;
@@ -68,7 +69,11 @@ function macSelection(): NativeSelection {
   const keyState = cg.func('bool CGEventSourceKeyState(int,uint16_t)'),
     key = cg.func('void *CGEventCreateKeyboardEvent(void *,uint16_t,bool)'),
     flags = cg.func('void CGEventSetFlags(void *,uint64_t)'),
-    post = cg.func('void CGEventPost(uint32_t,void *)');
+    post = cg.func('void CGEventPost(uint32_t,void *)'),
+    postToPid = cg.func('void CGEventPostToPid(int,void *)'),
+    keyCharacters = cg.func(
+      'void CGEventKeyboardGetUnicodeString(void *,size_t,_Out_ size_t *,_Out_ uint16_t *)',
+    );
   const pooled = <T>(work: () => T): T => {
     const pool = object(object(poolClass, selectors.alloc), selectors.init);
     try {
@@ -96,13 +101,19 @@ function macSelection(): NativeSelection {
       ? out.subarray(0, out.indexOf(0)).toString('utf8')
       : undefined;
   };
+  const frontmost = () =>
+    object(object(workspace, selectors.sharedWorkspace), selectors.frontmostApplication);
+  const frontmostPid = () =>
+    pooled(() => Number(integer(frontmost(), selectors.processIdentifier)));
+  const activateApplication = (pid: number) =>
+    pooled(() => {
+      const app = byPid(running, selectors['runningApplicationWithProcessIdentifier:'], pid);
+      return app ? activate(app, selectors['activateWithOptions:'], 2) : null;
+    });
   return {
     target: () =>
       pooled(() => {
-        const front = object(
-          object(workspace, selectors.sharedWorkspace),
-          selectors.frontmostApplication,
-        );
+        const front = frontmost();
         if (!front) return null;
         const pid = Number(integer(front, selectors.processIdentifier));
         if (!pid || pid === process.pid) return null;
@@ -158,16 +169,42 @@ function macSelection(): NativeSelection {
         }
       }
     },
+    paste: async (pid) => {
+      const vKey = 9;
+      const command = 1 << 20;
+      const down = key(null, vKey, true);
+      if (!down) return false;
+      try {
+        flags(down, command);
+        const length = [0];
+        const characters = Buffer.alloc(4);
+        keyCharacters(down, 2, length, characters);
+        // The physical ANSI V key can map to another shortcut on a different layout.
+        if (length[0] !== 1 || characters.toString('utf16le', 0, 2) !== 'v') return false;
+        const up = key(null, vKey, false);
+        if (!up) return false;
+        try {
+          flags(up, command);
+          if (frontmostPid() !== pid) {
+            if (activateApplication(pid) === null) throw Error(t('原应用已关闭'));
+            const deadline = performance.now() + 500;
+            while (frontmostPid() !== pid) {
+              if (performance.now() >= deadline) throw Error(t('无法恢复原应用焦点，内容已复制'));
+              await new Promise<void>((resolve) => setTimeout(resolve, 10));
+            }
+          }
+          postToPid(pid, down);
+          postToPid(pid, up);
+          return true;
+        } finally {
+          release(up);
+        }
+      } finally {
+        release(down);
+      }
+    },
     keysReleased: () => ![54, 55, 56, 58, 59, 60, 61, 62].some((code) => keyState(1, code)),
-    activate: (target) =>
-      pooled(() => {
-        const app = byPid(
-          running,
-          selectors['runningApplicationWithProcessIdentifier:'],
-          target.pid,
-        );
-        return !!app && activate(app, selectors['activateWithOptions:'], 2);
-      }),
+    activate: (target) => activateApplication(target.pid) ?? false,
     trusted: () => trusted(),
   };
 }

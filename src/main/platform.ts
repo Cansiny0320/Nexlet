@@ -29,6 +29,7 @@ export class Platform {
   constructor(
     private ownerHandle: () => Buffer | undefined,
     private nativeTarget?: () => Promise<{ pid: number } | null>,
+    private nativePaste?: (pid: number) => Promise<boolean> | undefined,
   ) {
     if (process.platform === 'win32') {
       try {
@@ -263,6 +264,7 @@ export class Platform {
             '请在系统设置 → 隐私与安全性 → 辅助功能中允许 Nexlet，授权后重新回贴；内容已复制，可手动粘贴',
           ),
         );
+      if (await this.nativePaste?.(target.pid)) return;
       await this.jxa(
         'ObjC.import("AppKit"); function run(argv){var target=$.NSRunningApplication.runningApplicationWithProcessIdentifier(Number(argv[0]));if(!target)throw Error(argv[1]);target.activateWithOptions(2);}',
         [String(target.pid), t('原应用已关闭')],

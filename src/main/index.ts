@@ -170,6 +170,7 @@ async function bootstrap() {
       if (selectionPlatform.error) throw Error(selectionPlatform.error);
       return selectionPlatform.target();
     },
+    (pid) => selectionPlatform.pasteMac(pid),
   );
   const clipStore = new ClipboardStore(store.directory, () => store.settings());
   const clips = new ClipboardService(clipStore, platform, () => notify('clips'));
