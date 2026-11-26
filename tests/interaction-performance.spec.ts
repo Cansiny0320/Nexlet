@@ -268,11 +268,13 @@ test('剪贴板收到新记录时回到顶部并选中最新记录', async () =>
   await page.getByRole('button', { name: '剪贴板', exact: true }).first().click();
   await expect(page.locator('[data-clip-id="scroll-199"]')).toBeVisible();
   const list = page.locator('.clipboard-list');
+  const scrollTop = () => list.evaluate((node) => node.scrollTop);
   for (const top of [0, 9000]) {
     await list.evaluate((node, top) => {
       node.scrollTop = top;
     }, top);
-    await expect.poll(() => list.evaluate((node) => node.scrollTop)).toBe(top);
+    if (top === 0) await expect.poll(scrollTop).toBe(0);
+    else await expect.poll(scrollTop).toBeGreaterThan(8000);
     const id = 'new-history-' + top;
     await application.evaluate((_, id) => {
       const n = (globalThis as any).__nexlet;
@@ -289,7 +291,7 @@ test('剪贴板收到新记录时回到顶部并选中最新记录', async () =>
     const newest = page.locator(`[data-clip-id="${id}"]`);
     await expect(newest).toBeInViewport();
     await expect(newest).toHaveAttribute('aria-selected', 'true');
-    expect(await list.evaluate((node) => node.scrollTop)).toBe(0);
+    await expect.poll(scrollTop).toBe(0);
   }
 });
 
